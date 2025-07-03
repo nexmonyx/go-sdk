@@ -219,7 +219,7 @@ func TestSystemdService_List(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/api/v1/systemd", r.URL.Path)
+		assert.Equal(t, "/v1/systemd", r.URL.Path)
 
 		// Send response
 		response := map[string]interface{}{

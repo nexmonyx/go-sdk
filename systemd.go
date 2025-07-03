@@ -12,7 +12,7 @@ func (s *SystemdService) Submit(ctx context.Context, request *SystemdServiceRequ
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/systemd",
+		Path:   "/v1/systemd",
 		Body:   request,
 		Result: &resp,
 	})
@@ -27,7 +27,7 @@ func (s *SystemdService) Get(ctx context.Context, serverUUID string) ([]*Systemd
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/systemd/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/systemd/%s", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -45,7 +45,7 @@ func (s *SystemdService) List(ctx context.Context, opts *ListOptions) ([]*System
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/systemd",
+		Path:   "/v1/systemd",
 		Result: &resp,
 	}
 
@@ -68,7 +68,7 @@ func (s *SystemdService) GetServiceByName(ctx context.Context, serverUUID, servi
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/systemd/%s/service/%s", serverUUID, serviceName),
+		Path:   fmt.Sprintf("/v1/systemd/%s/service/%s", serverUUID, serviceName),
 		Result: &resp,
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *SystemdService) GetSystemStats(ctx context.Context, serverUUID string) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/systemd/%s/stats", serverUUID),
+		Path:   fmt.Sprintf("/v1/systemd/%s/stats", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {

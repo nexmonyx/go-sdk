@@ -32,7 +32,7 @@ func (s *HardwareInventoryService) Get(ctx context.Context, serverUUID string) (
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/hardware-inventory/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/hardware-inventory/%s", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *HardwareInventoryService) List(ctx context.Context, opts *ListOptions) 
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/hardware-inventory",
+		Path:   "/v1/hardware-inventory",
 		Result: &resp,
 	}
 
@@ -77,7 +77,7 @@ func (s *HardwareInventoryService) GetHistory(ctx context.Context, serverUUID st
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/hardware-inventory/%s/history", serverUUID),
+		Path:   fmt.Sprintf("/v1/hardware-inventory/%s/history", serverUUID),
 		Result: &resp,
 	}
 
@@ -108,7 +108,7 @@ func (s *HardwareInventoryService) GetChanges(ctx context.Context, serverUUID st
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/hardware-inventory/%s/changes", serverUUID),
+		Path:   fmt.Sprintf("/v1/hardware-inventory/%s/changes", serverUUID),
 		Query:  query,
 		Result: &resp,
 	})
@@ -127,7 +127,7 @@ func (s *HardwareInventoryService) Search(ctx context.Context, search *HardwareS
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/hardware-inventory/search",
+		Path:   "/v1/hardware-inventory/search",
 		Body:   search,
 		Result: &resp,
 	})
@@ -147,7 +147,7 @@ func (s *HardwareInventoryService) Export(ctx context.Context, format string, se
 
 	resp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/hardware-inventory/export",
+		Path:   "/v1/hardware-inventory/export",
 		Body:   body,
 	})
 	if err != nil {

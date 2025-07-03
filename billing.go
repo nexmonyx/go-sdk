@@ -12,7 +12,7 @@ func (s *BillingService) GetBillingInfo(ctx context.Context, organizationID stri
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/billing", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/billing", organizationID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *BillingService) GetSubscription(ctx context.Context, organizationID str
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/subscription", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/subscription", organizationID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *BillingService) ListInvoices(ctx context.Context, organizationID string
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/invoices", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/invoices", organizationID),
 		Result: &resp,
 	}
 
@@ -75,7 +75,7 @@ func (s *BillingService) UpdatePaymentMethod(ctx context.Context, organizationID
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/payment-method", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/payment-method", organizationID),
 		Body:   paymentMethod,
 		Result: &resp,
 	})

@@ -12,7 +12,7 @@ func (s *AlertsService) Create(ctx context.Context, alert *Alert) (*Alert, error
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/alerts",
+		Path:   "/v1/alerts",
 		Body:   alert,
 		Result: &resp,
 	})
@@ -33,7 +33,7 @@ func (s *AlertsService) Get(ctx context.Context, id string) (*Alert, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *AlertsService) List(ctx context.Context, opts *ListOptions) ([]*Alert, 
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/alerts",
+		Path:   "/v1/alerts",
 		Result: &resp,
 	}
 
@@ -77,7 +77,7 @@ func (s *AlertsService) Update(ctx context.Context, id string, alert *Alert) (*A
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s", id),
 		Body:   alert,
 		Result: &resp,
 	})
@@ -97,7 +97,7 @@ func (s *AlertsService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -110,7 +110,7 @@ func (s *AlertsService) Enable(ctx context.Context, id string) (*Alert, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s/enable", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s/enable", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *AlertsService) Disable(ctx context.Context, id string) (*Alert, error) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s/disable", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s/disable", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -151,7 +151,7 @@ func (s *AlertsService) GetHistory(ctx context.Context, id string, opts *ListOpt
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s/history", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s/history", id),
 		Result: &resp,
 	}
 
@@ -174,7 +174,7 @@ func (s *AlertsService) Test(ctx context.Context, id string) (*AlertTestResult, 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s/test", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s/test", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -197,7 +197,7 @@ func (s *AlertsService) Acknowledge(ctx context.Context, id string, message stri
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/alerts/%s/acknowledge", id),
+		Path:   fmt.Sprintf("/v1/alerts/%s/acknowledge", id),
 		Body:   body,
 		Result: &resp,
 	})

@@ -12,7 +12,7 @@ func (s *SettingsService) Get(ctx context.Context, organizationID string) (*Sett
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/settings", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/settings", organizationID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *SettingsService) Update(ctx context.Context, organizationID string, set
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/settings", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/settings", organizationID),
 		Body:   settings,
 		Result: &resp,
 	})
@@ -53,7 +53,7 @@ func (s *SettingsService) GetNotificationSettings(ctx context.Context, organizat
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/settings/notifications", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/settings/notifications", organizationID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -73,7 +73,7 @@ func (s *SettingsService) UpdateNotificationSettings(ctx context.Context, organi
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/settings/notifications", organizationID),
+		Path:   fmt.Sprintf("/v1/organizations/%s/settings/notifications", organizationID),
 		Body:   settings,
 		Result: &resp,
 	})

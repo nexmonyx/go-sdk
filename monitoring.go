@@ -13,7 +13,7 @@ func (s *MonitoringService) CreateProbe(ctx context.Context, probe *MonitoringPr
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/monitoring/probes",
+		Path:   "/v1/monitoring/probes",
 		Body:   probe,
 		Result: &resp,
 	})
@@ -34,7 +34,7 @@ func (s *MonitoringService) GetProbe(ctx context.Context, id string) (*Monitorin
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s", id),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *MonitoringService) ListProbes(ctx context.Context, opts *ListOptions) (
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/monitoring/probes",
+		Path:   "/v1/monitoring/probes",
 		Result: &resp,
 	}
 
@@ -78,7 +78,7 @@ func (s *MonitoringService) UpdateProbe(ctx context.Context, id string, probe *M
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s", id),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s", id),
 		Body:   probe,
 		Result: &resp,
 	})
@@ -98,7 +98,7 @@ func (s *MonitoringService) DeleteProbe(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s", id),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -112,7 +112,7 @@ func (s *MonitoringService) GetProbeResults(ctx context.Context, probeID string,
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s/results", probeID),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s/results", probeID),
 		Result: &resp,
 	}
 
@@ -136,7 +136,7 @@ func (s *MonitoringService) GetAgents(ctx context.Context, opts *ListOptions) ([
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/monitoring/agents",
+		Path:   "/v1/monitoring/agents",
 		Result: &resp,
 	}
 
@@ -159,7 +159,7 @@ func (s *MonitoringService) GetStatus(ctx context.Context, organizationID string
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/monitoring/organizations/%s/status", organizationID),
+		Path:   fmt.Sprintf("/v1/monitoring/organizations/%s/status", organizationID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -179,7 +179,7 @@ func (s *MonitoringService) TestProbe(ctx context.Context, probeID string) (*Pro
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s/test", probeID),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s/test", probeID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -254,7 +254,7 @@ func (s *MonitoringService) GetAgentStatus(ctx context.Context, agentID string) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/monitoring/agents/%s/status", agentID),
+		Path:   fmt.Sprintf("/v1/monitoring/agents/%s/status", agentID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -287,7 +287,7 @@ func (s *MonitoringService) ListAgents(ctx context.Context, opts *MonitoringAgen
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/monitoring/agents",
+		Path:   "/v1/monitoring/agents",
 		Result: &resp,
 	}
 
@@ -310,7 +310,7 @@ func (s *MonitoringService) RegisterAgent(ctx context.Context, registration *Age
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/monitoring/agents",
+		Path:   "/v1/monitoring/agents",
 		Body:   registration,
 		Result: &resp,
 	})
@@ -387,7 +387,7 @@ func (s *MonitoringService) ListDeployments(ctx context.Context, opts *Monitorin
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/monitoring/deployments",
+		Path:   "/v1/monitoring/deployments",
 		Result: &resp,
 	}
 
@@ -457,7 +457,7 @@ func (s *MonitoringService) ListProbeResults(ctx context.Context, opts *ProbeRes
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/monitoring/probe-results",
+		Path:   "/v1/monitoring/probe-results",
 		Result: &resp,
 	}
 
@@ -522,7 +522,7 @@ func (s *MonitoringService) GetProbeMetrics(ctx context.Context, probeUUID strin
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/monitoring/probes/%s/metrics", probeUUID),
+		Path:   fmt.Sprintf("/v1/monitoring/probes/%s/metrics", probeUUID),
 		Result: &resp,
 	}
 

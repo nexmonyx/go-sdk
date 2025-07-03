@@ -15,7 +15,7 @@ func TestBackgroundJobsService_CreateJob(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/api/v1/background-jobs", r.URL.Path)
+		assert.Equal(t, "/v1/background-jobs", r.URL.Path)
 
 		var req CreateBackgroundJobRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -73,7 +73,7 @@ func TestBackgroundJobsService_ListJobs(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/api/v1/background-jobs", r.URL.Path)
+		assert.Equal(t, "/v1/background-jobs", r.URL.Path)
 		assert.Equal(t, "1", r.URL.Query().Get("page"))
 		assert.Equal(t, "10", r.URL.Query().Get("limit"))
 		assert.Equal(t, "data_export", r.URL.Query().Get("type"))
@@ -136,7 +136,7 @@ func TestBackgroundJobsService_GetJobByID(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/api/v1/background-jobs/123", r.URL.Path)
+		assert.Equal(t, "/v1/background-jobs/123", r.URL.Path)
 
 		response := map[string]interface{}{
 			"success": true,
@@ -180,7 +180,7 @@ func TestBackgroundJobsService_CancelJob(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/api/v1/background-jobs/456/cancel", r.URL.Path)
+		assert.Equal(t, "/v1/background-jobs/456/cancel", r.URL.Path)
 
 		response := map[string]interface{}{
 			"success": true,
@@ -216,7 +216,7 @@ func TestBackgroundJobsService_ConvenienceMethods(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/api/v1/background-jobs", r.URL.Path)
+		assert.Equal(t, "/v1/background-jobs", r.URL.Path)
 
 		var req CreateBackgroundJobRequest
 		err := json.NewDecoder(r.Body).Decode(&req)

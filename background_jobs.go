@@ -12,7 +12,7 @@ func (s *BackgroundJobsService) CreateJob(ctx context.Context, req *CreateBackgr
 
 	apiResp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/background-jobs",
+		Path:   "/v1/background-jobs",
 		Body:   req,
 		Result: &resp,
 	})
@@ -33,7 +33,7 @@ func (s *BackgroundJobsService) Get(ctx context.Context, jobID uint) (*Backgroun
 
 	apiResp, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/background-jobs/%d", jobID),
+		Path:   fmt.Sprintf("/v1/background-jobs/%d", jobID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *BackgroundJobsService) List(ctx context.Context, opts *ListJobsOptions)
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/background-jobs",
+		Path:   "/v1/background-jobs",
 		Result: &resp,
 	}
 
@@ -76,7 +76,7 @@ func (s *BackgroundJobsService) Cancel(ctx context.Context, jobID uint) (*Respon
 
 	apiResp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/background-jobs/%d/cancel", jobID),
+		Path:   fmt.Sprintf("/v1/background-jobs/%d/cancel", jobID),
 		Result: &resp,
 	})
 	return apiResp, err
@@ -89,7 +89,7 @@ func (s *BackgroundJobsService) Retry(ctx context.Context, jobID string) (*Backg
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/background-jobs/%s/retry", jobID),
+		Path:   fmt.Sprintf("/v1/background-jobs/%s/retry", jobID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -109,7 +109,7 @@ func (s *BackgroundJobsService) GetStatus(ctx context.Context, jobID string) (*J
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/background-jobs/%s/status", jobID),
+		Path:   fmt.Sprintf("/v1/background-jobs/%s/status", jobID),
 		Result: &resp,
 	})
 	if err != nil {

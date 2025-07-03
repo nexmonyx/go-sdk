@@ -17,7 +17,7 @@ func (s *MetricsService) Submit(ctx context.Context, serverUUID string, metrics 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/metrics",
+		Path:   "/v1/metrics",
 		Body:   body,
 		Result: &resp,
 	})
@@ -30,7 +30,7 @@ func (s *MetricsService) SubmitComprehensive(ctx context.Context, metrics *Compr
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/metrics/comprehensive",
+		Path:   "/v1/metrics/comprehensive",
 		Body:   metrics,
 		Result: &resp,
 	})
@@ -45,7 +45,7 @@ func (s *MetricsService) Query(ctx context.Context, query *MetricsQuery) ([]*Met
 
 	req := &Request{
 		Method: "POST",
-		Path:   "/api/v1/metrics/query",
+		Path:   "/v1/metrics/query",
 		Body:   query,
 		Result: &resp,
 	}
@@ -66,7 +66,7 @@ func (s *MetricsService) Get(ctx context.Context, serverUUID string, opts *ListO
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/metrics/server/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/metrics/server/%s", serverUUID),
 		Result: &resp,
 	}
 
@@ -97,7 +97,7 @@ func (s *MetricsService) GetSummary(ctx context.Context, serverUUID string, time
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/metrics/server/%s/summary", serverUUID),
+		Path:   fmt.Sprintf("/v1/metrics/server/%s/summary", serverUUID),
 		Query:  query,
 		Result: &resp,
 	})
@@ -116,7 +116,7 @@ func (s *MetricsService) GetAggregated(ctx context.Context, aggregation *Metrics
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/metrics/aggregate",
+		Path:   "/v1/metrics/aggregate",
 		Body:   aggregation,
 		Result: &resp,
 	})
@@ -131,7 +131,7 @@ func (s *MetricsService) GetAggregated(ctx context.Context, aggregation *Metrics
 func (s *MetricsService) Export(ctx context.Context, export *MetricsExport) ([]byte, error) {
 	resp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/metrics/export",
+		Path:   "/v1/metrics/export",
 		Body:   export,
 	})
 	if err != nil {
@@ -180,7 +180,7 @@ func (s *MetricsService) GetStatus(ctx context.Context, serverUUID string) (*Met
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/metrics/%s/status", serverUUID),
+		Path:   fmt.Sprintf("/v1/metrics/%s/status", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {

@@ -12,7 +12,7 @@ func (s *UsersService) Get(ctx context.Context, id string) (*User, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/users/%s", id),
+		Path:   fmt.Sprintf("/v1/users/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *UsersService) GetByEmail(ctx context.Context, email string) (*User, err
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/users/email/%s", email),
+		Path:   fmt.Sprintf("/v1/users/email/%s", email),
 		Result: &resp,
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *UsersService) List(ctx context.Context, opts *ListOptions) ([]*User, *P
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/users",
+		Path:   "/v1/users",
 		Result: &resp,
 	}
 
@@ -76,7 +76,7 @@ func (s *UsersService) Create(ctx context.Context, user *User) (*User, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/users",
+		Path:   "/v1/users",
 		Body:   user,
 		Result: &resp,
 	})
@@ -97,7 +97,7 @@ func (s *UsersService) Update(ctx context.Context, id string, user *User) (*User
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/users/%s", id),
+		Path:   fmt.Sprintf("/v1/users/%s", id),
 		Body:   user,
 		Result: &resp,
 	})
@@ -117,7 +117,7 @@ func (s *UsersService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/users/%s", id),
+		Path:   fmt.Sprintf("/v1/users/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -130,7 +130,7 @@ func (s *UsersService) GetCurrent(ctx context.Context) (*User, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/api/v1/users/me",
+		Path:   "/v1/users/me",
 		Result: &resp,
 	})
 	if err != nil {
@@ -154,7 +154,7 @@ func (s *UsersService) UpdateRole(ctx context.Context, id string, role string) (
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/users/%s/role", id),
+		Path:   fmt.Sprintf("/v1/users/%s/role", id),
 		Body:   body,
 		Result: &resp,
 	})
@@ -179,7 +179,7 @@ func (s *UsersService) UpdatePermissions(ctx context.Context, id string, permiss
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/users/%s/permissions", id),
+		Path:   fmt.Sprintf("/v1/users/%s/permissions", id),
 		Body:   body,
 		Result: &resp,
 	})
@@ -200,7 +200,7 @@ func (s *UsersService) UpdatePreferences(ctx context.Context, id string, prefere
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/users/%s/preferences", id),
+		Path:   fmt.Sprintf("/v1/users/%s/preferences", id),
 		Body:   preferences,
 		Result: &resp,
 	})
@@ -224,7 +224,7 @@ func (s *UsersService) ResetPassword(ctx context.Context, email string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/users/reset-password",
+		Path:   "/v1/users/reset-password",
 		Body:   body,
 		Result: &resp,
 	})
@@ -238,7 +238,7 @@ func (s *UsersService) Enable(ctx context.Context, id string) (*User, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/users/%s/enable", id),
+		Path:   fmt.Sprintf("/v1/users/%s/enable", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -258,7 +258,7 @@ func (s *UsersService) Disable(ctx context.Context, id string) (*User, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/users/%s/disable", id),
+		Path:   fmt.Sprintf("/v1/users/%s/disable", id),
 		Result: &resp,
 	})
 	if err != nil {

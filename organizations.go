@@ -12,7 +12,7 @@ func (s *OrganizationsService) Get(ctx context.Context, id string) (*Organizatio
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *OrganizationsService) List(ctx context.Context, opts *ListOptions) ([]*
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/organizations",
+		Path:   "/v1/organizations",
 		Result: &resp,
 	}
 
@@ -56,7 +56,7 @@ func (s *OrganizationsService) Create(ctx context.Context, org *Organization) (*
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/organizations",
+		Path:   "/v1/organizations",
 		Body:   org,
 		Result: &resp,
 	})
@@ -77,7 +77,7 @@ func (s *OrganizationsService) Update(ctx context.Context, id string, org *Organ
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s", id),
 		Body:   org,
 		Result: &resp,
 	})
@@ -97,7 +97,7 @@ func (s *OrganizationsService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -110,7 +110,7 @@ func (s *OrganizationsService) GetByUUID(ctx context.Context, uuid string) (*Org
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/uuid/%s", uuid),
+		Path:   fmt.Sprintf("/v1/organizations/uuid/%s", uuid),
 		Result: &resp,
 	})
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *OrganizationsService) GetServers(ctx context.Context, id string, opts *
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/servers", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s/servers", id),
 		Result: &resp,
 	}
 
@@ -155,7 +155,7 @@ func (s *OrganizationsService) GetUsers(ctx context.Context, id string, opts *Li
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/users", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s/users", id),
 		Result: &resp,
 	}
 
@@ -179,7 +179,7 @@ func (s *OrganizationsService) GetAlerts(ctx context.Context, id string, opts *L
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/alerts", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s/alerts", id),
 		Result: &resp,
 	}
 
@@ -202,7 +202,7 @@ func (s *OrganizationsService) UpdateSettings(ctx context.Context, id string, se
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/settings", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s/settings", id),
 		Body:   settings,
 		Result: &resp,
 	})
@@ -224,7 +224,7 @@ func (s *OrganizationsService) GetBilling(ctx context.Context, id string) (map[s
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/organizations/%s/billing", id),
+		Path:   fmt.Sprintf("/v1/organizations/%s/billing", id),
 		Result: &resp,
 	})
 	if err != nil {

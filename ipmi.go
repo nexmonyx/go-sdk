@@ -33,7 +33,7 @@ func (s *IPMIService) Get(ctx context.Context, serverUUID string) (*IPMIData, er
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/ipmi/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/ipmi/%s", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *IPMIService) GetSensorData(ctx context.Context, serverUUID string) ([]*
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/ipmi/%s/sensors", serverUUID),
+		Path:   fmt.Sprintf("/v1/ipmi/%s/sensors", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func (s *IPMIService) ExecuteCommand(ctx context.Context, serverUUID string, com
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/ipmi/%s/execute", serverUUID),
+		Path:   fmt.Sprintf("/v1/ipmi/%s/execute", serverUUID),
 		Body:   body,
 		Result: &resp,
 	})

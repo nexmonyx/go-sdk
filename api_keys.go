@@ -13,7 +13,7 @@ func (s *APIKeysService) Create(ctx context.Context, apiKey *APIKey) (*APIKey, e
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/api-keys",
+		Path:   "/v1/api-keys",
 		Body:   apiKey,
 		Result: &resp,
 	})
@@ -34,7 +34,7 @@ func (s *APIKeysService) Get(ctx context.Context, id string) (*APIKey, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/api-keys/%s", id),
+		Path:   fmt.Sprintf("/v1/api-keys/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *APIKeysService) List(ctx context.Context, opts *ListOptions) ([]*APIKey
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/api-keys",
+		Path:   "/v1/api-keys",
 		Result: &resp,
 	}
 
@@ -78,7 +78,7 @@ func (s *APIKeysService) Update(ctx context.Context, id string, apiKey *APIKey) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/api-keys/%s", id),
+		Path:   fmt.Sprintf("/v1/api-keys/%s", id),
 		Body:   apiKey,
 		Result: &resp,
 	})
@@ -98,7 +98,7 @@ func (s *APIKeysService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/api-keys/%s", id),
+		Path:   fmt.Sprintf("/v1/api-keys/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -110,7 +110,7 @@ func (s *APIKeysService) Revoke(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/api-keys/%s/revoke", id),
+		Path:   fmt.Sprintf("/v1/api-keys/%s/revoke", id),
 		Result: &resp,
 	})
 	return err
@@ -123,7 +123,7 @@ func (s *APIKeysService) Regenerate(ctx context.Context, id string) (*APIKey, er
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/api-keys/%s/regenerate", id),
+		Path:   fmt.Sprintf("/v1/api-keys/%s/regenerate", id),
 		Result: &resp,
 	})
 	if err != nil {

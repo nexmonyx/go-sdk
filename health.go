@@ -13,7 +13,7 @@ func (s *HealthService) GetHealth(ctx context.Context) (*HealthStatus, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/api/v1/health",
+		Path:   "/v1/healthz",
 		Result: &resp,
 	})
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *HealthService) GetHealthDetailed(ctx context.Context) (*DetailedHealthS
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/api/v1/health/detailed",
+		Path:   "/v1/health/detailed",
 		Result: &resp,
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func (s *HealthService) List(ctx context.Context, opts *HealthCheckListOptions) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/api/v1/health/checks",
+		Path:   "/v1/health/checks",
 		Query:  query,
 		Result: &resp,
 	})
@@ -103,7 +103,7 @@ func (s *HealthService) Get(ctx context.Context, id uint) (*HealthCheck, error) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/health/checks/%d", id),
+		Path:   fmt.Sprintf("/v1/health/checks/%d", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -123,7 +123,7 @@ func (s *HealthService) Create(ctx context.Context, req *CreateHealthCheckReques
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/health/checks",
+		Path:   "/v1/health/checks",
 		Body:   req,
 		Result: &resp,
 	})
@@ -144,7 +144,7 @@ func (s *HealthService) Update(ctx context.Context, id uint, req *UpdateHealthCh
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/api/v1/health/checks/%d", id),
+		Path:   fmt.Sprintf("/v1/health/checks/%d", id),
 		Body:   req,
 		Result: &resp,
 	})
@@ -162,7 +162,7 @@ func (s *HealthService) Update(ctx context.Context, id uint, req *UpdateHealthCh
 func (s *HealthService) Delete(ctx context.Context, id uint) error {
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/api/v1/health/checks/%d", id),
+		Path:   fmt.Sprintf("/v1/health/checks/%d", id),
 	})
 	return err
 }
@@ -205,7 +205,7 @@ func (s *HealthService) GetHistory(ctx context.Context, opts *HealthCheckHistory
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/api/v1/health/history",
+		Path:   "/v1/health/history",
 		Query:  query,
 		Result: &resp,
 	})
