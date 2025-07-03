@@ -157,9 +157,9 @@ type ProviderCreateRequest struct {
 
 // ProviderUpdateRequest represents a request to update a provider
 type ProviderUpdateRequest struct {
-	Name         string                 `json:"name,omitempty"`
-	Description  string                 `json:"description,omitempty"`
-	Credentials  map[string]interface{} `json:"credentials,omitempty"`
+	Name        string                 `json:"name,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Credentials map[string]interface{} `json:"credentials,omitempty"`
 }
 
 // SyncResponse represents the response from a sync operation

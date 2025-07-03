@@ -126,7 +126,7 @@ func (s *BackgroundJobsService) GetStatus(ctx context.Context, jobID string) (*J
 type BackgroundJob struct {
 	ID             uint                   `json:"id"`
 	Type           string                 `json:"type"`
-	Status         string                 `json:"status"` // pending, running, completed, failed, cancelled
+	Status         string                 `json:"status"`   // pending, running, completed, failed, cancelled
 	Progress       int                    `json:"progress"` // 0-100
 	Priority       int                    `json:"priority"` // 1 (low), 2 (normal), 3 (high)
 	ProgressText   string                 `json:"progress_text,omitempty"`
@@ -186,13 +186,13 @@ func (o *ListJobsOptions) ToQuery() map[string]string {
 
 // JobStatus represents the status of a background job
 type JobStatus struct {
-	ID         string                 `json:"id"`
-	Status     string                 `json:"status"`
-	Progress   int                    `json:"progress"`
-	Message    string                 `json:"message,omitempty"`
-	Steps      []JobStep              `json:"steps,omitempty"`
-	Metrics    map[string]interface{} `json:"metrics,omitempty"`
-	UpdatedAt  *CustomTime            `json:"updated_at"`
+	ID        string                 `json:"id"`
+	Status    string                 `json:"status"`
+	Progress  int                    `json:"progress"`
+	Message   string                 `json:"message,omitempty"`
+	Steps     []JobStep              `json:"steps,omitempty"`
+	Metrics   map[string]interface{} `json:"metrics,omitempty"`
+	UpdatedAt *CustomTime            `json:"updated_at"`
 }
 
 // JobStep represents a step in a background job
@@ -241,7 +241,7 @@ func (s *BackgroundJobsService) CreateReportGenerationJob(ctx context.Context, o
 		"period":          period,
 		"server_ids":      serverIDs,
 	}
-	
+
 	return s.CreateJob(ctx, &CreateBackgroundJobRequest{
 		Type:     "report_generation",
 		Priority: 2,

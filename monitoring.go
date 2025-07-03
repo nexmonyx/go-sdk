@@ -200,7 +200,7 @@ type MonitoringProbe struct {
 	Type           string                 `json:"type"` // http, https, tcp, icmp, dns
 	Target         string                 `json:"target"`
 	Interval       int                    `json:"interval"` // seconds
-	Timeout        int                    `json:"timeout"` // seconds
+	Timeout        int                    `json:"timeout"`  // seconds
 	Enabled        bool                   `json:"enabled"`
 	OrganizationID uint                   `json:"organization_id"`
 	ServerID       *uint                  `json:"server_id,omitempty"`
@@ -212,39 +212,39 @@ type MonitoringProbe struct {
 
 // ProbeAlertConfig represents alert configuration for a probe
 type ProbeAlertConfig struct {
-	Enabled            bool     `json:"enabled"`
-	FailureThreshold   int      `json:"failure_threshold"`
-	SuccessThreshold   int      `json:"success_threshold"`
-	NotificationDelay  int      `json:"notification_delay,omitempty"`
-	Channels           []string `json:"channels,omitempty"`
-	Recipients         []string `json:"recipients,omitempty"`
+	Enabled           bool     `json:"enabled"`
+	FailureThreshold  int      `json:"failure_threshold"`
+	SuccessThreshold  int      `json:"success_threshold"`
+	NotificationDelay int      `json:"notification_delay,omitempty"`
+	Channels          []string `json:"channels,omitempty"`
+	Recipients        []string `json:"recipients,omitempty"`
 }
 
 // MonitoringStatus represents the monitoring status for an organization
 type MonitoringStatus struct {
-	ActiveProbes      int                    `json:"active_probes"`
-	TotalProbes       int                    `json:"total_probes"`
-	ActiveAgents      int                    `json:"active_agents"`
-	TotalAgents       int                    `json:"total_agents"`
-	HealthyProbes     int                    `json:"healthy_probes"`
-	FailingProbes     int                    `json:"failing_probes"`
-	ProbesByType      map[string]int         `json:"probes_by_type"`
-	ProbesByRegion    map[string]int         `json:"probes_by_region"`
-	RecentIncidents   []MonitoringIncident   `json:"recent_incidents,omitempty"`
-	Metrics           map[string]interface{} `json:"metrics,omitempty"`
+	ActiveProbes    int                    `json:"active_probes"`
+	TotalProbes     int                    `json:"total_probes"`
+	ActiveAgents    int                    `json:"active_agents"`
+	TotalAgents     int                    `json:"total_agents"`
+	HealthyProbes   int                    `json:"healthy_probes"`
+	FailingProbes   int                    `json:"failing_probes"`
+	ProbesByType    map[string]int         `json:"probes_by_type"`
+	ProbesByRegion  map[string]int         `json:"probes_by_region"`
+	RecentIncidents []MonitoringIncident   `json:"recent_incidents,omitempty"`
+	Metrics         map[string]interface{} `json:"metrics,omitempty"`
 }
 
 // MonitoringIncident represents a monitoring incident
 type MonitoringIncident struct {
-	ID          uint        `json:"id"`
-	ProbeID     uint        `json:"probe_id"`
-	ProbeName   string      `json:"probe_name"`
-	StartedAt   *CustomTime `json:"started_at"`
-	ResolvedAt  *CustomTime `json:"resolved_at,omitempty"`
-	Duration    int         `json:"duration,omitempty"`
-	Status      string      `json:"status"`
-	Reason      string      `json:"reason"`
-	Details     string      `json:"details,omitempty"`
+	ID         uint        `json:"id"`
+	ProbeID    uint        `json:"probe_id"`
+	ProbeName  string      `json:"probe_name"`
+	StartedAt  *CustomTime `json:"started_at"`
+	ResolvedAt *CustomTime `json:"resolved_at,omitempty"`
+	Duration   int         `json:"duration,omitempty"`
+	Status     string      `json:"status"`
+	Reason     string      `json:"reason"`
+	Details    string      `json:"details,omitempty"`
 }
 
 // GetAgentStatus retrieves the status of a monitoring agent
@@ -327,10 +327,10 @@ func (s *MonitoringService) RegisterAgent(ctx context.Context, registration *Age
 // MonitoringAgentListOptions represents options for listing monitoring agents
 type MonitoringAgentListOptions struct {
 	ListOptions
-	Status   string `url:"status,omitempty"`
-	Region   string `url:"region,omitempty"`
-	Type     string `url:"type,omitempty"`
-	Enabled  *bool  `url:"enabled,omitempty"`
+	Status  string `url:"status,omitempty"`
+	Region  string `url:"region,omitempty"`
+	Type    string `url:"type,omitempty"`
+	Enabled *bool  `url:"enabled,omitempty"`
 }
 
 // ToQuery converts options to query parameters
@@ -562,14 +562,14 @@ type ProbeRequest struct {
 
 // ProbeConfig represents the configuration for a monitoring probe
 type ProbeConfig struct {
-	Method             *string `json:"method,omitempty"`
-	ExpectedStatusCode *int    `json:"expected_status_code,omitempty"`
-	FollowRedirects    *bool   `json:"follow_redirects,omitempty"`
+	Method             *string           `json:"method,omitempty"`
+	ExpectedStatusCode *int              `json:"expected_status_code,omitempty"`
+	FollowRedirects    *bool             `json:"follow_redirects,omitempty"`
 	Headers            map[string]string `json:"headers,omitempty"`
-	Body               *string `json:"body,omitempty"`
-	UserAgent          *string `json:"user_agent,omitempty"`
-	Keyword            *string `json:"keyword,omitempty"`
-	Port               *int    `json:"port,omitempty"`
+	Body               *string           `json:"body,omitempty"`
+	UserAgent          *string           `json:"user_agent,omitempty"`
+	Keyword            *string           `json:"keyword,omitempty"`
+	Port               *int              `json:"port,omitempty"`
 }
 
 // ProbeAlertChannel represents an alert channel for a probe

@@ -84,16 +84,16 @@ func (s *BillingService) UpdatePaymentMethod(ctx context.Context, organizationID
 
 // BillingInfo represents billing information
 type BillingInfo struct {
-	OrganizationID     uint                   `json:"organization_id"`
-	StripeCustomerID   string                 `json:"stripe_customer_id"`
-	CurrentBalance     float64                `json:"current_balance"`
-	Credits            float64                `json:"credits"`
-	PaymentMethod      *PaymentMethod         `json:"payment_method,omitempty"`
-	BillingAddress     *BillingAddress        `json:"billing_address,omitempty"`
-	TaxInfo            *TaxInfo               `json:"tax_info,omitempty"`
-	NextBillingDate    *CustomTime            `json:"next_billing_date,omitempty"`
-	BillingCycle       string                 `json:"billing_cycle"`
-	Metadata           map[string]interface{} `json:"metadata,omitempty"`
+	OrganizationID   uint                   `json:"organization_id"`
+	StripeCustomerID string                 `json:"stripe_customer_id"`
+	CurrentBalance   float64                `json:"current_balance"`
+	Credits          float64                `json:"credits"`
+	PaymentMethod    *PaymentMethod         `json:"payment_method,omitempty"`
+	BillingAddress   *BillingAddress        `json:"billing_address,omitempty"`
+	TaxInfo          *TaxInfo               `json:"tax_info,omitempty"`
+	NextBillingDate  *CustomTime            `json:"next_billing_date,omitempty"`
+	BillingCycle     string                 `json:"billing_cycle"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // Subscription represents a subscription
@@ -116,51 +116,51 @@ type Subscription struct {
 
 // Invoice represents an invoice
 type Invoice struct {
-	ID                 string                 `json:"id"`
-	OrganizationID     uint                   `json:"organization_id"`
-	InvoiceNumber      string                 `json:"invoice_number"`
-	Status             string                 `json:"status"`
-	Amount             float64                `json:"amount"`
-	Currency           string                 `json:"currency"`
-	DueDate            *CustomTime            `json:"due_date"`
-	PaidAt             *CustomTime            `json:"paid_at,omitempty"`
-	PeriodStart        *CustomTime            `json:"period_start"`
-	PeriodEnd          *CustomTime            `json:"period_end"`
-	LineItems          []InvoiceLineItem      `json:"line_items"`
-	PDFURL             string                 `json:"pdf_url,omitempty"`
-	Metadata           map[string]interface{} `json:"metadata,omitempty"`
+	ID             string                 `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	InvoiceNumber  string                 `json:"invoice_number"`
+	Status         string                 `json:"status"`
+	Amount         float64                `json:"amount"`
+	Currency       string                 `json:"currency"`
+	DueDate        *CustomTime            `json:"due_date"`
+	PaidAt         *CustomTime            `json:"paid_at,omitempty"`
+	PeriodStart    *CustomTime            `json:"period_start"`
+	PeriodEnd      *CustomTime            `json:"period_end"`
+	LineItems      []InvoiceLineItem      `json:"line_items"`
+	PDFURL         string                 `json:"pdf_url,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // PaymentMethod represents a payment method
 type PaymentMethod struct {
-	ID               string      `json:"id"`
-	Type             string      `json:"type"` // card, bank_account
-	Last4            string      `json:"last4"`
-	Brand            string      `json:"brand,omitempty"` // For cards
-	ExpiryMonth      int         `json:"expiry_month,omitempty"`
-	ExpiryYear       int         `json:"expiry_year,omitempty"`
-	BankName         string      `json:"bank_name,omitempty"` // For bank accounts
-	IsDefault        bool        `json:"is_default"`
-	CreatedAt        *CustomTime `json:"created_at"`
+	ID          string      `json:"id"`
+	Type        string      `json:"type"` // card, bank_account
+	Last4       string      `json:"last4"`
+	Brand       string      `json:"brand,omitempty"` // For cards
+	ExpiryMonth int         `json:"expiry_month,omitempty"`
+	ExpiryYear  int         `json:"expiry_year,omitempty"`
+	BankName    string      `json:"bank_name,omitempty"` // For bank accounts
+	IsDefault   bool        `json:"is_default"`
+	CreatedAt   *CustomTime `json:"created_at"`
 }
 
 // BillingAddress represents a billing address
 type BillingAddress struct {
-	Line1       string `json:"line1"`
-	Line2       string `json:"line2,omitempty"`
-	City        string `json:"city"`
-	State       string `json:"state"`
-	PostalCode  string `json:"postal_code"`
-	Country     string `json:"country"`
+	Line1      string `json:"line1"`
+	Line2      string `json:"line2,omitempty"`
+	City       string `json:"city"`
+	State      string `json:"state"`
+	PostalCode string `json:"postal_code"`
+	Country    string `json:"country"`
 }
 
 // TaxInfo represents tax information
 type TaxInfo struct {
-	TaxID            string `json:"tax_id"`
-	TaxType          string `json:"tax_type"` // vat, gst, etc.
-	CompanyName      string `json:"company_name"`
-	TaxExempt        bool   `json:"tax_exempt"`
-	TaxExemptReason  string `json:"tax_exempt_reason,omitempty"`
+	TaxID           string `json:"tax_id"`
+	TaxType         string `json:"tax_type"` // vat, gst, etc.
+	CompanyName     string `json:"company_name"`
+	TaxExempt       bool   `json:"tax_exempt"`
+	TaxExemptReason string `json:"tax_exempt_reason,omitempty"`
 }
 
 // SubscriptionAddOn represents an add-on to a subscription

@@ -140,12 +140,12 @@ func TestClient_Do(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		
+
 		// Debug: print the response body
 		t.Logf("Response body: %s", resp.Body)
-		
+
 		assert.Equal(t, "success", result.Status)
-		
+
 		// Check data field
 		if data, ok := result.Data.(map[string]interface{}); ok {
 			assert.Equal(t, "ok", data["message"])

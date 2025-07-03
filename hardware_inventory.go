@@ -204,24 +204,24 @@ func (s *HardwareInventoryService) GetLatestHardwareInventory(ctx context.Contex
 
 // HardwareChange represents a hardware change event
 type HardwareChange struct {
-	ID          uint        `json:"id"`
-	ServerUUID  string      `json:"server_uuid"`
-	ComponentType string    `json:"component_type"`
-	ChangeType  string      `json:"change_type"` // added, removed, modified
-	OldValue    interface{} `json:"old_value,omitempty"`
-	NewValue    interface{} `json:"new_value,omitempty"`
-	ChangedAt   *CustomTime `json:"changed_at"`
-	Details     string      `json:"details,omitempty"`
+	ID            uint        `json:"id"`
+	ServerUUID    string      `json:"server_uuid"`
+	ComponentType string      `json:"component_type"`
+	ChangeType    string      `json:"change_type"` // added, removed, modified
+	OldValue      interface{} `json:"old_value,omitempty"`
+	NewValue      interface{} `json:"new_value,omitempty"`
+	ChangedAt     *CustomTime `json:"changed_at"`
+	Details       string      `json:"details,omitempty"`
 }
 
 // HardwareSearch represents hardware search parameters
 type HardwareSearch struct {
-	Manufacturer string   `json:"manufacturer,omitempty"`
-	Model        string   `json:"model,omitempty"`
-	SerialNumber string   `json:"serial_number,omitempty"`
-	ComponentType string  `json:"component_type,omitempty"`
-	ServerUUIDs  []string `json:"server_uuids,omitempty"`
-	Tags         []string `json:"tags,omitempty"`
+	Manufacturer  string   `json:"manufacturer,omitempty"`
+	Model         string   `json:"model,omitempty"`
+	SerialNumber  string   `json:"serial_number,omitempty"`
+	ComponentType string   `json:"component_type,omitempty"`
+	ServerUUIDs   []string `json:"server_uuids,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
 }
 
 // ListHardwareHistory retrieves hardware inventory history for a server

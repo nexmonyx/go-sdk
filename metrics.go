@@ -160,7 +160,7 @@ type MetricsAggregation struct {
 	StartTime   string   `json:"start_time"`
 	EndTime     string   `json:"end_time"`
 	GroupBy     []string `json:"group_by"`
-	Function    string   `json:"function"` // avg, sum, min, max, count
+	Function    string   `json:"function"`           // avg, sum, min, max, count
 	Interval    string   `json:"interval,omitempty"` // 1m, 5m, 1h, 1d
 }
 
@@ -285,9 +285,9 @@ type HostInfo struct {
 
 // TimescaleCPUMetrics represents CPU metrics in TimescaleDB format
 type TimescaleCPUMetrics struct {
-	UsagePercent float64           `json:"usage_percent"`
-	LoadAverage  *LoadAverage      `json:"load_average,omitempty"`
-	PerCPU       []PerCPUMetrics   `json:"per_cpu,omitempty"`
+	UsagePercent float64         `json:"usage_percent"`
+	LoadAverage  *LoadAverage    `json:"load_average,omitempty"`
+	PerCPU       []PerCPUMetrics `json:"per_cpu,omitempty"`
 }
 
 // PerCPUMetrics represents per-CPU metrics
@@ -372,8 +372,8 @@ func ConvertLegacyToTimescaleMetrics(legacy *ComprehensiveMetricsRequest) *Times
 
 // ComprehensiveMetricsSubmission represents a comprehensive metrics submission
 type ComprehensiveMetricsSubmission struct {
-	Timestamp int64                       `json:"timestamp"`
-	Hostname  string                      `json:"hostname"`
+	Timestamp int64                        `json:"timestamp"`
+	Hostname  string                       `json:"hostname"`
 	Metrics   *ComprehensiveMetricsPayload `json:"metrics"`
 }
 
@@ -419,10 +419,10 @@ func (s *MetricsService) GetLatestMetrics(ctx context.Context, serverUUID string
 
 // TimescaleMetricsResponse represents a response containing TimescaleDB metrics
 type TimescaleMetricsResponse struct {
-	ServerUUID string                        `json:"server_uuid"`
-	Timestamp  string                        `json:"timestamp"`
+	ServerUUID string                         `json:"server_uuid"`
+	Timestamp  string                         `json:"timestamp"`
 	Metrics    *ComprehensiveMetricsTimescale `json:"metrics"`
-	Source     string                        `json:"source,omitempty"`
+	Source     string                         `json:"source,omitempty"`
 }
 
 // ComprehensiveMetricsTimescale represents comprehensive metrics in TimescaleDB format
@@ -458,7 +458,7 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 		"start": startTime,
 		"end":   endTime,
 	}
-	
+
 	if limit > 0 {
 		query["limit"] = fmt.Sprintf("%d", limit)
 	}
@@ -481,9 +481,9 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 
 // MetricsAggregator handles aggregation of metrics data
 type MetricsAggregator struct {
-	metrics   []*ComprehensiveMetricsTimescale
-	groupBy   string
-	function  string
+	metrics  []*ComprehensiveMetricsTimescale
+	groupBy  string
+	function string
 }
 
 // NewMetricsAggregator creates a new metrics aggregator
@@ -491,7 +491,7 @@ func NewMetricsAggregator(initialMetrics ...interface{}) *MetricsAggregator {
 	aggregator := &MetricsAggregator{
 		metrics: make([]*ComprehensiveMetricsTimescale, 0),
 	}
-	
+
 	// Handle different input types
 	for _, m := range initialMetrics {
 		switch v := m.(type) {
@@ -507,7 +507,7 @@ func NewMetricsAggregator(initialMetrics ...interface{}) *MetricsAggregator {
 			aggregator.metrics = append(aggregator.metrics, &v)
 		}
 	}
-	
+
 	return aggregator
 }
 
@@ -543,7 +543,7 @@ func (a *MetricsAggregator) AverageCPUUsage() float64 {
 	if len(a.metrics) == 0 {
 		return 0
 	}
-	
+
 	var total float64
 	var count int
 	for _, m := range a.metrics {
@@ -552,7 +552,7 @@ func (a *MetricsAggregator) AverageCPUUsage() float64 {
 			count++
 		}
 	}
-	
+
 	if count == 0 {
 		return 0
 	}
@@ -564,7 +564,7 @@ func (a *MetricsAggregator) AverageMemoryUsage() float64 {
 	if len(a.metrics) == 0 {
 		return 0
 	}
-	
+
 	var total float64
 	var count int
 	for _, m := range a.metrics {
@@ -573,7 +573,7 @@ func (a *MetricsAggregator) AverageMemoryUsage() float64 {
 			count++
 		}
 	}
-	
+
 	if count == 0 {
 		return 0
 	}
@@ -607,10 +607,10 @@ func (a *MetricsAggregator) TimeRange() (start, end time.Time) {
 	if len(a.metrics) == 0 {
 		return
 	}
-	
+
 	start = a.metrics[0].Timestamp
 	end = a.metrics[0].Timestamp
-	
+
 	for _, m := range a.metrics {
 		if m.Timestamp.Before(start) {
 			start = m.Timestamp
@@ -619,6 +619,6 @@ func (a *MetricsAggregator) TimeRange() (start, end time.Time) {
 			end = m.Timestamp
 		}
 	}
-	
+
 	return start, end
 }

@@ -45,22 +45,22 @@ type PaginationMeta struct {
 
 // ListOptions specifies options for listing resources
 type ListOptions struct {
-	Page         int               `url:"page,omitempty"`
-	Limit        int               `url:"limit,omitempty"`
-	PerPage      int               `url:"per_page,omitempty"`
-	Sort         string            `url:"sort,omitempty"`
-	Order        string            `url:"order,omitempty"`
-	Search       string            `url:"search,omitempty"`
-	Query        string            `url:"q,omitempty"`
-	Filters      map[string]string `url:"-"`
-	Fields       []string          `url:"fields,omitempty,comma"`
-	Expand       []string          `url:"expand,omitempty,comma"`
-	Include      []string          `url:"include,omitempty,comma"`
-	StartDate    string            `url:"start_date,omitempty"`
-	EndDate      string            `url:"end_date,omitempty"`
-	TimeRange    string            `url:"time_range,omitempty"`
-	GroupBy      string            `url:"group_by,omitempty"`
-	Aggregation  string            `url:"aggregation,omitempty"`
+	Page        int               `url:"page,omitempty"`
+	Limit       int               `url:"limit,omitempty"`
+	PerPage     int               `url:"per_page,omitempty"`
+	Sort        string            `url:"sort,omitempty"`
+	Order       string            `url:"order,omitempty"`
+	Search      string            `url:"search,omitempty"`
+	Query       string            `url:"q,omitempty"`
+	Filters     map[string]string `url:"-"`
+	Fields      []string          `url:"fields,omitempty,comma"`
+	Expand      []string          `url:"expand,omitempty,comma"`
+	Include     []string          `url:"include,omitempty,comma"`
+	StartDate   string            `url:"start_date,omitempty"`
+	EndDate     string            `url:"end_date,omitempty"`
+	TimeRange   string            `url:"time_range,omitempty"`
+	GroupBy     string            `url:"group_by,omitempty"`
+	Aggregation string            `url:"aggregation,omitempty"`
 }
 
 // ToQuery converts ListOptions to query parameters
@@ -179,13 +179,13 @@ type TimeRange struct {
 
 // BatchResponse represents a response from a batch operation
 type BatchResponse struct {
-	Status     string               `json:"status"`
-	Message    string               `json:"message"`
-	Successful []BatchItemResponse  `json:"successful,omitempty"`
-	Failed     []BatchItemResponse  `json:"failed,omitempty"`
-	Total      int                  `json:"total"`
-	Success    int                  `json:"success"`
-	Failures   int                  `json:"failures"`
+	Status     string              `json:"status"`
+	Message    string              `json:"message"`
+	Successful []BatchItemResponse `json:"successful,omitempty"`
+	Failed     []BatchItemResponse `json:"failed,omitempty"`
+	Total      int                 `json:"total"`
+	Success    int                 `json:"success"`
+	Failures   int                 `json:"failures"`
 }
 
 // BatchItemResponse represents an individual item response in a batch
@@ -199,13 +199,13 @@ type BatchItemResponse struct {
 
 // StatusResponse represents a status check response
 type StatusResponse struct {
-	Status      string                 `json:"status"`
-	Healthy     bool                   `json:"healthy"`
-	Version     string                 `json:"version,omitempty"`
-	Uptime      int64                  `json:"uptime,omitempty"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Services    map[string]bool        `json:"services,omitempty"`
-	Details     map[string]interface{} `json:"details,omitempty"`
+	Status    string                 `json:"status"`
+	Healthy   bool                   `json:"healthy"`
+	Version   string                 `json:"version,omitempty"`
+	Uptime    int64                  `json:"uptime,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+	Services  map[string]bool        `json:"services,omitempty"`
+	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
 // ErrorResponse represents an error response from the API

@@ -219,7 +219,7 @@ func userExample() {
 	if err != nil {
 		log.Printf("Failed to get services: %v", err)
 	} else {
-		fmt.Printf("Found %d services in the last 24 hours (page %d of %d)\n", 
+		fmt.Printf("Found %d services in the last 24 hours (page %d of %d)\n",
 			len(services), meta.Page, meta.TotalPages)
 	}
 
@@ -371,7 +371,7 @@ func advancedExample() {
 		fmt.Printf("  Total Services: %d\n", len(services))
 		fmt.Printf("  Healthy: %d\n", healthyCount)
 		fmt.Printf("  Failed: %d\n", failedCount)
-		
+
 		// Get stats separately
 		stats, err := client.Systemd.GetSystemStats(ctx, uuid)
 		if err == nil && stats != nil {

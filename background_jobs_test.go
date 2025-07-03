@@ -92,7 +92,7 @@ func TestBackgroundJobsService_ListJobs(t *testing.T) {
 				Priority: 3,
 			},
 		}
-		
+
 		response := map[string]interface{}{
 			"success": true,
 			"data": map[string]interface{}{
@@ -141,11 +141,11 @@ func TestBackgroundJobsService_GetJobByID(t *testing.T) {
 		response := map[string]interface{}{
 			"success": true,
 			"data": BackgroundJob{
-				ID:       123,
-				Type:     "report_generation",
-				Status:   "running",
-				Priority: 2,
-				Progress: 50,
+				ID:           123,
+				Type:         "report_generation",
+				Status:       "running",
+				Priority:     2,
+				Progress:     50,
 				ProgressText: "Generating report",
 			},
 		}

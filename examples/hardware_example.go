@@ -25,8 +25,8 @@ func DemoHardwareInventorySubmit() {
 
 	// Prepare hardware inventory data
 	inventory := &nexmonyx.HardwareInventoryRequest{
-		ServerUUID:      "your-server-uuid",
-		CollectedAt:     time.Now(),
+		ServerUUID:       "your-server-uuid",
+		CollectedAt:      time.Now(),
 		CollectionMethod: "dmidecode",
 		Hardware: nexmonyx.HardwareInventoryInfo{
 			System: &nexmonyx.SystemHardwareInfo{
@@ -51,26 +51,26 @@ func DemoHardwareInventorySubmit() {
 			// CPUs
 			CPUs: []nexmonyx.CPUInfo{
 				{
-					Manufacturer:  "Intel",
-					Model:         "Xeon Gold 6230",
-					Cores:         20,
-					Threads:       40,
-					BaseSpeedMHz:  2100,
-					MaxSpeedMHz:   3900,
-					CacheSizeKB:   28160, // 27.5MB
-					Architecture:  "x86_64",
-					Socket:        "Socket 0",
+					Manufacturer: "Intel",
+					Model:        "Xeon Gold 6230",
+					Cores:        20,
+					Threads:      40,
+					BaseSpeedMHz: 2100,
+					MaxSpeedMHz:  3900,
+					CacheSizeKB:  28160, // 27.5MB
+					Architecture: "x86_64",
+					Socket:       "Socket 0",
 				},
 				{
-					Manufacturer:  "Intel",
-					Model:         "Xeon Gold 6230",
-					Cores:         20,
-					Threads:       40,
-					BaseSpeedMHz:  2100,
-					MaxSpeedMHz:   3900,
-					CacheSizeKB:   28160,
-					Architecture:  "x86_64",
-					Socket:        "Socket 1",
+					Manufacturer: "Intel",
+					Model:        "Xeon Gold 6230",
+					Cores:        20,
+					Threads:      40,
+					BaseSpeedMHz: 2100,
+					MaxSpeedMHz:  3900,
+					CacheSizeKB:  28160,
+					Architecture: "x86_64",
+					Socket:       "Socket 1",
 				},
 			},
 

@@ -32,7 +32,7 @@ func TestSystemdService_Submit(t *testing.T) {
 
 		// Send response
 		response := map[string]interface{}{
-			"status": "success",
+			"status":  "success",
 			"message": "Services submitted successfully",
 		}
 
@@ -364,7 +364,6 @@ func TestSystemdService_GetSystemdSystemStats(t *testing.T) {
 	assert.Equal(t, 3, stats.FailedUnits)
 	assert.Len(t, stats.CriticalServices, 2)
 }
-
 
 func TestSystemdServiceInfo_HelperFunctions(t *testing.T) {
 	t.Run("IsHealthy", func(t *testing.T) {

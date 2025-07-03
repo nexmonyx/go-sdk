@@ -139,23 +139,23 @@ func (s *APIKeysService) Regenerate(ctx context.Context, id string) (*APIKey, er
 // APIKey represents an API key
 type APIKey struct {
 	GormModel
-	Name            string      `json:"name"`
-	Description     string      `json:"description,omitempty"`
-	Key             string      `json:"key,omitempty"` // Only returned on creation
-	Secret          string      `json:"secret,omitempty"` // Only returned on creation
-	KeyPrefix       string      `json:"key_prefix"` // First few characters of the key
-	OrganizationID  uint        `json:"organization_id"`
-	UserID          uint        `json:"user_id"`
-	User            *User       `json:"user,omitempty"`
-	Scopes          []string    `json:"scopes"`
-	Status          string      `json:"status"` // active, revoked, expired
-	ExpiresAt       *CustomTime `json:"expires_at,omitempty"`
-	LastUsedAt      *CustomTime `json:"last_used_at,omitempty"`
-	LastUsedIP      string      `json:"last_used_ip,omitempty"`
-	UsageCount      int         `json:"usage_count"`
-	RateLimitPerHour int        `json:"rate_limit_per_hour,omitempty"`
-	AllowedIPs      []string    `json:"allowed_ips,omitempty"`
-	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+	Name             string                 `json:"name"`
+	Description      string                 `json:"description,omitempty"`
+	Key              string                 `json:"key,omitempty"`    // Only returned on creation
+	Secret           string                 `json:"secret,omitempty"` // Only returned on creation
+	KeyPrefix        string                 `json:"key_prefix"`       // First few characters of the key
+	OrganizationID   uint                   `json:"organization_id"`
+	UserID           uint                   `json:"user_id"`
+	User             *User                  `json:"user,omitempty"`
+	Scopes           []string               `json:"scopes"`
+	Status           string                 `json:"status"` // active, revoked, expired
+	ExpiresAt        *CustomTime            `json:"expires_at,omitempty"`
+	LastUsedAt       *CustomTime            `json:"last_used_at,omitempty"`
+	LastUsedIP       string                 `json:"last_used_ip,omitempty"`
+	UsageCount       int                    `json:"usage_count"`
+	RateLimitPerHour int                    `json:"rate_limit_per_hour,omitempty"`
+	AllowedIPs       []string               `json:"allowed_ips,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // IsActive returns true if the API key is active

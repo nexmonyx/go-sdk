@@ -163,12 +163,12 @@ func (s *IPMIService) ListIPMIHistory(ctx context.Context, serverUUID string, op
 
 // IPMISubmitRequest represents a request to submit IPMI data
 type IPMISubmitRequest struct {
-	ServerUUID  string        `json:"server_uuid"`
-	CollectedAt time.Time     `json:"collected_at"`
-	IPMI        IPMIInfo      `json:"ipmi"`
-	IPMIData    *IPMIData     `json:"ipmi_data,omitempty"`
-	Sensors     []IPMISensor  `json:"sensors,omitempty"`
-	Events      []IPMIEvent   `json:"events,omitempty"`
+	ServerUUID  string       `json:"server_uuid"`
+	CollectedAt time.Time    `json:"collected_at"`
+	IPMI        IPMIInfo     `json:"ipmi"`
+	IPMIData    *IPMIData    `json:"ipmi_data,omitempty"`
+	Sensors     []IPMISensor `json:"sensors,omitempty"`
+	Events      []IPMIEvent  `json:"events,omitempty"`
 }
 
 // IPMISubmitResponse represents the response from submitting IPMI data
@@ -184,14 +184,14 @@ type IPMISubmitResponse struct {
 
 // IPMIData represents IPMI data for a server
 type IPMIData struct {
-	BMCInfo        *BMCInfo               `json:"bmc_info,omitempty"`
-	ChassisStatus  *ChassisStatus         `json:"chassis_status,omitempty"`
-	PowerStatus    *PowerStatus           `json:"power_status,omitempty"`
-	SystemHealth   string                 `json:"system_health"`
-	FanStatus      []FanStatus            `json:"fan_status,omitempty"`
-	Temperatures   []TemperatureSensor    `json:"temperatures,omitempty"`
-	PowerSupplies  []PowerSupplyStatus    `json:"power_supplies,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	BMCInfo       *BMCInfo               `json:"bmc_info,omitempty"`
+	ChassisStatus *ChassisStatus         `json:"chassis_status,omitempty"`
+	PowerStatus   *PowerStatus           `json:"power_status,omitempty"`
+	SystemHealth  string                 `json:"system_health"`
+	FanStatus     []FanStatus            `json:"fan_status,omitempty"`
+	Temperatures  []TemperatureSensor    `json:"temperatures,omitempty"`
+	PowerSupplies []PowerSupplyStatus    `json:"power_supplies,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // BMCInfo represents BMC (Baseboard Management Controller) information
@@ -209,11 +209,11 @@ type BMCInfo struct {
 
 // ChassisStatus represents chassis status
 type ChassisStatus struct {
-	PowerState         string `json:"power_state"`
-	ChassisIntrusion   bool   `json:"chassis_intrusion"`
-	FrontPanelLockout  bool   `json:"front_panel_lockout"`
-	DriveFault         bool   `json:"drive_fault"`
-	CoolingFault       bool   `json:"cooling_fault"`
+	PowerState        string `json:"power_state"`
+	ChassisIntrusion  bool   `json:"chassis_intrusion"`
+	FrontPanelLockout bool   `json:"front_panel_lockout"`
+	DriveFault        bool   `json:"drive_fault"`
+	CoolingFault      bool   `json:"cooling_fault"`
 }
 
 // PowerStatus represents power status
@@ -225,19 +225,19 @@ type PowerStatus struct {
 
 // FanStatus represents fan status
 type FanStatus struct {
-	Name     string  `json:"name"`
-	RPM      int     `json:"rpm"`
-	Status   string  `json:"status"`
-	Percent  float64 `json:"percent"`
+	Name    string  `json:"name"`
+	RPM     int     `json:"rpm"`
+	Status  string  `json:"status"`
+	Percent float64 `json:"percent"`
 }
 
 // TemperatureSensor represents a temperature sensor
 type TemperatureSensor struct {
-	Name        string  `json:"name"`
-	Reading     float64 `json:"reading"`     // Celsius
-	Status      string  `json:"status"`
-	Threshold   float64 `json:"threshold"`   // Celsius
-	Critical    float64 `json:"critical"`    // Celsius
+	Name      string  `json:"name"`
+	Reading   float64 `json:"reading"` // Celsius
+	Status    string  `json:"status"`
+	Threshold float64 `json:"threshold"` // Celsius
+	Critical  float64 `json:"critical"`  // Celsius
 }
 
 // PowerSupplyStatus represents power supply status
@@ -265,35 +265,35 @@ type IPMISensor struct {
 
 // IPMIEvent represents an IPMI event
 type IPMIEvent struct {
-	ID          string      `json:"id"`
-	Timestamp   time.Time   `json:"timestamp"`
-	SensorName  string      `json:"sensor_name"`
-	SensorType  string      `json:"sensor_type"`
-	EventType   string      `json:"event_type"`
-	Severity    string      `json:"severity"`
-	Description string      `json:"description"`
-	RawData     string      `json:"raw_data,omitempty"`
+	ID          string    `json:"id"`
+	Timestamp   time.Time `json:"timestamp"`
+	SensorName  string    `json:"sensor_name"`
+	SensorType  string    `json:"sensor_type"`
+	EventType   string    `json:"event_type"`
+	Severity    string    `json:"severity"`
+	Description string    `json:"description"`
+	RawData     string    `json:"raw_data,omitempty"`
 }
 
 // IPMICommandResult represents the result of an IPMI command
 type IPMICommandResult struct {
-	Command    string `json:"command"`
-	Output     string `json:"output"`
-	Error      string `json:"error,omitempty"`
-	ExitCode   int    `json:"exit_code"`
+	Command    string    `json:"command"`
+	Output     string    `json:"output"`
+	Error      string    `json:"error,omitempty"`
+	ExitCode   int       `json:"exit_code"`
 	ExecutedAt time.Time `json:"executed_at"`
 }
 
 // IPMIInfo represents IPMI information
 type IPMIInfo struct {
-	CollectionMethod string                 `json:"collection_method"`
-	IPMIVersion      string                 `json:"ipmi_version"`
-	BMC              *BMCInfo               `json:"bmc,omitempty"`
-	Sensors          []IPMISensorInfo       `json:"sensors,omitempty"`
-	PowerInfo        *IPMIPowerInfo         `json:"power_info,omitempty"`
-	Fans             []IPMIFanInfo          `json:"fans,omitempty"`
-	Temperatures     []IPMITemperatureInfo  `json:"temperatures,omitempty"`
-	SystemHealth     *IPMISystemHealth      `json:"system_health,omitempty"`
+	CollectionMethod string                `json:"collection_method"`
+	IPMIVersion      string                `json:"ipmi_version"`
+	BMC              *BMCInfo              `json:"bmc,omitempty"`
+	Sensors          []IPMISensorInfo      `json:"sensors,omitempty"`
+	PowerInfo        *IPMIPowerInfo        `json:"power_info,omitempty"`
+	Fans             []IPMIFanInfo         `json:"fans,omitempty"`
+	Temperatures     []IPMITemperatureInfo `json:"temperatures,omitempty"`
+	SystemHealth     *IPMISystemHealth     `json:"system_health,omitempty"`
 }
 
 // IPMISensorInfo represents IPMI sensor information

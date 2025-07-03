@@ -1,8 +1,6 @@
 module github.com/nexmonyx/go-sdk
 
-go 1.23.0
-
-toolchain go1.24.2
+go 1.24
 
 require (
 	github.com/go-resty/resty/v2 v2.11.0
