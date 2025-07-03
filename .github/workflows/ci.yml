@@ -1,0 +1,121 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'master'
+  pull_request:
+    branches:
+      - main
+      - master
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [1.24]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install static analysis tools
+        run: |
+          go install golang.org/x/lint/golint@latest
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Go static analysis
+        run: |
+          golint $(go list ./... | grep -v /vendor/) || true
+          staticcheck $(go list ./... | grep -v /vendor/) || true
+          go vet ./... || true
+
+      - name: Dependency management
+        run: |
+          go mod tidy
+          go mod verify
+
+      - name: Security scanning
+        run: |
+          gosec $(go list ./... | grep -v /vendor/)
+
+      - name: Run unit tests
+        run: |
+          go test -v -race -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
+
+      - name: Build SDK
+        run: |
+          go build -v ./...
+
+      - name: Run integration tests (if credentials available)
+        if: env.NEXMONYX_AUTH_TOKEN != ''
+        env:
+          NEXMONYX_INTEGRATION_TESTS: "true"
+          NEXMONYX_API_URL: ${{ secrets.NEXMONYX_API_URL || 'https://api-dev.nexmonyx.com' }}
+          NEXMONYX_AUTH_TOKEN: ${{ secrets.NEXMONYX_AUTH_TOKEN }}
+          NEXMONYX_DEBUG: "false"
+        run: |
+          go test -v -tags=integration -timeout 30m ./...
+
+      - name: Upload test coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-coverage
+          path: coverage.out
+          retention-days: 7
+
+      - name: Validate documentation
+        run: |
+          # Check that README.md exists and has content
+          if [ ! -f README.md ]; then
+            echo "ERROR: README.md not found"
+            exit 1
+          fi
+          if [ ! -s README.md ]; then
+            echo "ERROR: README.md is empty"
+            exit 1
+          fi
+          echo "Documentation validation passed"
+
+  release:
+    if: github.event_name == 'release'
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.24
+
+      - name: Create release assets
+        run: |
+          # Create a simple release validation
+          go mod tidy
+          go build -v ./...
+          echo "Release validation complete for ${{ github.event.release.tag_name }}"
