@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.0.6"
+	Version = "1.0.7"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -353,14 +353,22 @@ func (c *Client) HealthCheck(ctx context.Context) error {
 		return err
 	}
 	
-	if !health.Healthy {
-		if health.Status != "" {
-			return fmt.Errorf("API is unhealthy: %s", health.Status)
-		}
-		return fmt.Errorf("API is unhealthy")
+	// If the healthy boolean is explicitly true, consider it healthy
+	if health.Healthy {
+		return nil
 	}
 	
-	return nil
+	// If the healthy field is false/missing, check if status indicates health
+	// Some APIs may return status="healthy" but omit the healthy boolean field
+	if health.Status == "healthy" || health.Status == "operational" || health.Status == "ok" {
+		return nil
+	}
+	
+	// API is definitively unhealthy
+	if health.Status != "" {
+		return fmt.Errorf("API is unhealthy: %s", health.Status)
+	}
+	return fmt.Errorf("API is unhealthy")
 }
 
 // Request represents an API request
