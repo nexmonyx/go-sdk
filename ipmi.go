@@ -8,7 +8,8 @@ import (
 
 // Submit submits IPMI data for a server
 func (s *IPMIService) Submit(ctx context.Context, request *IPMISubmitRequest) (*IPMISubmitResponse, error) {
-	var resp map[string]IPMISubmitResponse
+	var resp StandardResponse
+	resp.Data = &IPMISubmitResponse{}
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
@@ -20,8 +21,8 @@ func (s *IPMIService) Submit(ctx context.Context, request *IPMISubmitRequest) (*
 		return nil, err
 	}
 
-	if data, ok := resp["data"]; ok {
-		return &data, nil
+	if data, ok := resp.Data.(*IPMISubmitResponse); ok {
+		return data, nil
 	}
 	return nil, fmt.Errorf("unexpected response format")
 }

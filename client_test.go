@@ -110,6 +110,7 @@ func TestClient_Do(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/success":
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"status": "success", "data": {"message": "ok"}}`))
 		case "/error":
@@ -335,7 +336,7 @@ func TestStandardResponse_GetError(t *testing.T) {
 				assert.Error(t, err)
 				apiErr, ok := err.(*APIError)
 				assert.True(t, ok)
-				assert.Equal(t, "test_error", apiErr.ErrorCode)
+				assert.Equal(t, "test_error", apiErr.ErrorType)
 				assert.Equal(t, "Test error message", apiErr.Message)
 			} else {
 				assert.NoError(t, err)

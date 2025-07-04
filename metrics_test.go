@@ -104,8 +104,8 @@ func TestSubmitComprehensiveToTimescale(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/v2/metrics/comprehensive", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "test-uuid", r.Header.Get("Server-UUID"))
-		assert.Equal(t, "test-secret", r.Header.Get("Server-Secret"))
+		assert.Equal(t, "test-uuid", r.Header.Get("X-Server-UUID"))
+		assert.Equal(t, "test-secret", r.Header.Get("X-Server-Secret"))
 
 		var body ComprehensiveMetricsSubmission
 		err := json.NewDecoder(r.Body).Decode(&body)
@@ -174,6 +174,7 @@ func TestGetLatestMetrics(t *testing.T) {
 			Data:   metricsData,
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
 	}))

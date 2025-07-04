@@ -16,16 +16,16 @@ func TestIPMIService_Submit(t *testing.T) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST request, got %s", r.Method)
 		}
-		if r.URL.Path != "/v2/hardware/ipmi" {
-			t.Errorf("Expected path /v2/hardware/ipmi, got %s", r.URL.Path)
+		if r.URL.Path != "/v2/ipmi/data" {
+			t.Errorf("Expected path /v2/ipmi/data, got %s", r.URL.Path)
 		}
 
 		// Verify headers
-		if r.Header.Get("Server-UUID") == "" {
-			t.Error("Missing Server-UUID header")
+		if r.Header.Get("X-Server-UUID") == "" {
+			t.Error("Missing X-Server-UUID header")
 		}
-		if r.Header.Get("Server-Secret") == "" {
-			t.Error("Missing Server-Secret header")
+		if r.Header.Get("X-Server-Secret") == "" {
+			t.Error("Missing X-Server-Secret header")
 		}
 
 		// Parse request body
@@ -151,7 +151,7 @@ func TestIPMIService_GetIPMI(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-		expectedPath := "/v2/servers/test-server-uuid/ipmi"
+		expectedPath := "/v2/ipmi/test-server-uuid"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -208,7 +208,7 @@ func TestIPMIService_GetLatestIPMI(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-		expectedPath := "/v2/servers/test-server-uuid/ipmi/latest"
+		expectedPath := "/v2/ipmi/test-server-uuid/latest"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}
@@ -267,7 +267,7 @@ func TestIPMIService_ListIPMIHistory(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET request, got %s", r.Method)
 		}
-		expectedPath := "/v2/servers/test-server-uuid/ipmi/history"
+		expectedPath := "/v2/ipmi/test-server-uuid/history"
 		if r.URL.Path != expectedPath {
 			t.Errorf("Expected path %s, got %s", expectedPath, r.URL.Path)
 		}

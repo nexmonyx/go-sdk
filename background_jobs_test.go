@@ -95,8 +95,8 @@ func TestBackgroundJobsService_ListJobs(t *testing.T) {
 
 		response := map[string]interface{}{
 			"success": true,
-			"data": map[string]interface{}{
-				"jobs":        jobs,
+			"data": jobs,
+			"meta": map[string]interface{}{
 				"total":       2,
 				"page":        1,
 				"limit":       10,
@@ -232,7 +232,7 @@ func TestBackgroundJobsService_ConvenienceMethods(t *testing.T) {
 			assert.Equal(t, "uptime", req.Payload["report_type"])
 		case 2: // Alert digest
 			assert.Equal(t, "alert_digest", req.Type)
-			assert.Equal(t, "daily", req.Payload["digest_type"])
+			assert.Equal(t, "daily", req.Payload["period"])
 		}
 
 		callCount++
