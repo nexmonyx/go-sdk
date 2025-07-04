@@ -227,3 +227,27 @@ type AlertTestResult struct {
 	Details   map[string]interface{} `json:"details,omitempty"`
 	Errors    []string               `json:"errors,omitempty"`
 }
+
+// ListChannels retrieves all notification channels for an organization
+func (s *AlertsService) ListChannels(ctx context.Context, opts *ListOptions) ([]*AlertChannel, *PaginationMeta, error) {
+	var resp PaginatedResponse
+	var channels []*AlertChannel
+	resp.Data = &channels
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/alerts/channels",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return channels, resp.Meta, nil
+}

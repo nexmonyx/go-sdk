@@ -622,3 +622,31 @@ func (a *MetricsAggregator) TimeRange() (start, end time.Time) {
 
 	return start, end
 }
+
+// GetServerMetrics retrieves specific metrics for a server within a time range
+func (s *MetricsService) GetServerMetrics(ctx context.Context, serverUUID string, metricName string, timeRange *TimeRange) ([]interface{}, error) {
+	var resp StandardResponse
+	var metrics []interface{}
+	resp.Data = &metrics
+
+	query := map[string]string{
+		"metric": metricName,
+	}
+
+	if timeRange != nil {
+		query["start"] = timeRange.Start
+		query["end"] = timeRange.End
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/metrics/servers/%s", serverUUID),
+		Query:  query,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return metrics, nil
+}

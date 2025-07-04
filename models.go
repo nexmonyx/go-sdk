@@ -230,6 +230,62 @@ type AlertAction struct {
 	OnResolve bool                   `json:"on_resolve"`
 }
 
+// AlertChannel represents a notification channel configuration
+type AlertChannel struct {
+	ID             uint                   `json:"id"`
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"` // email, slack, pagerduty, webhook
+	Configuration  map[string]interface{} `json:"configuration"`
+	Enabled        bool                   `json:"enabled"`
+	OrganizationID uint                   `json:"organization_id"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// AlertRule represents a more detailed alert rule configuration
+type AlertRule struct {
+	ID             uint                   `json:"id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description"`
+	OrganizationID uint                   `json:"organization_id"`
+	
+	// Scope configuration
+	ScopeType      string                 `json:"scope_type"` // organization, server, tag, group
+	ScopeID        *uint                  `json:"scope_id,omitempty"`
+	ScopeValue     string                 `json:"scope_value,omitempty"`
+	
+	// Metric configuration
+	MetricName     string                 `json:"metric_name"`
+	Aggregation    string                 `json:"aggregation"` // avg, sum, min, max, count
+	
+	// Conditions
+	Conditions     AlertConditions        `json:"conditions"`
+	
+	// Notification settings
+	ChannelIDs     []uint                 `json:"channel_ids"`
+	
+	// State
+	Enabled        bool                   `json:"enabled"`
+	LastEvaluated  *time.Time             `json:"last_evaluated,omitempty"`
+	
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// AlertConditions represents the conditions for triggering an alert
+type AlertConditions struct {
+	TimeWindow int                `json:"time_window"` // in minutes
+	Thresholds []AlertThreshold   `json:"thresholds"`
+}
+
+// AlertThreshold represents a threshold configuration
+type AlertThreshold struct {
+	Value    float64 `json:"value"`
+	Operator string  `json:"operator"` // >, >=, <, <=, ==, !=
+	Duration int     `json:"duration"` // in minutes (how long condition must be true)
+	Severity string  `json:"severity"` // critical, warning, info
+}
+
 // Metric represents a metric data point
 type Metric struct {
 	ServerID   uint                   `json:"server_id"`
