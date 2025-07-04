@@ -343,3 +343,145 @@ func TestStandardResponse_GetError(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_HealthCheck(t *testing.T) {
+	tests := []struct {
+		name       string
+		serverFunc func(w http.ResponseWriter, r *http.Request)
+		wantErr    bool
+		errMsg     string
+	}{
+		{
+			name: "healthy API",
+			serverFunc: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/v1/healthz", r.URL.Path)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{
+					"status": "success",
+					"data": {
+						"status": "operational",
+						"healthy": true,
+						"version": "1.0.0",
+						"timestamp": "2023-01-01T12:00:00Z"
+					}
+				}`))
+			},
+			wantErr: false,
+		},
+		{
+			name: "unhealthy API",
+			serverFunc: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/v1/healthz", r.URL.Path)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{
+					"status": "success",
+					"data": {
+						"status": "degraded",
+						"healthy": false,
+						"version": "1.0.0",
+						"timestamp": "2023-01-01T12:00:00Z"
+					}
+				}`))
+			},
+			wantErr: true,
+			errMsg:  "API is unhealthy: degraded",
+		},
+		{
+			name: "API error",
+			serverFunc: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/v1/healthz", r.URL.Path)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(`{
+					"status": "error",
+					"error": "internal_error",
+					"message": "Internal server error"
+				}`))
+			},
+			wantErr: true,
+		},
+		{
+			name: "network error",
+			serverFunc: func(w http.ResponseWriter, r *http.Request) {
+				// Simulate network error by closing connection
+				hj, ok := w.(http.Hijacker)
+				if ok {
+					conn, _, _ := hj.Hijack()
+					conn.Close()
+				}
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test server
+			server := httptest.NewServer(http.HandlerFunc(tt.serverFunc))
+			defer server.Close()
+
+			// Create client
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth: AuthConfig{
+					Token: "test-token",
+				},
+			})
+			require.NoError(t, err)
+
+			// Test health check
+			ctx := context.Background()
+			err = client.HealthCheck(ctx)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestClient_HealthCheck_Context(t *testing.T) {
+	// Create a test server that delays response
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{
+			"status": "success",
+			"data": {
+				"status": "operational",
+				"healthy": true,
+				"version": "1.0.0",
+				"timestamp": "2023-01-01T12:00:00Z"
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+	})
+	require.NoError(t, err)
+
+	// Test with cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err = client.HealthCheck(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled")
+
+	// Test with timeout context
+	ctx, cancel = context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	err = client.HealthCheck(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context deadline exceeded")
+}

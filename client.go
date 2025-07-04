@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.0.2"
+	Version = "1.0.5"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -341,6 +341,26 @@ func (c *Client) handleError(resp *resty.Response) error {
 			Message:   string(resp.Body()),
 		}
 	}
+}
+
+// HealthCheck performs a lightweight health check on the API
+// This is a convenience method that calls Health.GetHealth() and returns only the error.
+// It's designed for use in readiness probes and health checks where you only need to know
+// if the API is reachable and healthy.
+func (c *Client) HealthCheck(ctx context.Context) error {
+	health, err := c.Health.GetHealth(ctx)
+	if err != nil {
+		return err
+	}
+	
+	if !health.Healthy {
+		if health.Status != "" {
+			return fmt.Errorf("API is unhealthy: %s", health.Status)
+		}
+		return fmt.Errorf("API is unhealthy")
+	}
+	
+	return nil
 }
 
 // Request represents an API request
