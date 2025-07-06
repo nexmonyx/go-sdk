@@ -280,8 +280,13 @@ type TimescaleSystemMetrics struct {
 
 // HostInfo represents host information
 type HostInfo struct {
-	Hostname string `json:"hostname"`
-	OS       string `json:"os"`
+	Hostname       string `json:"hostname"`
+	OS             string `json:"os"`
+	Uptime         int64  `json:"uptime"`
+	BootTime       int64  `json:"boot_time"`
+	Procs          int    `json:"procs"`
+	Platform       string `json:"platform"`
+	PlatformFamily string `json:"platform_family"`
 }
 
 // TimescaleCPUMetrics represents CPU metrics in TimescaleDB format
@@ -384,8 +389,13 @@ func ConvertLegacyToTimescaleMetrics(legacy *ComprehensiveMetricsRequest) *Times
 	if legacy.SystemInfo != nil {
 		metrics.Metrics.System = &TimescaleSystemMetrics{
 			Host: &HostInfo{
-				Hostname: legacy.SystemInfo.Hostname,
-				OS:       legacy.SystemInfo.OS,
+				Hostname:       legacy.SystemInfo.Hostname,
+				OS:             legacy.SystemInfo.OS,
+				Uptime:         legacy.SystemInfo.Uptime,
+				BootTime:       legacy.SystemInfo.BootTime,
+				Procs:          legacy.SystemInfo.Processes,
+				Platform:       legacy.SystemInfo.Platform,
+				PlatformFamily: legacy.SystemInfo.PlatformFamily,
 			},
 		}
 	}
