@@ -33,7 +33,7 @@ func TestProvidersService_List(t *testing.T) {
 		}
 
 		// Send response
-		response := ProviderListResponse{
+		providerResp := ProviderListResponse{
 			Providers: []Provider{
 				{
 					ID:           "provider-1",
@@ -54,6 +54,17 @@ func TestProvidersService_List(t *testing.T) {
 			Page:       1,
 			PageSize:   20,
 			TotalPages: 1,
+		}
+
+		response := PaginatedResponse{
+			Status: "success",
+			Data:   providerResp,
+			Meta: &PaginationMeta{
+				Page:       1,
+				Limit:      20,
+				TotalItems: 2,
+				TotalPages: 1,
+			},
 		}
 
 		w.Header().Set("Content-Type", "application/json")

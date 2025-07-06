@@ -17,8 +17,8 @@ func TestSystemdService_Submit(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v2/hardware/systemd/services", r.URL.Path)
-		assert.Equal(t, "test-server-uuid", r.Header.Get("Server-UUID"))
-		assert.Equal(t, "test-server-secret", r.Header.Get("Server-Secret"))
+		assert.Equal(t, "test-server-uuid", r.Header.Get("X-Server-UUID"))
+		assert.Equal(t, "test-server-secret", r.Header.Get("X-Server-Secret"))
 
 		// Parse request body
 		var req SystemdServiceRequest

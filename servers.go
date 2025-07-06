@@ -279,6 +279,15 @@ func (s *ServersService) GetSystemInfo(ctx context.Context, id string) (*SystemI
 
 // RegisterWithKey registers a new server with a registration key
 func (s *ServersService) RegisterWithKey(ctx context.Context, registrationKey string, req *ServerCreateRequest) (*Server, error) {
+	resp, err := s.RegisterWithKeyFull(ctx, registrationKey, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Server, nil
+}
+
+// RegisterWithKeyFull registers a new server with a registration key and returns the full response
+func (s *ServersService) RegisterWithKeyFull(ctx context.Context, registrationKey string, req *ServerCreateRequest) (*ServerRegistrationResponse, error) {
 	var resp StandardResponse
 	resp.Data = &ServerRegistrationResponse{}
 
@@ -296,7 +305,7 @@ func (s *ServersService) RegisterWithKey(ctx context.Context, registrationKey st
 	}
 
 	if regResp, ok := resp.Data.(*ServerRegistrationResponse); ok {
-		return regResp.Server, nil
+		return regResp, nil
 	}
 	return nil, fmt.Errorf("unexpected response type")
 }

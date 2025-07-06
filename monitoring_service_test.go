@@ -15,8 +15,8 @@ func TestMonitoringService_TestProbe(t *testing.T) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST method, got %s", r.Method)
 		}
-		if !strings.Contains(r.URL.Path, "/v2/probes/test-uuid/test") {
-			t.Errorf("Expected /v2/probes/test-uuid/test, got %s", r.URL.Path)
+		if !strings.Contains(r.URL.Path, "/v1/monitoring/probes/test-uuid/test") {
+			t.Errorf("Expected /v1/monitoring/probes/test-uuid/test, got %s", r.URL.Path)
 		}
 
 		result := ProbeTestResult{
@@ -67,8 +67,8 @@ func TestMonitoringService_ListAgents(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET method, got %s", r.Method)
 		}
-		if !strings.Contains(r.URL.Path, "/v2/monitoring/agents") {
-			t.Errorf("Expected /v2/monitoring/agents, got %s", r.URL.Path)
+		if !strings.Contains(r.URL.Path, "/v1/monitoring/agents") {
+			t.Errorf("Expected /v1/monitoring/agents, got %s", r.URL.Path)
 		}
 
 		// Check query parameters
@@ -158,8 +158,8 @@ func TestMonitoringService_RegisterAgent(t *testing.T) {
 		if r.Method != "POST" {
 			t.Errorf("Expected POST method, got %s", r.Method)
 		}
-		if !strings.Contains(r.URL.Path, "/v2/monitoring/agents") {
-			t.Errorf("Expected /v2/monitoring/agents, got %s", r.URL.Path)
+		if !strings.Contains(r.URL.Path, "/v1/monitoring/agents") {
+			t.Errorf("Expected /v1/monitoring/agents, got %s", r.URL.Path)
 		}
 
 		var req AgentRegistration
@@ -306,8 +306,8 @@ func TestMonitoringService_ListProbeResults(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET method, got %s", r.Method)
 		}
-		if !strings.Contains(r.URL.Path, "/v2/probe-results") {
-			t.Errorf("Expected /v2/probe-results, got %s", r.URL.Path)
+		if !strings.Contains(r.URL.Path, "/v1/monitoring/probe-results") {
+			t.Errorf("Expected /v1/monitoring/probe-results, got %s", r.URL.Path)
 		}
 
 		// Check query parameters
@@ -393,8 +393,8 @@ func TestMonitoringService_GetProbeMetrics(t *testing.T) {
 		if r.Method != "GET" {
 			t.Errorf("Expected GET method, got %s", r.Method)
 		}
-		if !strings.Contains(r.URL.Path, "/v2/probes/test-uuid/metrics") {
-			t.Errorf("Expected /v2/probes/test-uuid/metrics, got %s", r.URL.Path)
+		if !strings.Contains(r.URL.Path, "/v1/monitoring/probes/test-uuid/metrics") {
+			t.Errorf("Expected /v1/monitoring/probes/test-uuid/metrics, got %s", r.URL.Path)
 		}
 
 		metrics := ProbeMetrics{

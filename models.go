@@ -204,7 +204,9 @@ type ServerCreateRequest struct {
 
 // ServerRegistrationResponse represents the response from server registration
 type ServerRegistrationResponse struct {
-	Server *Server `json:"server"`
+	Server       *Server `json:"server"`
+	ServerUUID   string  `json:"server_uuid"`
+	ServerSecret string  `json:"server_secret"`
 }
 
 // ServerUpdateRequest represents a request to update server information
@@ -218,13 +220,19 @@ type ServerUpdateRequest struct {
 
 // ServerDetailsUpdateRequest represents a request to update detailed server information
 type ServerDetailsUpdateRequest struct {
-	// All fields from ServerUpdateRequest
+	// Basic server information
 	Hostname       string `json:"hostname,omitempty"`
 	MainIP         string `json:"main_ip,omitempty"`
 	Environment    string `json:"environment,omitempty"`
 	Location       string `json:"location,omitempty"`
 	Classification string `json:"classification,omitempty"`
-	// Additional hardware details
+	// System information
+	OS           string `json:"os,omitempty"`
+	OSVersion    string `json:"os_version,omitempty"`
+	OSArch       string `json:"os_arch,omitempty"`
+	SerialNumber string `json:"serial_number,omitempty"`
+	MacAddress   string `json:"mac_address,omitempty"`
+	// Hardware details
 	CPUModel     string `json:"cpu_model,omitempty"`
 	CPUCount     int    `json:"cpu_count,omitempty"`
 	CPUCores     int    `json:"cpu_cores,omitempty"`
@@ -583,6 +591,8 @@ type SystemInfo struct {
 	BootTime        int64  `json:"boot_time"`
 	Processes       int    `json:"processes"`
 	UsersLoggedIn   int    `json:"users_logged_in"`
+	Platform        string `json:"platform,omitempty"`
+	PlatformFamily  string `json:"platform_family,omitempty"`
 }
 
 // CPUMetrics represents CPU metrics
@@ -704,6 +714,8 @@ type TimescaleDiskDevice struct {
 	AvgReadWait           float64 `json:"avg_read_wait"`
 	AvgWriteWait          float64 `json:"avg_write_wait"`
 	AvgDiscardWait        float64 `json:"avg_discard_wait"`
+	AvgFlushWait          float64 `json:"avg_flush_wait"`
+	AvgQueueSize          float64 `json:"avg_queue_size"`
 	Utilization           float64 `json:"utilization"`
 	QueueDepth            uint64  `json:"queue_depth"`
 }
@@ -750,12 +762,6 @@ type TimescaleFilesystem struct {
 	InodesFree  uint64  `json:"inodes_free"`
 }
 
-// ZFSMetricsData represents ZFS metrics (placeholder for actual implementation)
-type ZFSMetricsData struct {
-	// ZFS-specific metrics will be defined based on actual requirements
-	// This is a placeholder that can be extended later
-	Pools []json.RawMessage `json:"pools,omitempty"`
-}
 
 // TimescaleHostInfo represents host system information
 type TimescaleHostInfo struct {
@@ -818,4 +824,16 @@ type HardwareInventoryListOptions struct {
 	ListOptions
 	StartTime *time.Time `url:"start_time,omitempty"`
 	EndTime   *time.Time `url:"end_time,omitempty"`
+}
+
+// ToQuery converts HardwareInventoryListOptions to query parameters
+func (o *HardwareInventoryListOptions) ToQuery() map[string]string {
+	params := o.ListOptions.ToQuery()
+	if o.StartTime != nil {
+		params["start_time"] = o.StartTime.Format(time.RFC3339)
+	}
+	if o.EndTime != nil {
+		params["end_time"] = o.EndTime.Format(time.RFC3339)
+	}
+	return params
 }

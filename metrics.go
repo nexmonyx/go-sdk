@@ -411,7 +411,7 @@ type ComprehensiveMetricsPayload struct {
 	Network       *TimescaleNetworkMetrics    `json:"network,omitempty"`
 	Filesystem    *TimescaleFilesystemMetrics `json:"filesystem,omitempty"`
 	Processes     []ProcessMetrics            `json:"processes,omitempty"`
-	ZFS           *ZFSMetricsData             `json:"zfs,omitempty"`
+	ZFS           json.RawMessage             `json:"zfs,omitempty"`
 	RAID          json.RawMessage             `json:"raid,omitempty"`
 	System        *TimescaleSystemMetrics     `json:"system,omitempty"`
 	CustomMetrics map[string]interface{}      `json:"custom_metrics,omitempty"`
@@ -526,7 +526,7 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 		return &result, nil
 	}
 	
-	return nil, fmt.Errorf("unexpected response type: %T", resp.Data)
+	return nil, fmt.Errorf("unexpected response type")
 }
 
 // MetricsAggregator handles aggregation of metrics data

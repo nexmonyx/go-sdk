@@ -17,8 +17,8 @@ func TestHardwareInventoryService_Submit(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v2/hardware/inventory", r.URL.Path)
-		assert.Equal(t, "test-uuid", r.Header.Get("Server-UUID"))
-		assert.Equal(t, "test-secret", r.Header.Get("Server-Secret"))
+		assert.Equal(t, "test-uuid", r.Header.Get("X-Server-UUID"))
+		assert.Equal(t, "test-secret", r.Header.Get("X-Server-Secret"))
 
 		var req HardwareInventoryRequest
 		err := json.NewDecoder(r.Body).Decode(&req)
@@ -123,7 +123,7 @@ func TestHardwareInventoryService_GetHardwareInventory(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/v2/servers/"+serverUUID+"/hardware/inventory", r.URL.Path)
+		assert.Equal(t, "/v2/hardware/inventory/"+serverUUID, r.URL.Path)
 		assert.Equal(t, "2024-01-01T00:00:00Z", r.URL.Query().Get("start"))
 		assert.Equal(t, "2024-01-31T23:59:59Z", r.URL.Query().Get("end"))
 
@@ -185,7 +185,7 @@ func TestHardwareInventoryService_GetLatestHardwareInventory(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/v2/servers/"+serverUUID+"/hardware/inventory/latest", r.URL.Path)
+		assert.Equal(t, "/v2/hardware/inventory/"+serverUUID+"/latest", r.URL.Path)
 
 		response := map[string]interface{}{
 			"data": HardwareInventoryRecord{
@@ -246,7 +246,7 @@ func TestHardwareInventoryService_ListHardwareHistory(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/v2/servers/"+serverUUID+"/hardware/history", r.URL.Path)
+		assert.Equal(t, "/v2/hardware/inventory/"+serverUUID+"/history", r.URL.Path)
 		assert.Equal(t, "1", r.URL.Query().Get("page"))
 		assert.Equal(t, "50", r.URL.Query().Get("limit"))
 		assert.Equal(t, "2024-01-01T00:00:00Z", r.URL.Query().Get("start_time"))
@@ -370,8 +370,7 @@ func TestHardwareInventoryService_ServerNotFound(t *testing.T) {
 	// The hardware_inventory.go now properly converts API errors to NotFoundError
 	notFoundErr, ok := err.(*NotFoundError)
 	assert.True(t, ok, "Expected NotFoundError but got: %T - %v", err, err)
-	assert.Equal(t, "server", notFoundErr.Resource)
-	assert.Equal(t, serverUUID, notFoundErr.ID)
+	assert.Equal(t, "resource not found", notFoundErr.Message)
 }
 
 func TestHardwareInventoryService_ValidationError(t *testing.T) {
