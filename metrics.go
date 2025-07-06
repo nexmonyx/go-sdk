@@ -2,6 +2,7 @@ package nexmonyx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -285,29 +286,51 @@ type HostInfo struct {
 
 // TimescaleCPUMetrics represents CPU metrics in TimescaleDB format
 type TimescaleCPUMetrics struct {
-	UsagePercent float64         `json:"usage_percent"`
-	LoadAverage  *LoadAverage    `json:"load_average,omitempty"`
-	PerCPU       []PerCPUMetrics `json:"per_cpu,omitempty"`
+	UsagePercent   float64         `json:"usage_percent"`
+	UserPercent    float64         `json:"user_percent"`
+	SystemPercent  float64         `json:"system_percent"`
+	IdlePercent    float64         `json:"idle_percent"`
+	IowaitPercent  float64         `json:"iowait_percent"`
+	IRQPercent     float64         `json:"irq_percent"`
+	SoftIRQPercent float64         `json:"soft_irq_percent"`
+	StealPercent   float64         `json:"steal_percent"`
+	LoadAverage    *LoadAverage    `json:"load_average,omitempty"`
+	PerCPU         []TimescaleCPUCore `json:"per_cpu,omitempty"`
 }
 
-// PerCPUMetrics represents per-CPU metrics
-type PerCPUMetrics struct {
+// TimescaleCPUCore represents per-CPU metrics
+type TimescaleCPUCore struct {
 	Core         string  `json:"core"`
 	UsagePercent float64 `json:"usage_percent"`
 }
 
 // LoadAverage represents system load averages
 type LoadAverage struct {
-	Load1  float64 `json:"load1"`
-	Load5  float64 `json:"load5"`
-	Load15 float64 `json:"load15"`
+	Load1  float64 `json:"load_1"`
+	Load5  float64 `json:"load_5"`
+	Load15 float64 `json:"load_15"`
 }
 
 // TimescaleMemoryMetrics represents memory metrics in TimescaleDB format
 type TimescaleMemoryMetrics struct {
-	Total       uint64  `json:"total"`
-	Used        uint64  `json:"used"`
-	UsedPercent float64 `json:"used_percent"`
+	Total           uint64  `json:"total"`
+	Available       uint64  `json:"available"`
+	Used            uint64  `json:"used"`
+	UsedPercent     float64 `json:"used_percent"`
+	Free            uint64  `json:"free"`
+	Active          uint64  `json:"active"`
+	Inactive        uint64  `json:"inactive"`
+	Buffers         uint64  `json:"buffers"`
+	Cached          uint64  `json:"cached"`
+	SwapTotal       uint64  `json:"swap_total"`
+	SwapUsed        uint64  `json:"swap_used"`
+	SwapFree        uint64  `json:"swap_free"`
+	SwapUsedPercent float64 `json:"swap_used_percent"`
+	Slab            uint64  `json:"slab"`
+	SReclaimable    uint64  `json:"s_reclaimable"`
+	SUnreclaim      uint64  `json:"s_unreclaim"`
+	PageTables      uint64  `json:"page_tables"`
+	SwapCached      uint64  `json:"swap_cached"`
 }
 
 // ConvertLegacyToTimescaleMetrics converts legacy metrics format to TimescaleDB format
@@ -336,9 +359,9 @@ func ConvertLegacyToTimescaleMetrics(legacy *ComprehensiveMetricsRequest) *Times
 
 		// Convert per-core usage
 		if legacy.CPU.PerCoreUsage != nil {
-			cpu.PerCPU = make([]PerCPUMetrics, len(legacy.CPU.PerCoreUsage))
+			cpu.PerCPU = make([]TimescaleCPUCore, len(legacy.CPU.PerCoreUsage))
 			for i, usage := range legacy.CPU.PerCoreUsage {
-				cpu.PerCPU[i] = PerCPUMetrics{
+				cpu.PerCPU[i] = TimescaleCPUCore{
 					Core:         fmt.Sprintf("%d", i),
 					UsagePercent: usage,
 				}
@@ -379,9 +402,19 @@ type ComprehensiveMetricsSubmission struct {
 
 // ComprehensiveMetricsPayload represents the payload for comprehensive metrics
 type ComprehensiveMetricsPayload struct {
-	CPU    *TimescaleCPUMetrics    `json:"cpu,omitempty"`
-	Memory *TimescaleMemoryMetrics `json:"memory,omitempty"`
-	System *TimescaleSystemMetrics `json:"system,omitempty"`
+	ServerUUID    string                      `json:"server_uuid"`
+	CollectedAt   string                      `json:"collected_at"`
+	SystemInfo    *SystemInfo                 `json:"system_info,omitempty"`
+	CPU           *TimescaleCPUMetrics        `json:"cpu,omitempty"`
+	Memory        *TimescaleMemoryMetrics     `json:"memory,omitempty"`
+	Disk          *TimescaleDiskMetrics       `json:"disk,omitempty"`
+	Network       *TimescaleNetworkMetrics    `json:"network,omitempty"`
+	Filesystem    *TimescaleFilesystemMetrics `json:"filesystem,omitempty"`
+	Processes     []ProcessMetrics            `json:"processes,omitempty"`
+	ZFS           *ZFSMetricsData             `json:"zfs,omitempty"`
+	RAID          json.RawMessage             `json:"raid,omitempty"`
+	System        *TimescaleSystemMetrics     `json:"system,omitempty"`
+	CustomMetrics map[string]interface{}      `json:"custom_metrics,omitempty"`
 }
 
 // SubmitComprehensiveToTimescale submits comprehensive metrics to TimescaleDB
@@ -455,8 +488,8 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 	resp.Data = &TimescaleMetricsRangeResponse{}
 
 	query := map[string]string{
-		"start": startTime,
-		"end":   endTime,
+		"start_time": startTime,
+		"end_time":   endTime,
 	}
 
 	if limit > 0 {
@@ -465,7 +498,7 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v2/servers/%s/metrics", serverUUID),
+		Path:   fmt.Sprintf("/v2/servers/%s/metrics/range", serverUUID),
 		Query:  query,
 		Result: &resp,
 	})
@@ -476,7 +509,24 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 	if data, ok := resp.Data.(*TimescaleMetricsRangeResponse); ok {
 		return data, nil
 	}
-	return nil, fmt.Errorf("unexpected response type")
+	
+	// If type assertion failed, try to handle map[string]interface{} case
+	if dataMap, ok := resp.Data.(map[string]interface{}); ok {
+		// Convert map to JSON and unmarshal into our type
+		jsonBytes, err := json.Marshal(dataMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal data map: %w", err)
+		}
+		
+		var result TimescaleMetricsRangeResponse
+		if err := json.Unmarshal(jsonBytes, &result); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into TimescaleMetricsRangeResponse: %w", err)
+		}
+		
+		return &result, nil
+	}
+	
+	return nil, fmt.Errorf("unexpected response type: %T", resp.Data)
 }
 
 // MetricsAggregator handles aggregation of metrics data

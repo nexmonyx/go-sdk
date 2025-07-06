@@ -205,6 +205,7 @@ func TestGetLatestMetrics(t *testing.T) {
 func TestGetMetricsRange(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Logf("Test server received request: %s %s", r.Method, r.URL.Path)
 		assert.Equal(t, "/v2/servers/test-uuid/metrics/range", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		assert.Contains(t, r.Header.Get("Authorization"), "Bearer")
@@ -216,7 +217,7 @@ func TestGetMetricsRange(t *testing.T) {
 		assert.Equal(t, "100", query.Get("limit"))
 
 		now := time.Now()
-		response := TimescaleMetricsRangeResponse{
+		rangeResponse := TimescaleMetricsRangeResponse{
 			ServerUUID: "test-uuid",
 			StartTime:  "2023-01-01T00:00:00Z",
 			EndTime:    "2023-01-01T01:00:00Z",
@@ -235,6 +236,15 @@ func TestGetMetricsRange(t *testing.T) {
 			},
 			Source: "timescaledb",
 		}
+
+		response := StandardResponse{
+			Status: "success",
+			Data:   rangeResponse,
+		}
+
+		// Debug: log the response
+		respJSON, _ := json.Marshal(response)
+		t.Logf("Server response: %s", string(respJSON))
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
@@ -260,12 +270,27 @@ func TestGetMetricsRange(t *testing.T) {
 		100,
 	)
 	require.NoError(t, err)
+	require.NotNil(t, result, "Result should not be nil")
+
+	// Debug output
+	t.Logf("Result: %+v", result)
+	if result != nil {
+		t.Logf("ServerUUID: %s, Count: %d, Metrics len: %d", result.ServerUUID, result.Count, len(result.Metrics))
+		// Test direct JSON unmarshaling to verify structure
+		testResp := StandardResponse{}
+		testJSON := `{"status":"success","data":{"server_uuid":"test-uuid","count":2}}`
+		if err := json.Unmarshal([]byte(testJSON), &testResp); err == nil {
+			t.Logf("Test unmarshal Data type: %T, value: %+v", testResp.Data, testResp.Data)
+		}
+	}
 
 	assert.Equal(t, "test-uuid", result.ServerUUID)
 	assert.Equal(t, 2, result.Count)
 	assert.Len(t, result.Metrics, 2)
-	assert.Equal(t, 45.5, *result.Metrics[0].CPUUsagePercent)
-	assert.Equal(t, 48.2, *result.Metrics[1].CPUUsagePercent)
+	if len(result.Metrics) >= 2 {
+		assert.Equal(t, 45.5, *result.Metrics[0].CPUUsagePercent)
+		assert.Equal(t, 48.2, *result.Metrics[1].CPUUsagePercent)
+	}
 }
 
 // TestMetricsAggregator tests the metrics aggregator

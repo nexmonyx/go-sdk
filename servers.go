@@ -276,3 +276,98 @@ func (s *ServersService) GetSystemInfo(ctx context.Context, id string) (*SystemI
 	}
 	return nil, fmt.Errorf("unexpected response type")
 }
+
+// RegisterWithKey registers a new server with a registration key
+func (s *ServersService) RegisterWithKey(ctx context.Context, registrationKey string, req *ServerCreateRequest) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &ServerRegistrationResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/servers/register",
+		Headers: map[string]string{
+			"X-Registration-Key": registrationKey,
+		},
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if regResp, ok := resp.Data.(*ServerRegistrationResponse); ok {
+		return regResp.Server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// Heartbeat sends a heartbeat from the authenticated server
+func (s *ServersService) Heartbeat(ctx context.Context) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/servers/heartbeat",
+		Result: &resp,
+	})
+	return err
+}
+
+// HeartbeatWithVersion sends a heartbeat with agent version from the authenticated server
+func (s *ServersService) HeartbeatWithVersion(ctx context.Context, agentVersion string) error {
+	var resp StandardResponse
+
+	body := map[string]string{
+		"agent_version": agentVersion,
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/servers/heartbeat",
+		Body:   body,
+		Result: &resp,
+	})
+	return err
+}
+
+// UpdateServer updates server information
+func (s *ServersService) UpdateServer(ctx context.Context, serverUUID string, req *ServerUpdateRequest) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &Server{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/servers/%s", serverUUID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if server, ok := resp.Data.(*Server); ok {
+		return server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// UpdateDetails updates detailed server information including hardware info
+func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &Server{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/servers/%s/details", serverUUID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if server, ok := resp.Data.(*Server); ok {
+		return server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}

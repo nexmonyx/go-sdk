@@ -186,6 +186,52 @@ type Server struct {
 	CustomFields map[string]interface{} `json:"custom_fields,omitempty"`
 }
 
+// ServerCreateRequest represents a request to create/register a new server
+type ServerCreateRequest struct {
+	Hostname       string `json:"hostname"`
+	MainIP         string `json:"main_ip"`
+	OS             string `json:"os"`
+	OSVersion      string `json:"os_version"`
+	OSArch         string `json:"os_arch"`
+	SerialNumber   string `json:"serial_number"`
+	MacAddress     string `json:"mac_address"`
+	Environment    string `json:"environment,omitempty"`
+	Location       string `json:"location,omitempty"`
+	Classification string `json:"classification,omitempty"`
+	HardwareIP     string `json:"hardware_ip,omitempty"`
+	HardwareType   string `json:"hardware_type,omitempty"`
+}
+
+// ServerRegistrationResponse represents the response from server registration
+type ServerRegistrationResponse struct {
+	Server *Server `json:"server"`
+}
+
+// ServerUpdateRequest represents a request to update server information
+type ServerUpdateRequest struct {
+	Hostname       string `json:"hostname,omitempty"`
+	MainIP         string `json:"main_ip,omitempty"`
+	Environment    string `json:"environment,omitempty"`
+	Location       string `json:"location,omitempty"`
+	Classification string `json:"classification,omitempty"`
+}
+
+// ServerDetailsUpdateRequest represents a request to update detailed server information
+type ServerDetailsUpdateRequest struct {
+	// All fields from ServerUpdateRequest
+	Hostname       string `json:"hostname,omitempty"`
+	MainIP         string `json:"main_ip,omitempty"`
+	Environment    string `json:"environment,omitempty"`
+	Location       string `json:"location,omitempty"`
+	Classification string `json:"classification,omitempty"`
+	// Additional hardware details
+	CPUModel     string `json:"cpu_model,omitempty"`
+	CPUCount     int    `json:"cpu_count,omitempty"`
+	CPUCores     int    `json:"cpu_cores,omitempty"`
+	MemoryTotal  uint64 `json:"memory_total,omitempty"`
+	StorageTotal uint64 `json:"storage_total,omitempty"`
+}
+
 // Alert represents an alert
 type Alert struct {
 	GormModel
@@ -624,6 +670,102 @@ type ComprehensiveMetricsRequest struct {
 	Network       []NetworkMetrics       `json:"network,omitempty"`
 	Processes     []ProcessMetrics       `json:"processes,omitempty"`
 	CustomMetrics map[string]interface{} `json:"custom_metrics,omitempty"`
+}
+
+// TimescaleDiskMetrics represents disk metrics for Timescale
+type TimescaleDiskMetrics struct {
+	Devices []TimescaleDiskDevice `json:"devices"`
+}
+
+// TimescaleDiskDevice represents individual disk device metrics
+type TimescaleDiskDevice struct {
+	Name                  string  `json:"name"`
+	ReadCount             uint64  `json:"read_count"`
+	WriteCount            uint64  `json:"write_count"`
+	ReadBytes             uint64  `json:"read_bytes"`
+	WriteBytes            uint64  `json:"write_bytes"`
+	ReadTime              uint64  `json:"read_time"`
+	WriteTime             uint64  `json:"write_time"`
+	IoTime                uint64  `json:"io_time"`
+	Size                  uint64  `json:"size"`
+	ReadsPerSec           float64 `json:"reads_per_sec"`
+	WritesPerSec          float64 `json:"writes_per_sec"`
+	DiscardsPerSec        float64 `json:"discards_per_sec"`
+	FlushesPerSec         float64 `json:"flushes_per_sec"`
+	ReadKBPerSec          float64 `json:"read_kb_per_sec"`
+	WriteKBPerSec         float64 `json:"write_kb_per_sec"`
+	DiscardKBPerSec       float64 `json:"discard_kb_per_sec"`
+	ReadMergePercent      float64 `json:"read_merge_percent"`
+	WriteMergePercent     float64 `json:"write_merge_percent"`
+	DiscardMergePercent   float64 `json:"discard_merge_percent"`
+	AvgReadRequestSize    float64 `json:"avg_read_request_size"`
+	AvgWriteRequestSize   float64 `json:"avg_write_request_size"`
+	AvgDiscardRequestSize float64 `json:"avg_discard_request_size"`
+	AvgReadWait           float64 `json:"avg_read_wait"`
+	AvgWriteWait          float64 `json:"avg_write_wait"`
+	AvgDiscardWait        float64 `json:"avg_discard_wait"`
+	Utilization           float64 `json:"utilization"`
+	QueueDepth            uint64  `json:"queue_depth"`
+}
+
+// TimescaleNetworkMetrics represents network metrics for Timescale
+type TimescaleNetworkMetrics struct {
+	Interfaces []TimescaleNetworkInterface `json:"interfaces"`
+}
+
+// TimescaleNetworkInterface represents individual network interface metrics
+type TimescaleNetworkInterface struct {
+	Name        string  `json:"name"`
+	BytesSent   uint64  `json:"bytes_sent"`
+	BytesRecv   uint64  `json:"bytes_recv"`
+	PacketsSent uint64  `json:"packets_sent"`
+	PacketsRecv uint64  `json:"packets_recv"`
+	Errin       uint64  `json:"errin"`
+	Errout      uint64  `json:"errout"`
+	Dropin      uint64  `json:"dropin"`
+	Dropout     uint64  `json:"dropout"`
+	Speed       uint64  `json:"speed"`
+	Mtu         uint64  `json:"mtu"`
+	State       string  `json:"state"`
+	RxRateKbps  float64 `json:"rx_rate_kbps"`
+	TxRateKbps  float64 `json:"tx_rate_kbps"`
+}
+
+// TimescaleFilesystemMetrics represents filesystem metrics for Timescale
+type TimescaleFilesystemMetrics struct {
+	Filesystems []TimescaleFilesystem `json:"filesystems"`
+}
+
+// TimescaleFilesystem represents individual filesystem metrics
+type TimescaleFilesystem struct {
+	Device      string  `json:"device"`
+	Mountpoint  string  `json:"mountpoint"`
+	Fstype      string  `json:"fstype"`
+	Total       uint64  `json:"total"`
+	Used        uint64  `json:"used"`
+	Free        uint64  `json:"free"`
+	UsedPercent float64 `json:"used_percent"`
+	InodesTotal uint64  `json:"inodes_total"`
+	InodesUsed  uint64  `json:"inodes_used"`
+	InodesFree  uint64  `json:"inodes_free"`
+}
+
+// ZFSMetricsData represents ZFS metrics (placeholder for actual implementation)
+type ZFSMetricsData struct {
+	// ZFS-specific metrics will be defined based on actual requirements
+	// This is a placeholder that can be extended later
+	Pools []json.RawMessage `json:"pools,omitempty"`
+}
+
+// TimescaleHostInfo represents host system information
+type TimescaleHostInfo struct {
+	Hostname       string `json:"hostname"`
+	Uptime         uint64 `json:"uptime"`
+	BootTime       uint64 `json:"boot_time"`
+	Procs          uint32 `json:"procs"`
+	OS             string `json:"os"`
+	Platform       string `json:"platform"`
+	PlatformFamily string `json:"platform_family"`
 }
 
 // RAIDControllerInfo represents RAID controller information
