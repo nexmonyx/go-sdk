@@ -208,6 +208,21 @@ type StatusResponse struct {
 	Details   map[string]interface{} `json:"details,omitempty"`
 }
 
+// HeartbeatResponse represents a heartbeat response from the server
+type HeartbeatResponse struct {
+	Status         string     `json:"status"`
+	Message        string     `json:"message"`
+	LastHeartbeat  *time.Time `json:"last_heartbeat,omitempty"`
+	ServerUUID     string     `json:"server_uuid"`
+	ServerStatus   string     `json:"server_status,omitempty"`
+	HeartbeatCount int        `json:"heartbeat_count,omitempty"`
+	Details        struct {
+		AgentVersion string     `json:"agent_version,omitempty"`
+		LastSeen     *time.Time `json:"last_seen,omitempty"`
+		NextExpected *time.Time `json:"next_expected,omitempty"`
+	} `json:"details,omitempty"`
+}
+
 // ErrorResponse represents an error response from the API
 type ErrorResponse struct {
 	Status    string              `json:"status"`

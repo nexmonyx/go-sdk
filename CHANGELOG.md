@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Different endpoints expect different header formats
   - SDK now uses `X-Server-UUID` and `X-Server-Secret` to match most endpoints
 
+### Added
+- **New Server Methods**: Added methods for all server-related endpoints
+  - `UpdateInfo()` - Updates server info at `/v1/server/{uuid}/info`
+  - `GetDetails()` - Retrieves server details from `/v1/server/{uuid}/details`
+  - `GetFullDetails()` - Gets comprehensive server details from `/v1/server/{uuid}/full-details`
+  - `UpdateHeartbeat()` - Updates heartbeat at `/v1/server/{uuid}/heartbeat`
+  - `GetHeartbeat()` - Retrieves heartbeat info from `/v1/server/{uuid}/heartbeat`
+- **HeartbeatResponse Type**: Added type for heartbeat response data
+
 ### Known Issues
 - API has inconsistent authentication header expectations across endpoints
 - Some endpoints work with X- prefix, others without

@@ -380,3 +380,97 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 	}
 	return nil, fmt.Errorf("unexpected response type")
 }
+
+// UpdateInfo updates server information (alias for UpdateDetails)
+func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &Server{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/server/%s/info", serverUUID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if server, ok := resp.Data.(*Server); ok {
+		return server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetDetails retrieves server details
+func (s *ServersService) GetDetails(ctx context.Context, serverUUID string) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &Server{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/server/%s/details", serverUUID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if server, ok := resp.Data.(*Server); ok {
+		return server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetFullDetails retrieves comprehensive server details including CPU information
+// This endpoint requires JWT authentication with servers:read permission
+func (s *ServersService) GetFullDetails(ctx context.Context, serverUUID string) (*Server, error) {
+	var resp StandardResponse
+	resp.Data = &Server{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/server/%s/full-details", serverUUID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if server, ok := resp.Data.(*Server); ok {
+		return server, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// UpdateHeartbeat updates the heartbeat for a specific server
+func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID),
+		Result: &resp,
+	})
+	return err
+}
+
+// GetHeartbeat retrieves heartbeat information for a server
+func (s *ServersService) GetHeartbeat(ctx context.Context, serverUUID string) (*HeartbeatResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HeartbeatResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if heartbeat, ok := resp.Data.(*HeartbeatResponse); ok {
+		return heartbeat, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
