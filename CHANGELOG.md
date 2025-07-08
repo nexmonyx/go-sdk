@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.7] - 2025-07-08
+
+### Changed
+- **Debug Logging**: Updated debug output to match new API field names
+  - `Kernel` → `OSVersion`
+  - `Architecture` → `OSArch`
+  - `MemoryTotalMB` → `MemoryTotal`
+  - `DiskTotalGB` → `StorageTotal`
+  - `UUID` → `ServerUUID`
+
 ## [1.1.6] - 2025-07-08
 
 ### Fixed
