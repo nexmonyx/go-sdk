@@ -417,12 +417,12 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 		if req != nil {
 			fmt.Printf("[DEBUG]   Hostname: %s\n", req.Hostname)
 			fmt.Printf("[DEBUG]   OS: %s\n", req.OS)
-			fmt.Printf("[DEBUG]   Kernel: %s\n", req.Kernel)
-			fmt.Printf("[DEBUG]   Architecture: %s\n", req.Architecture)
+			fmt.Printf("[DEBUG]   OS Version: %s\n", req.OSVersion)
+			fmt.Printf("[DEBUG]   OS Arch: %s\n", req.OSArch)
 			fmt.Printf("[DEBUG]   CPUModel: %s\n", req.CPUModel)
 			fmt.Printf("[DEBUG]   CPUCores: %d\n", req.CPUCores)
-			fmt.Printf("[DEBUG]   MemoryTotalMB: %d\n", req.MemoryTotalMB)
-			fmt.Printf("[DEBUG]   DiskTotalGB: %d\n", req.DiskTotalGB)
+			fmt.Printf("[DEBUG]   MemoryTotal: %d\n", req.MemoryTotal)
+			fmt.Printf("[DEBUG]   StorageTotal: %d\n", req.StorageTotal)
 		}
 		fmt.Printf("[DEBUG] UpdateDetails: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
 	}
@@ -449,7 +449,7 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 			}
 			if server, ok := resp.Data.(*Server); ok && server != nil {
 				fmt.Printf("[DEBUG] UpdateDetails: Server ID: %d\n", server.ID)
-				fmt.Printf("[DEBUG] UpdateDetails: Server UUID: %s\n", server.UUID)
+				fmt.Printf("[DEBUG] UpdateDetails: Server UUID: %s\n", server.ServerUUID)
 				fmt.Printf("[DEBUG] UpdateDetails: Server Hostname: %s\n", server.Hostname)
 			}
 		}
@@ -477,12 +477,12 @@ func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req 
 		if req != nil {
 			fmt.Printf("[DEBUG]   Hostname: %s\n", req.Hostname)
 			fmt.Printf("[DEBUG]   OS: %s\n", req.OS)
-			fmt.Printf("[DEBUG]   Kernel: %s\n", req.Kernel)
-			fmt.Printf("[DEBUG]   Architecture: %s\n", req.Architecture)
+			fmt.Printf("[DEBUG]   OS Version: %s\n", req.OSVersion)
+			fmt.Printf("[DEBUG]   OS Arch: %s\n", req.OSArch)
 			fmt.Printf("[DEBUG]   CPUModel: %s\n", req.CPUModel)
 			fmt.Printf("[DEBUG]   CPUCores: %d\n", req.CPUCores)
-			fmt.Printf("[DEBUG]   MemoryTotalMB: %d\n", req.MemoryTotalMB)
-			fmt.Printf("[DEBUG]   DiskTotalGB: %d\n", req.DiskTotalGB)
+			fmt.Printf("[DEBUG]   MemoryTotal: %d\n", req.MemoryTotal)
+			fmt.Printf("[DEBUG]   StorageTotal: %d\n", req.StorageTotal)
 		}
 		fmt.Printf("[DEBUG] UpdateInfo: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
 	}
@@ -509,7 +509,7 @@ func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req 
 			}
 			if server, ok := resp.Data.(*Server); ok && server != nil {
 				fmt.Printf("[DEBUG] UpdateInfo: Server ID: %d\n", server.ID)
-				fmt.Printf("[DEBUG] UpdateInfo: Server UUID: %s\n", server.UUID)
+				fmt.Printf("[DEBUG] UpdateInfo: Server UUID: %s\n", server.ServerUUID)
 				fmt.Printf("[DEBUG] UpdateInfo: Server Hostname: %s\n", server.Hostname)
 			}
 		}
