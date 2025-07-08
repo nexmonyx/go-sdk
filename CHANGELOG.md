@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-07-08
+
+### Fixed
+- **Authentication Headers**: Fixed critical authentication issue for server credentials
+  - Changed server authentication headers from `X-Server-UUID`/`X-Server-Secret` to `Server-UUID`/`Server-Secret`
+  - Aligns with API expectations for v2 endpoints
+  - API now accepts both formats for backwards compatibility
+  - Resolves "Missing Server-UUID or Server-Secret headers" errors
+
+### Added
+- **Authentication Debug Tools**: Added utilities to help diagnose authentication issues
+  - `DebugAuthHeaders()` method to test both header formats
+  - Enhanced debug logging in Do() method to show headers being sent
+  - Test scripts for validating authentication across all endpoints
+  - Examples for testing authentication with server credentials
+
+## [1.1.1] - 2025-07-08
+
+### Fixed
+- **Metrics Submission**: Auto-populate ServerUUID in request body when using server authentication
+
+## [1.1.0] - 2025-07-08
+
 ### Added
 - **Probe Alerts Service**: Complete implementation for probe alert management
   - List() for retrieving probe alerts with filtering by status and probe ID

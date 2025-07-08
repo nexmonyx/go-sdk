@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.1.1"
+	Version = "1.1.2"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -149,8 +149,10 @@ func NewClient(config *Config) (*Client, error) {
 		restyClient.SetHeader("X-API-Key", config.Auth.APIKey)
 		restyClient.SetHeader("X-API-Secret", config.Auth.APISecret)
 	} else if config.Auth.ServerUUID != "" && config.Auth.ServerSecret != "" {
-		restyClient.SetHeader("X-Server-UUID", config.Auth.ServerUUID)
-		restyClient.SetHeader("X-Server-Secret", config.Auth.ServerSecret)
+		// Note: Headers use non-prefixed format (Server-UUID not X-Server-UUID)
+		// The API accepts both formats for backwards compatibility, but non-prefixed is preferred
+		restyClient.SetHeader("Server-UUID", config.Auth.ServerUUID)
+		restyClient.SetHeader("Server-Secret", config.Auth.ServerSecret)
 	} else if config.Auth.MonitoringKey != "" {
 		restyClient.SetHeader("X-Monitoring-Key", config.Auth.MonitoringKey)
 	}
@@ -282,6 +284,20 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 		r.SetError(req.Error)
 	}
 
+	// Debug logging for authentication headers
+	if c.config.Debug {
+		fmt.Printf("[DEBUG] Request: %s %s\n", req.Method, req.Path)
+		fmt.Printf("[DEBUG] Headers being sent:\n")
+		for k, v := range r.Header {
+			// Mask sensitive headers for security
+			if k == "Server-Secret" || k == "X-Server-Secret" || k == "X-Api-Secret" || k == "Authorization" {
+				fmt.Printf("[DEBUG]   %s: [REDACTED]\n", k)
+			} else {
+				fmt.Printf("[DEBUG]   %s: %v\n", k, v)
+			}
+		}
+	}
+
 	// Execute request
 	resp, err := r.Execute(req.Method, req.Path)
 	if err != nil {
@@ -302,22 +318,46 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 
 // handleError converts HTTP errors to SDK error types
 func (c *Client) handleError(resp *resty.Response) error {
+	// Debug logging for error responses
+	if c.config.Debug {
+		fmt.Printf("[DEBUG] Error Response: Status=%d\n", resp.StatusCode())
+		fmt.Printf("[DEBUG] Error Body: %s\n", string(resp.Body()))
+		fmt.Printf("[DEBUG] Response Headers:\n")
+		for k, v := range resp.Header() {
+			fmt.Printf("[DEBUG]   %s: %v\n", k, v)
+		}
+	}
+
 	var apiErr APIError
 	if err := json.Unmarshal(resp.Body(), &apiErr); err == nil && apiErr.ErrorType != "" {
 		return &apiErr
 	}
 
+	// Try to parse error message from response body
+	errorMessage := string(resp.Body())
+	
 	switch resp.StatusCode() {
 	case 400:
 		return &ValidationError{
 			StatusCode: resp.StatusCode(),
-			Message:    string(resp.Body()),
+			Message:    errorMessage,
 		}
 	case 401:
+		// Use actual error message from API if available
+		if errorMessage != "" && errorMessage != "{}" {
+			return &UnauthorizedError{
+				Message: errorMessage,
+			}
+		}
 		return &UnauthorizedError{
 			Message: "authentication required",
 		}
 	case 403:
+		if errorMessage != "" && errorMessage != "{}" {
+			return &ForbiddenError{
+				Message: errorMessage,
+			}
+		}
 		return &ForbiddenError{
 			Message: "insufficient permissions",
 		}
@@ -340,7 +380,7 @@ func (c *Client) handleError(resp *resty.Response) error {
 		return &APIError{
 			Status:    "error",
 			ErrorCode: fmt.Sprintf("HTTP_%d", resp.StatusCode()),
-			Message:   string(resp.Body()),
+			Message:   errorMessage,
 		}
 	}
 }
