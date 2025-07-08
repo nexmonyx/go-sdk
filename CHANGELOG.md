@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2025-07-08
+
+### Fixed
+- **SendHeartbeat Method**: Fixed incorrect endpoint path
+  - Changed from `/v1/servers/{uuid}/heartbeat` to `/v1/server/{uuid}/heartbeat`
+  - The plural "servers" was causing 500 "Unhandled route" errors
+  - Now correctly uses singular "server" to match API routing
+
 ## [1.1.5] - 2025-07-08
 
 ### Added
