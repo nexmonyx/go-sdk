@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.1.4"
+	Version = "1.1.5"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -295,6 +295,9 @@ func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 			} else {
 				fmt.Printf("[DEBUG]   %s: %v\n", k, v)
 			}
+		}
+		if req.Body != nil {
+			fmt.Printf("[DEBUG] Request has body (type: %T)\n", req.Body)
 		}
 	}
 

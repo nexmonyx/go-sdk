@@ -312,30 +312,75 @@ func (s *ServersService) RegisterWithKeyFull(ctx context.Context, registrationKe
 
 // Heartbeat sends a heartbeat from the authenticated server
 func (s *ServersService) Heartbeat(ctx context.Context) error {
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] Heartbeat: Starting heartbeat request\n")
+		fmt.Printf("[DEBUG] Heartbeat: Endpoint: POST /v1/heartbeat\n")
+		fmt.Printf("[DEBUG] Heartbeat: Using server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
 		Path:   "/v1/heartbeat",
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] Heartbeat: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] Heartbeat: Request successful\n")
+			fmt.Printf("[DEBUG] Heartbeat: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] Heartbeat: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] Heartbeat: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+		}
+	}
+
 	return err
 }
 
 // HeartbeatWithVersion sends a heartbeat with agent version from the authenticated server
 func (s *ServersService) HeartbeatWithVersion(ctx context.Context, agentVersion string) error {
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] HeartbeatWithVersion: Starting heartbeat request with version\n")
+		fmt.Printf("[DEBUG] HeartbeatWithVersion: Endpoint: POST /v1/heartbeat\n")
+		fmt.Printf("[DEBUG] HeartbeatWithVersion: Agent version: %s\n", agentVersion)
+		fmt.Printf("[DEBUG] HeartbeatWithVersion: Using server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 
 	body := map[string]string{
 		"agent_version": agentVersion,
 	}
 
-	_, err := s.client.Do(ctx, &Request{
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] HeartbeatWithVersion: Request body: %+v\n", body)
+	}
+
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
 		Path:   "/v1/heartbeat",
 		Body:   body,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] HeartbeatWithVersion: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] HeartbeatWithVersion: Request successful\n")
+			fmt.Printf("[DEBUG] HeartbeatWithVersion: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] HeartbeatWithVersion: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] HeartbeatWithVersion: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+		}
+	}
+
 	return err
 }
 
@@ -362,15 +407,54 @@ func (s *ServersService) UpdateServer(ctx context.Context, serverUUID string, re
 
 // UpdateDetails updates detailed server information including hardware info
 func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
+	endpoint := fmt.Sprintf("/v1/server/%s/details", serverUUID)
+	
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] UpdateDetails: Starting server details update\n")
+		fmt.Printf("[DEBUG] UpdateDetails: Endpoint: PUT %s\n", endpoint)
+		fmt.Printf("[DEBUG] UpdateDetails: Server UUID: %s\n", serverUUID)
+		fmt.Printf("[DEBUG] UpdateDetails: Request data:\n")
+		if req != nil {
+			fmt.Printf("[DEBUG]   Hostname: %s\n", req.Hostname)
+			fmt.Printf("[DEBUG]   OS: %s\n", req.OS)
+			fmt.Printf("[DEBUG]   Kernel: %s\n", req.Kernel)
+			fmt.Printf("[DEBUG]   Architecture: %s\n", req.Architecture)
+			fmt.Printf("[DEBUG]   CPUModel: %s\n", req.CPUModel)
+			fmt.Printf("[DEBUG]   CPUCores: %d\n", req.CPUCores)
+			fmt.Printf("[DEBUG]   MemoryTotalMB: %d\n", req.MemoryTotalMB)
+			fmt.Printf("[DEBUG]   DiskTotalGB: %d\n", req.DiskTotalGB)
+		}
+		fmt.Printf("[DEBUG] UpdateDetails: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 	resp.Data = &Server{}
 
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/server/%s/details", serverUUID),
+		Path:   endpoint,
 		Body:   req,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] UpdateDetails: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] UpdateDetails: Request successful\n")
+			fmt.Printf("[DEBUG] UpdateDetails: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] UpdateDetails: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] UpdateDetails: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+			if server, ok := resp.Data.(*Server); ok && server != nil {
+				fmt.Printf("[DEBUG] UpdateDetails: Server ID: %d\n", server.ID)
+				fmt.Printf("[DEBUG] UpdateDetails: Server UUID: %s\n", server.UUID)
+				fmt.Printf("[DEBUG] UpdateDetails: Server Hostname: %s\n", server.Hostname)
+			}
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -383,15 +467,54 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 
 // UpdateInfo updates server information (alias for UpdateDetails)
 func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
+	endpoint := fmt.Sprintf("/v1/server/%s/info", serverUUID)
+	
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] UpdateInfo: Starting server info update\n")
+		fmt.Printf("[DEBUG] UpdateInfo: Endpoint: PUT %s\n", endpoint)
+		fmt.Printf("[DEBUG] UpdateInfo: Server UUID: %s\n", serverUUID)
+		fmt.Printf("[DEBUG] UpdateInfo: Request data:\n")
+		if req != nil {
+			fmt.Printf("[DEBUG]   Hostname: %s\n", req.Hostname)
+			fmt.Printf("[DEBUG]   OS: %s\n", req.OS)
+			fmt.Printf("[DEBUG]   Kernel: %s\n", req.Kernel)
+			fmt.Printf("[DEBUG]   Architecture: %s\n", req.Architecture)
+			fmt.Printf("[DEBUG]   CPUModel: %s\n", req.CPUModel)
+			fmt.Printf("[DEBUG]   CPUCores: %d\n", req.CPUCores)
+			fmt.Printf("[DEBUG]   MemoryTotalMB: %d\n", req.MemoryTotalMB)
+			fmt.Printf("[DEBUG]   DiskTotalGB: %d\n", req.DiskTotalGB)
+		}
+		fmt.Printf("[DEBUG] UpdateInfo: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 	resp.Data = &Server{}
 
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/server/%s/info", serverUUID),
+		Path:   endpoint,
 		Body:   req,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] UpdateInfo: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] UpdateInfo: Request successful\n")
+			fmt.Printf("[DEBUG] UpdateInfo: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] UpdateInfo: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] UpdateInfo: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+			if server, ok := resp.Data.(*Server); ok && server != nil {
+				fmt.Printf("[DEBUG] UpdateInfo: Server ID: %d\n", server.ID)
+				fmt.Printf("[DEBUG] UpdateInfo: Server UUID: %s\n", server.UUID)
+				fmt.Printf("[DEBUG] UpdateInfo: Server Hostname: %s\n", server.Hostname)
+			}
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -445,26 +568,80 @@ func (s *ServersService) GetFullDetails(ctx context.Context, serverUUID string) 
 
 // UpdateHeartbeat updates the heartbeat for a specific server
 func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string) error {
+	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
+	
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] UpdateHeartbeat: Starting heartbeat update\n")
+		fmt.Printf("[DEBUG] UpdateHeartbeat: Endpoint: PUT %s\n", endpoint)
+		fmt.Printf("[DEBUG] UpdateHeartbeat: Server UUID: %s\n", serverUUID)
+		fmt.Printf("[DEBUG] UpdateHeartbeat: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID),
+		Path:   endpoint,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] UpdateHeartbeat: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] UpdateHeartbeat: Request successful\n")
+			fmt.Printf("[DEBUG] UpdateHeartbeat: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] UpdateHeartbeat: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] UpdateHeartbeat: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+		}
+	}
+
 	return err
 }
 
 // GetHeartbeat retrieves heartbeat information for a server
 func (s *ServersService) GetHeartbeat(ctx context.Context, serverUUID string) (*HeartbeatResponse, error) {
+	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
+	
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] GetHeartbeat: Starting heartbeat retrieval\n")
+		fmt.Printf("[DEBUG] GetHeartbeat: Endpoint: GET %s\n", endpoint)
+		fmt.Printf("[DEBUG] GetHeartbeat: Server UUID: %s\n", serverUUID)
+		fmt.Printf("[DEBUG] GetHeartbeat: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
+	}
+
 	var resp StandardResponse
 	resp.Data = &HeartbeatResponse{}
 
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID),
+		Path:   endpoint,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if err != nil {
+			fmt.Printf("[DEBUG] GetHeartbeat: Request failed with error: %v\n", err)
+		} else {
+			fmt.Printf("[DEBUG] GetHeartbeat: Request successful\n")
+			fmt.Printf("[DEBUG] GetHeartbeat: Response status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] GetHeartbeat: Response message: %s\n", resp.Message)
+			if httpResp != nil {
+				fmt.Printf("[DEBUG] GetHeartbeat: HTTP Status Code: %d\n", httpResp.StatusCode)
+			}
+			if heartbeat, ok := resp.Data.(*HeartbeatResponse); ok && heartbeat != nil {
+				fmt.Printf("[DEBUG] GetHeartbeat: Server UUID: %s\n", heartbeat.ServerUUID)
+				fmt.Printf("[DEBUG] GetHeartbeat: Server Status: %s\n", heartbeat.ServerStatus)
+				if heartbeat.LastHeartbeat != nil {
+					fmt.Printf("[DEBUG] GetHeartbeat: Last Heartbeat: %v\n", *heartbeat.LastHeartbeat)
+				}
+				fmt.Printf("[DEBUG] GetHeartbeat: Heartbeat Count: %d\n", heartbeat.HeartbeatCount)
+			}
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}

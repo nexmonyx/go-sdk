@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-07-08
+
+### Added
+- **Comprehensive Debug Logging**: Added extensive debug logging for all heartbeat and server info operations
+  - Heartbeat methods now show endpoint, authentication details, request/response status
+  - UpdateDetails/UpdateInfo methods log all request fields and response data
+  - GetHeartbeat shows retrieved heartbeat information
+  - All debug output clearly labeled with method names for easy troubleshooting
+- **Debug Example**: Added `examples/debug_heartbeat/main.go` for testing and debugging
+  - Supports multiple test scenarios: heartbeat, update-details, update-info, get-heartbeat
+  - Shows how to enable debug mode and interpret output
+
+### Enhanced
+- Client debug logging now shows when request has a body
+- All server methods return HTTP status codes in debug output
+
 ## [1.1.4] - 2025-07-08
 
 ### Added
