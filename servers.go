@@ -155,7 +155,7 @@ func (s *ServersService) SendHeartbeat(ctx context.Context, uuid string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v1/servers/%s/heartbeat", uuid),
+		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", uuid),
 		Result: &resp,
 	})
 	return err
