@@ -7,14 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2025-07-08
+
+### Fixed
+- **Endpoint Paths**: Fixed incorrect endpoint paths that were causing 500 errors
+  - Changed heartbeat endpoint from `/v1/servers/heartbeat` to `/v1/heartbeat`
+  - Changed server details endpoint from `/v1/servers/{uuid}/details` to `/v1/server/{uuid}/details`
+  - These were causing "Unhandled route" errors on the API side
+- **Authentication Headers**: Reverted to X- prefix headers as API behavior is inconsistent
+  - Different endpoints expect different header formats
+  - SDK now uses `X-Server-UUID` and `X-Server-Secret` to match most endpoints
+
+### Known Issues
+- API has inconsistent authentication header expectations across endpoints
+- Some endpoints work with X- prefix, others without
+
 ## [1.1.2] - 2025-07-08
 
 ### Fixed
-- **Authentication Headers**: Fixed critical authentication issue for server credentials
-  - Changed server authentication headers from `X-Server-UUID`/`X-Server-Secret` to `Server-UUID`/`Server-Secret`
-  - Aligns with API expectations for v2 endpoints
-  - API now accepts both formats for backwards compatibility
-  - Resolves "Missing Server-UUID or Server-Secret headers" errors
+- **Authentication Headers**: Attempted fix for server credentials (later found to be incorrect)
+  - Changed headers to non-prefixed format
+  - This version has issues - use v1.1.3 instead
 
 ### Added
 - **Authentication Debug Tools**: Added utilities to help diagnose authentication issues

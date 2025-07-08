@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.1.2"
+	Version = "1.1.3"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -149,10 +149,10 @@ func NewClient(config *Config) (*Client, error) {
 		restyClient.SetHeader("X-API-Key", config.Auth.APIKey)
 		restyClient.SetHeader("X-API-Secret", config.Auth.APISecret)
 	} else if config.Auth.ServerUUID != "" && config.Auth.ServerSecret != "" {
-		// Note: Headers use non-prefixed format (Server-UUID not X-Server-UUID)
-		// The API accepts both formats for backwards compatibility, but non-prefixed is preferred
-		restyClient.SetHeader("Server-UUID", config.Auth.ServerUUID)
-		restyClient.SetHeader("Server-Secret", config.Auth.ServerSecret)
+		// Note: API currently expects X- prefix for server authentication
+		// This may change in the future once API authentication is standardized
+		restyClient.SetHeader("X-Server-UUID", config.Auth.ServerUUID)
+		restyClient.SetHeader("X-Server-Secret", config.Auth.ServerSecret)
 	} else if config.Auth.MonitoringKey != "" {
 		restyClient.SetHeader("X-Monitoring-Key", config.Auth.MonitoringKey)
 	}

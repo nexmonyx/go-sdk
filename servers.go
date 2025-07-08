@@ -316,7 +316,7 @@ func (s *ServersService) Heartbeat(ctx context.Context) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/servers/heartbeat",
+		Path:   "/v1/heartbeat",
 		Result: &resp,
 	})
 	return err
@@ -332,7 +332,7 @@ func (s *ServersService) HeartbeatWithVersion(ctx context.Context, agentVersion 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/servers/heartbeat",
+		Path:   "/v1/heartbeat",
 		Body:   body,
 		Result: &resp,
 	})
@@ -367,7 +367,7 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/servers/%s/details", serverUUID),
+		Path:   fmt.Sprintf("/v1/server/%s/details", serverUUID),
 		Body:   req,
 		Result: &resp,
 	})
