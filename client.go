@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.0.7"
+	Version = "1.1.0"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -36,6 +36,7 @@ type Client struct {
 	Billing               *BillingService
 	Settings              *SettingsService
 	Alerts                *AlertsService
+	ProbeAlerts           *ProbeAlertsService
 	Admin                 *AdminService
 	StatusPages           *StatusPagesService
 	Providers             *ProvidersService
@@ -185,6 +186,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Billing = &BillingService{client: client}
 	client.Settings = &SettingsService{client: client}
 	client.Alerts = &AlertsService{client: client}
+	client.ProbeAlerts = &ProbeAlertsService{client: client}
 	client.Admin = &AdminService{client: client}
 	client.StatusPages = &StatusPagesService{client: client}
 	client.Providers = &ProvidersService{client: client}

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Probe Alerts Service**: Complete implementation for probe alert management
+  - List() for retrieving probe alerts with filtering by status and probe ID
+  - Get() for individual probe alert retrieval
+  - Acknowledge() for acknowledging active alerts with optional note
+  - Resolve() for resolving alerts with optional resolution message
+  - ListAdmin() for admin access to all probe alerts across organizations
+  - Support for pagination and filtering on all list operations
+  - Full integration with v1/probe-alerts API endpoints
+
 ## [1.0.2] - 2025-07-03
 
 ### Fixed
