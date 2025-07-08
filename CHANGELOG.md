@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2025-07-08
+
+### Added
+- **Complete Server Endpoint Coverage**: Added methods for all server-related API endpoints
+  - `UpdateInfo()` - Updates server info at `/v1/server/{uuid}/info`
+  - `GetDetails()` - Retrieves server details from `/v1/server/{uuid}/details`
+  - `GetFullDetails()` - Gets comprehensive server details from `/v1/server/{uuid}/full-details` (JWT auth)
+  - `UpdateHeartbeat()` - Updates heartbeat at `/v1/server/{uuid}/heartbeat`
+  - `GetHeartbeat()` - Retrieves heartbeat info from `/v1/server/{uuid}/heartbeat`
+- **HeartbeatResponse Type**: Added structured type for heartbeat response data
+
+### Changed
+- Organized documentation into `docs/` directory for better structure
+
 ## [1.1.3] - 2025-07-08
 
 ### Fixed
