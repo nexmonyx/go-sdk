@@ -27,6 +27,12 @@ func (s *MetricsService) Submit(ctx context.Context, serverUUID string, metrics 
 
 // SubmitComprehensiveMetrics submits comprehensive metrics for a server
 func (s *MetricsService) SubmitComprehensive(ctx context.Context, metrics *ComprehensiveMetricsRequest) error {
+	// If using server authentication and ServerUUID is not set in the request,
+	// automatically populate it from the client configuration
+	if s.client.config.Auth.ServerUUID != "" && metrics.ServerUUID == "" {
+		metrics.ServerUUID = s.client.config.Auth.ServerUUID
+	}
+
 	var resp StandardResponse
 
 	_, err := s.client.Do(ctx, &Request{
@@ -429,6 +435,12 @@ type ComprehensiveMetricsPayload struct {
 
 // SubmitComprehensiveToTimescale submits comprehensive metrics to TimescaleDB
 func (s *MetricsService) SubmitComprehensiveToTimescale(ctx context.Context, metrics *ComprehensiveMetricsSubmission) error {
+	// If using server authentication and ServerUUID is not set in the payload,
+	// automatically populate it from the client configuration
+	if s.client.config.Auth.ServerUUID != "" && metrics.Metrics != nil && metrics.Metrics.ServerUUID == "" {
+		metrics.Metrics.ServerUUID = s.client.config.Auth.ServerUUID
+	}
+
 	var resp StandardResponse
 
 	_, err := s.client.Do(ctx, &Request{
