@@ -154,7 +154,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 	var resp StandardResponse
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v2/servers/%s/hardware/network", serverUUID),
+		Path:   fmt.Sprintf("/v2/server/%s/hardware/network", serverUUID),
 		Body:   req,
 		Result: &resp,
 	})

@@ -12,7 +12,7 @@ func (s *ServersService) Get(ctx context.Context, id string) (*Server, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/servers/%s", id),
+		Path:   fmt.Sprintf("/v1/server/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *ServersService) GetByUUID(ctx context.Context, uuid string) (*Server, e
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/servers/uuid/%s", uuid),
+		Path:   fmt.Sprintf("/v1/server/uuid/%s", uuid),
 		Result: &resp,
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func (s *ServersService) Update(ctx context.Context, id string, server *Server) 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/servers/%s", id),
+		Path:   fmt.Sprintf("/v1/server/%s", id),
 		Body:   server,
 		Result: &resp,
 	})
@@ -117,7 +117,7 @@ func (s *ServersService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/v1/servers/%s", id),
+		Path:   fmt.Sprintf("/v1/server/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -135,7 +135,7 @@ func (s *ServersService) Register(ctx context.Context, hostname string, organiza
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/servers/register",
+		Path:   "/v1/server/register",
 		Body:   body,
 		Result: &resp,
 	})
@@ -169,7 +169,7 @@ func (s *ServersService) GetMetrics(ctx context.Context, id string, opts *ListOp
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/servers/%s/metrics", id),
+		Path:   fmt.Sprintf("/v1/server/%s/metrics", id),
 		Result: &resp,
 	}
 
@@ -193,7 +193,7 @@ func (s *ServersService) GetAlerts(ctx context.Context, id string, opts *ListOpt
 
 	req := &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/servers/%s/alerts", id),
+		Path:   fmt.Sprintf("/v1/server/%s/alerts", id),
 		Result: &resp,
 	}
 
@@ -220,7 +220,7 @@ func (s *ServersService) UpdateTags(ctx context.Context, id string, tags []strin
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/servers/%s/tags", id),
+		Path:   fmt.Sprintf("/v1/server/%s/tags", id),
 		Body:   body,
 		Result: &resp,
 	})
@@ -246,7 +246,7 @@ func (s *ServersService) ExecuteCommand(ctx context.Context, id string, command 
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v1/servers/%s/execute", id),
+		Path:   fmt.Sprintf("/v1/server/%s/execute", id),
 		Body:   body,
 		Result: &resp,
 	})
@@ -264,7 +264,7 @@ func (s *ServersService) GetSystemInfo(ctx context.Context, id string) (*SystemI
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/servers/%s/system-info", id),
+		Path:   fmt.Sprintf("/v1/server/%s/system-info", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -293,7 +293,7 @@ func (s *ServersService) RegisterWithKeyFull(ctx context.Context, registrationKe
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/servers/register",
+		Path:   "/v1/server/register",
 		Headers: map[string]string{
 			"X-Registration-Key": registrationKey,
 		},
@@ -391,7 +391,7 @@ func (s *ServersService) UpdateServer(ctx context.Context, serverUUID string, re
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/servers/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/server/%s", serverUUID),
 		Body:   req,
 		Result: &resp,
 	})

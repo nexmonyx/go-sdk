@@ -459,7 +459,7 @@ func (s *MetricsService) GetLatestMetrics(ctx context.Context, serverUUID string
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v2/servers/%s/metrics/latest", serverUUID),
+		Path:   fmt.Sprintf("/v2/server/%s/metrics/latest", serverUUID),
 		Result: &resp,
 	})
 	if err != nil {
@@ -520,7 +520,7 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v2/servers/%s/metrics/range", serverUUID),
+		Path:   fmt.Sprintf("/v2/server/%s/metrics/range", serverUUID),
 		Query:  query,
 		Result: &resp,
 	})
@@ -712,7 +712,7 @@ func (s *MetricsService) GetServerMetrics(ctx context.Context, serverUUID string
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/metrics/servers/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/metrics/server/%s", serverUUID),
 		Query:  query,
 		Result: &resp,
 	})

@@ -92,7 +92,7 @@ func (c *Client) testAuthRequest(ctx context.Context, headers map[string]string)
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/v1/servers/heartbeat", nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/v1/server/heartbeat", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
