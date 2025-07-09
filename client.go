@@ -466,3 +466,20 @@ type NamespaceDeploymentsService struct{ client *Client }
 type MonitoringAgentKeysService struct{ client *Client }
 type RemoteClustersService struct{ client *Client }
 type HealthService struct{ client *Client }
+
+// getAuthMethod returns a string describing the authentication method being used
+func (c *Client) getAuthMethod() string {
+	if c.config.Auth.Token != "" {
+		return "JWT Token"
+	}
+	if c.config.Auth.APIKey != "" && c.config.Auth.APISecret != "" {
+		return "API Key/Secret"
+	}
+	if c.config.Auth.ServerUUID != "" && c.config.Auth.ServerSecret != "" {
+		return "Server Credentials"
+	}
+	if c.config.Auth.MonitoringKey != "" {
+		return "Monitoring Key"
+	}
+	return "None"
+}

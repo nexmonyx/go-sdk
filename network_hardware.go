@@ -142,7 +142,16 @@ type NetworkHardwareInfo struct {
 
 // Submit submits network hardware information for a server
 func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, interfaces []NetworkHardwareInfo) (*StandardResponse, error) {
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Starting network hardware submission\n")
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Server UUID: %s\n", serverUUID)
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Number of interfaces: %d\n", len(interfaces))
+	}
+
 	if serverUUID == "" {
+		if s.client.config.Debug {
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: ERROR - Server UUID is required\n")
+		}
 		return nil, fmt.Errorf("server UUID is required")
 	}
 
@@ -151,13 +160,84 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 		Interfaces: interfaces,
 	}
 
+	endpoint := fmt.Sprintf("/v2/server/%s/hardware/network", serverUUID)
+	if s.client.config.Debug {
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Endpoint: POST %s\n", endpoint)
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Request payload:\n")
+		fmt.Printf("[DEBUG] NetworkHardware.Submit:   ServerUUID: %s\n", req.ServerUUID)
+		fmt.Printf("[DEBUG] NetworkHardware.Submit:   Interfaces count: %d\n", len(req.Interfaces))
+		
+		for i, iface := range req.Interfaces {
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:   Interface[%d]:\n", i)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     Name: %s\n", iface.InterfaceName)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     Type: %s\n", iface.InterfaceType)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     MAC: %s\n", iface.MacAddress)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     Speed: %d Mbps\n", iface.SpeedMbps)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     State: %s\n", iface.OperationalState)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     Link: %t\n", iface.LinkDetected)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     IPs: %v\n", iface.IPAddresses)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     RX Bytes: %d\n", iface.RxBytes)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit:     TX Bytes: %d\n", iface.TxBytes)
+			
+			if iface.InterfaceType == "bond" {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bond Mode: %s\n", iface.BondMode)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bond Slaves: %v\n", iface.BondSlaves)
+			}
+			if iface.InterfaceType == "vlan" {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     VLAN ID: %d\n", iface.VlanID)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     VLAN Parent: %s\n", iface.VlanParent)
+			}
+			if iface.InterfaceType == "bridge" {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bridge Ports: %v\n", iface.BridgePorts)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bridge STP: %t\n", iface.BridgeSTP)
+			}
+		}
+		
+		fmt.Printf("[DEBUG] NetworkHardware.Submit: Using authentication method: %s\n", s.client.getAuthMethod())
+	}
+
 	var resp StandardResponse
-	_, err := s.client.Do(ctx, &Request{
+	httpResp, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v2/server/%s/hardware/network", serverUUID),
+		Path:   endpoint,
 		Body:   req,
 		Result: &resp,
 	})
+	
+	if s.client.config.Debug {
+		if httpResp != nil {
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Status: %d\n", httpResp.StatusCode)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Headers: %v\n", httpResp.Headers)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Body Size: %d bytes\n", len(httpResp.Body))
+			if len(httpResp.Body) > 0 && len(httpResp.Body) < 1000 {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Body: %s\n", string(httpResp.Body))
+			}
+		}
+		
+		if err != nil {
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: ERROR - Request failed: %v\n", err)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: Error type: %T\n", err)
+			
+			// Check if it's an API error and log details
+			if apiErr, ok := err.(*APIError); ok {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit: API Error Details:\n")
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:   Status: %s\n", apiErr.Status)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:   ErrorCode: %s\n", apiErr.ErrorCode)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:   Message: %s\n", apiErr.Message)
+				fmt.Printf("[DEBUG] NetworkHardware.Submit:   ErrorType: %s\n", apiErr.ErrorType)
+			}
+		} else {
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: Request successful\n")
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: Response Status: %s\n", resp.Status)
+			fmt.Printf("[DEBUG] NetworkHardware.Submit: Response Message: %s\n", resp.Message)
+			if resp.Data != nil {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit: Response Data: %+v\n", resp.Data)
+			} else {
+				fmt.Printf("[DEBUG] NetworkHardware.Submit: Response Data: <nil>\n")
+			}
+		}
+	}
+	
 	if err != nil {
 		return nil, err
 	}
