@@ -1,4 +1,4 @@
-package nexmonyx_test
+package main
 
 import (
 	"context"
