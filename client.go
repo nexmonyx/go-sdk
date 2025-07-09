@@ -53,6 +53,7 @@ type Client struct {
 	HardwareInventory     *HardwareInventoryService
 	IPMI                  *IPMIService
 	Systemd               *SystemdService
+	NetworkHardware       *NetworkHardwareService
 	MonitoringDeployments *MonitoringDeploymentsService
 	NamespaceDeployments  *NamespaceDeploymentsService
 	MonitoringAgentKeys   *MonitoringAgentKeysService
@@ -205,6 +206,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.HardwareInventory = &HardwareInventoryService{client: client}
 	client.IPMI = &IPMIService{client: client}
 	client.Systemd = &SystemdService{client: client}
+	client.NetworkHardware = &NetworkHardwareService{client: client}
 	client.MonitoringDeployments = &MonitoringDeploymentsService{client: client}
 	client.NamespaceDeployments = &NamespaceDeploymentsService{client: client}
 	client.MonitoringAgentKeys = &MonitoringAgentKeysService{client: client}
