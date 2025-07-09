@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.11] - 2025-07-09
+
+### Added
+- **Comprehensive Debug Logging for Network Hardware**: Added extensive debug logging to `NetworkHardware.Submit()` method
+  - Request details: endpoint, server UUID, interface count, authentication method
+  - Per-interface logging: name, type, MAC, speed, state, IPs, network statistics
+  - Bond/VLAN/Bridge specific configuration details (mode, slaves, VLAN IDs, bridge ports)
+  - HTTP response details: status codes, headers, body content, timing information
+  - Enhanced error handling with API error breakdowns and error type identification
+- **Authentication Debug Helper**: Added `getAuthMethod()` helper to Client for authentication visibility
+- **Enhanced Example**: Improved network hardware example with better error handling and validation
+
+### Enhanced
+- **Network Hardware Example**: Added environment variable validation and detailed error reporting
+- **Debug Output**: Provides complete request/response flow for troubleshooting network hardware submissions
+
 ## [1.1.10] - 2025-07-09
 
 ### Fixed
