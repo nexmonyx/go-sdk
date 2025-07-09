@@ -105,14 +105,14 @@ func testUpdateDetails(ctx context.Context, client *nexmonyx.Client, serverUUID 
 	fmt.Println("\n=== Testing Update Details ===\n")
 
 	details := &nexmonyx.ServerDetailsUpdateRequest{
-		Hostname:      "debug-test-server",
-		OS:            "Ubuntu 22.04 LTS",
-		Kernel:        "5.15.0-88-generic",
-		Architecture:  "x86_64",
-		CPUModel:      "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
-		CPUCores:      8,
-		MemoryTotalMB: 16384,
-		DiskTotalGB:   500,
+		Hostname:     "debug-test-server",
+		OS:           "Ubuntu 22.04 LTS",
+		OSVersion:    "5.15.0-88-generic",
+		OSArch:       "x86_64",
+		CPUModel:     "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
+		CPUCores:     8,
+		MemoryTotal:  16384 * 1024 * 1024,     // Convert MB to bytes
+		StorageTotal: 500 * 1024 * 1024 * 1024, // Convert GB to bytes
 	}
 
 	server, err := client.Servers.UpdateDetails(ctx, serverUUID, details)
@@ -122,7 +122,7 @@ func testUpdateDetails(ctx context.Context, client *nexmonyx.Client, serverUUID 
 		fmt.Printf("\n✅ Update details successful!\n")
 		if server != nil {
 			fmt.Printf("Server ID: %d\n", server.ID)
-			fmt.Printf("Server UUID: %s\n", server.UUID)
+			fmt.Printf("Server UUID: %s\n", server.ServerUUID)
 			fmt.Printf("Server Hostname: %s\n", server.Hostname)
 		}
 	}
@@ -132,14 +132,14 @@ func testUpdateInfo(ctx context.Context, client *nexmonyx.Client, serverUUID str
 	fmt.Println("\n=== Testing Update Info ===\n")
 
 	info := &nexmonyx.ServerDetailsUpdateRequest{
-		Hostname:      "debug-test-server-info",
-		OS:            "Ubuntu 22.04 LTS",
-		Kernel:        "5.15.0-88-generic",
-		Architecture:  "x86_64",
-		CPUModel:      "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
-		CPUCores:      8,
-		MemoryTotalMB: 16384,
-		DiskTotalGB:   500,
+		Hostname:     "debug-test-server-info",
+		OS:           "Ubuntu 22.04 LTS",
+		OSVersion:    "5.15.0-88-generic",
+		OSArch:       "x86_64",
+		CPUModel:     "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
+		CPUCores:     8,
+		MemoryTotal:  16384 * 1024 * 1024,     // Convert MB to bytes
+		StorageTotal: 500 * 1024 * 1024 * 1024, // Convert GB to bytes
 	}
 
 	server, err := client.Servers.UpdateInfo(ctx, serverUUID, info)
@@ -149,7 +149,7 @@ func testUpdateInfo(ctx context.Context, client *nexmonyx.Client, serverUUID str
 		fmt.Printf("\n✅ Update info successful!\n")
 		if server != nil {
 			fmt.Printf("Server ID: %d\n", server.ID)
-			fmt.Printf("Server UUID: %s\n", server.UUID)
+			fmt.Printf("Server UUID: %s\n", server.ServerUUID)
 			fmt.Printf("Server Hostname: %s\n", server.Hostname)
 		}
 	}
