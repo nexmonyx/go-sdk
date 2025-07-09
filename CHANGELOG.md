@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.10] - 2025-07-09
+
+### Fixed
+- **API Endpoint Paths**: Fixed all endpoint paths to use singular `/server/` instead of `/servers/`
+  - Updated 12 endpoints in `servers.go` from `/v1/servers/` to `/v1/server/`
+  - Fixed `/v2/servers/` to `/v2/server/` in `metrics.go` and `network_hardware.go`
+  - Changed `/v1/metrics/servers/` to `/v1/metrics/server/` in `metrics.go`
+  - Updated `auth_debug.go` heartbeat endpoint to use `/v1/server/heartbeat`
+  - This aligns with the API specification that requires singular form for all server endpoints
+
+## [1.1.9] - 2025-07-09
+
+### Fixed
+- **Debug Example**: Fixed field names in debug_heartbeat example to match current SDK structure
+- **Hardware Example**: Fixed package name conflict to resolve compilation issues
+
+## [1.1.8] - 2025-07-08
+
+### Fixed
+- **CI/CD**: Updated GitHub Actions to use Go 1.24 to match main repository requirements
+
 ## [1.1.7] - 2025-07-08
 
 ### Changed
