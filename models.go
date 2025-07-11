@@ -352,39 +352,18 @@ type Metric struct {
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// MonitoringAgent represents a monitoring agent or probe
+// MonitoringAgent represents a monitoring agent
 type MonitoringAgent struct {
 	GormModel
-	UUID           string `json:"uuid"`
-	NodeUUID       string `json:"node_uuid,omitempty"`
-	Name           string `json:"name"`
-	Description    string `json:"description,omitempty"`
-	Type           string `json:"type"`
-	OrganizationID *uint  `json:"organization_id,omitempty"`
-
-	// Agent configuration
-	Region        string                 `json:"region"`
-	Location      string                 `json:"location,omitempty"`
-	IPAddress     string                 `json:"ip_address,omitempty"`
-	Provider      string                 `json:"provider,omitempty"`
-	Version       string                 `json:"version"`
-	Capabilities  []string               `json:"capabilities"`
-	Config        map[string]interface{} `json:"config,omitempty"`
-	Enabled       bool                   `json:"enabled"`
-	MaxProbes     int                    `json:"max_probes,omitempty"`
-	CurrentProbes int                    `json:"current_probes,omitempty"`
-
-	// Agent status
-	Status        string      `json:"status"`
-	LastHeartbeat *CustomTime `json:"last_heartbeat,omitempty"`
-	LastError     string      `json:"last_error,omitempty"`
-	ErrorCount    int         `json:"error_count"`
-
-	// Performance metrics
-	ProbesExecuted  int64   `json:"probes_executed"`
-	ProbesFailed    int64   `json:"probes_failed"`
-	AvgResponseTime float64 `json:"avg_response_time"`
-	Uptime          float64 `json:"uptime"`
+	UUID           string                 `json:"uuid"`
+	Name           string                 `json:"name"`
+	Status         string                 `json:"status"`
+	Version        string                 `json:"version"`
+	OrganizationID uint                   `json:"organization_id"`
+	ServerUUID     string                 `json:"server_uuid,omitempty"`
+	Configuration  map[string]interface{} `json:"configuration,omitempty"`
+	LastHeartbeat  *CustomTime            `json:"last_heartbeat,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ProbeTestResult represents the result of a probe test
@@ -641,6 +620,18 @@ type DiskMetrics struct {
 	InodesUsagePercent float64 `json:"inodes_usage_percent"`
 }
 
+// DiskUsageAggregate represents aggregated disk usage summary across all filesystems
+type DiskUsageAggregate struct {
+	TotalBytes      uint64   `json:"total_bytes"`      // Total bytes across all filesystems
+	UsedBytes       uint64   `json:"used_bytes"`       // Used bytes across all filesystems
+	FreeBytes       uint64   `json:"free_bytes"`       // Free bytes across all filesystems
+	UsedPercent     float64  `json:"used_percent"`     // Overall usage percentage
+	FilesystemCount int      `json:"filesystem_count"` // Number of filesystems included in aggregation
+	LargestMount    string   `json:"largest_mount"`    // Mount point with largest capacity
+	CriticalMounts  []string `json:"critical_mounts"`  // Mount points >90% full
+	CalculatedAt    string   `json:"calculated_at"`    // ISO 8601 timestamp when aggregation was calculated
+}
+
 // NetworkMetrics represents network metrics
 type NetworkMetrics struct {
 	Interface   string `json:"interface"`
@@ -671,15 +662,16 @@ type ProcessMetrics struct {
 
 // ComprehensiveMetricsRequest represents a comprehensive metrics submission
 type ComprehensiveMetricsRequest struct {
-	ServerUUID    string                 `json:"server_uuid"`
-	CollectedAt   string                 `json:"collected_at"`
-	SystemInfo    *SystemInfo            `json:"system_info,omitempty"`
-	CPU           *CPUMetrics            `json:"cpu,omitempty"`
-	Memory        *MemoryMetrics         `json:"memory,omitempty"`
-	Disks         []DiskMetrics          `json:"disks,omitempty"`
-	Network       []NetworkMetrics       `json:"network,omitempty"`
-	Processes     []ProcessMetrics       `json:"processes,omitempty"`
-	CustomMetrics map[string]interface{} `json:"custom_metrics,omitempty"`
+	ServerUUID         string                 `json:"server_uuid"`
+	CollectedAt        string                 `json:"collected_at"`
+	SystemInfo         *SystemInfo            `json:"system_info,omitempty"`
+	CPU                *CPUMetrics            `json:"cpu,omitempty"`
+	Memory             *MemoryMetrics         `json:"memory,omitempty"`
+	Disks              []DiskMetrics          `json:"disks,omitempty"`
+	DiskUsageAggregate *DiskUsageAggregate    `json:"disk_usage_aggregate,omitempty"`
+	Network            []NetworkMetrics       `json:"network,omitempty"`
+	Processes          []ProcessMetrics       `json:"processes,omitempty"`
+	CustomMetrics      map[string]interface{} `json:"custom_metrics,omitempty"`
 }
 
 // TimescaleDiskMetrics represents disk metrics for Timescale
@@ -845,6 +837,11 @@ type ControllerHealthInfo struct {
 	LastHeartbeat *CustomTime            `json:"last_heartbeat,omitempty"`
 	ResourceUsage *ResourceUsageInfo     `json:"resource_usage,omitempty"`
 	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+
+	// Additional fields needed by monitoring-controller:
+	ServiceComponents map[string]string `json:"service_components,omitempty"`
+	RegionHealth      map[string]string `json:"region_health,omitempty"`
+	LastErrors        []string          `json:"last_errors,omitempty"`
 }
 
 type ControllerHeartbeatRequest struct {
@@ -854,6 +851,14 @@ type ControllerHeartbeatRequest struct {
 	Health        *ControllerHealthInfo `json:"health"`
 	ResourceUsage *ResourceUsageInfo    `json:"resource_usage,omitempty"`
 	Timestamp     time.Time             `json:"timestamp"`
+
+	// Additional fields needed by monitoring-controller:
+	ControllerName    string                 `json:"controller_name"`
+	ControllerType    string                 `json:"controller_type"`
+	HeartbeatInterval int                    `json:"heartbeat_interval"`
+	IsLeader          bool                   `json:"is_leader"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	HealthDetails     *ControllerHealthInfo  `json:"health_details,omitempty"`
 }
 
 type ResourceUsageInfo struct {
@@ -908,6 +913,53 @@ type ControllerHeartbeat struct {
 	Health        *ControllerHealthInfo `json:"health"`
 	ResourceUsage *ResourceUsageInfo    `json:"resource_usage,omitempty"`
 	Timestamp     time.Time             `json:"timestamp"`
+}
+
+// NamespaceDeployment represents a deployment within a namespace
+type NamespaceDeployment struct {
+	GormModel
+	Name           string                 `json:"name"`
+	Namespace      string                 `json:"namespace"`
+	OrganizationID uint                   `json:"organization_id"`
+	Status         string                 `json:"status"`
+	AgentVersion   string                 `json:"agent_version"`
+	Configuration  map[string]interface{} `json:"configuration,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	LastUpdated    *CustomTime            `json:"last_updated,omitempty"`
+}
+
+// ProbeCreateRequest represents a request to create a probe
+type ProbeCreateRequest struct {
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"`
+	Target         string                 `json:"target"`
+	Configuration  map[string]interface{} `json:"configuration,omitempty"`
+	Interval       int                    `json:"interval"`
+	Timeout        int                    `json:"timeout"`
+	OrganizationID uint                   `json:"organization_id"`
+	RegionCode     string                 `json:"region_code,omitempty"`
+	Enabled        bool                   `json:"enabled"`
+}
+
+// ProbeUpdateRequest represents a request to update a probe
+type ProbeUpdateRequest struct {
+	Name          *string                `json:"name,omitempty"`
+	Type          *string                `json:"type,omitempty"`
+	Target        *string                `json:"target,omitempty"`
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
+	Interval      *int                   `json:"interval,omitempty"`
+	Timeout       *int                   `json:"timeout,omitempty"`
+	RegionCode    *string                `json:"region_code,omitempty"`
+	Enabled       *bool                  `json:"enabled,omitempty"`
+}
+
+// ProbeMetricsOptions represents options for retrieving probe metrics
+type ProbeMetricsOptions struct {
+	ProbeUUID   string     `json:"probe_uuid"`
+	StartTime   *time.Time `json:"start_time,omitempty"`
+	EndTime     *time.Time `json:"end_time,omitempty"`
+	Granularity string     `json:"granularity,omitempty"` // minute, hour, day
+	Aggregation string     `json:"aggregation,omitempty"` // avg, min, max, sum
 }
 
 // Type alias for backward compatibility

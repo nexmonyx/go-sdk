@@ -351,6 +351,56 @@ func (o *MonitoringAgentListOptions) ToQuery() map[string]string {
 	return params
 }
 
+// UpdateAgent updates a monitoring agent
+func (s *MonitoringService) UpdateAgent(ctx context.Context, uuid string, updates map[string]interface{}) (*MonitoringAgent, error) {
+	var resp StandardResponse
+	resp.Data = &MonitoringAgent{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/monitoring/agents/%s", uuid),
+		Body:   updates,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if agent, ok := resp.Data.(*MonitoringAgent); ok {
+		return agent, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetAgent retrieves a monitoring agent by UUID
+func (s *MonitoringService) GetAgent(ctx context.Context, uuid string) (*MonitoringAgent, error) {
+	var resp StandardResponse
+	resp.Data = &MonitoringAgent{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/monitoring/agents/%s", uuid),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if agent, ok := resp.Data.(*MonitoringAgent); ok {
+		return agent, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// DeleteAgent deletes a monitoring agent
+func (s *MonitoringService) DeleteAgent(ctx context.Context, uuid string) error {
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/monitoring/agents/%s", uuid),
+	})
+	return err
+}
+
 // AgentRegistration represents a monitoring agent registration request
 type AgentRegistration struct {
 	Name         string                 `json:"name"`
