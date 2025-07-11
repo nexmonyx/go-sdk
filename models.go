@@ -962,5 +962,84 @@ type ProbeMetricsOptions struct {
 	Aggregation string     `json:"aggregation,omitempty"` // avg, min, max, sum
 }
 
+// AggregatedMetricsRequest represents a request to submit aggregated metrics
+type AggregatedMetricsRequest struct {
+	ServerUUID  string               `json:"server_uuid"`
+	CollectedAt string               `json:"collected_at"`
+	Disk        *DiskAggregation     `json:"disk,omitempty"`
+	CPU         *CPUAggregation      `json:"cpu,omitempty"`
+	Memory      *MemoryAggregation   `json:"memory,omitempty"`
+	Network     *NetworkAggregation  `json:"network,omitempty"`
+	GPU         *GPUAggregation      `json:"gpu,omitempty"`
+}
+
+// DiskAggregation represents aggregated disk metrics
+type DiskAggregation struct {
+	TotalBytes      uint64   `json:"total_bytes"`
+	UsedBytes       uint64   `json:"used_bytes"`
+	FreeBytes       uint64   `json:"free_bytes"`
+	UsedPercent     float64  `json:"used_percent"`
+	FilesystemCount int      `json:"filesystem_count"`
+	LargestMount    string   `json:"largest_mount"`
+	CriticalMounts  []string `json:"critical_mounts"`
+	CalculatedAt    string   `json:"calculated_at"`
+}
+
+// CPUAggregation represents aggregated CPU metrics
+type CPUAggregation struct {
+	UsagePercent   float64 `json:"usage_percent"`
+	LoadAverage1   float64 `json:"load_average_1"`
+	LoadAverage5   float64 `json:"load_average_5"`
+	LoadAverage15  float64 `json:"load_average_15"`
+	CoreCount      int     `json:"core_count"`
+	MaxCorePercent float64 `json:"max_core_percent"`
+	MinCorePercent float64 `json:"min_core_percent"`
+	StealPercent   float64 `json:"steal_percent"`
+	IOWaitPercent  float64 `json:"iowait_percent"`
+	CalculatedAt   string  `json:"calculated_at"`
+}
+
+// MemoryAggregation represents aggregated memory metrics
+type MemoryAggregation struct {
+	TotalBytes      uint64  `json:"total_bytes"`
+	UsedBytes       uint64  `json:"used_bytes"`
+	FreeBytes       uint64  `json:"free_bytes"`
+	AvailableBytes  uint64  `json:"available_bytes"`
+	UsedPercent     float64 `json:"used_percent"`
+	SwapTotalBytes  uint64  `json:"swap_total_bytes"`
+	SwapUsedBytes   uint64  `json:"swap_used_bytes"`
+	SwapUsedPercent float64 `json:"swap_used_percent"`
+	CacheBytes      uint64  `json:"cache_bytes"`
+	BufferBytes     uint64  `json:"buffer_bytes"`
+	CalculatedAt    string  `json:"calculated_at"`
+}
+
+// NetworkAggregation represents aggregated network metrics
+type NetworkAggregation struct {
+	TotalBandwidthBPS uint64  `json:"total_bandwidth_bps"`
+	IngressBPS        uint64  `json:"ingress_bps"`
+	EgressBPS         uint64  `json:"egress_bps"`
+	TotalInterfaces   int     `json:"total_interfaces"`
+	ActiveInterfaces  int     `json:"active_interfaces"`
+	ErrorRate         float64 `json:"error_rate"`
+	DropRate          float64 `json:"drop_rate"`
+	PrimaryInterface  string  `json:"primary_interface"`
+	CalculatedAt      string  `json:"calculated_at"`
+}
+
+// GPUAggregation represents aggregated GPU metrics
+type GPUAggregation struct {
+	TotalGPUs         int     `json:"total_gpus"`
+	AvgUsagePercent   float64 `json:"avg_usage_percent"`
+	MaxUsagePercent   float64 `json:"max_usage_percent"`
+	TotalMemoryBytes  uint64  `json:"total_memory_bytes"`
+	UsedMemoryBytes   uint64  `json:"used_memory_bytes"`
+	MemoryUsedPercent float64 `json:"memory_used_percent"`
+	AvgTemperature    float64 `json:"avg_temperature"`
+	MaxTemperature    float64 `json:"max_temperature"`
+	PowerUsageWatts   float64 `json:"power_usage_watts"`
+	CalculatedAt      string  `json:"calculated_at"`
+}
+
 // Type alias for backward compatibility
 type Probe = MonitoringProbe

@@ -37,7 +37,26 @@ func (s *MetricsService) SubmitComprehensive(ctx context.Context, metrics *Compr
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/metrics/comprehensive",
+		Path:   "/v2/metrics/comprehensive",
+		Body:   metrics,
+		Result: &resp,
+	})
+	return err
+}
+
+// SubmitAggregatedMetrics submits aggregated metrics for a server
+func (s *MetricsService) SubmitAggregatedMetrics(ctx context.Context, metrics *AggregatedMetricsRequest) error {
+	// If using server authentication and ServerUUID is not set in the request,
+	// automatically populate it from the client configuration
+	if s.client.config.Auth.ServerUUID != "" && metrics.ServerUUID == "" {
+		metrics.ServerUUID = s.client.config.Auth.ServerUUID
+	}
+
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/metrics/aggregated",
 		Body:   metrics,
 		Result: &resp,
 	})
@@ -297,15 +316,15 @@ type HostInfo struct {
 
 // TimescaleCPUMetrics represents CPU metrics in TimescaleDB format
 type TimescaleCPUMetrics struct {
-	UsagePercent   float64         `json:"usage_percent"`
-	UserPercent    float64         `json:"user_percent"`
-	SystemPercent  float64         `json:"system_percent"`
-	IdlePercent    float64         `json:"idle_percent"`
-	IowaitPercent  float64         `json:"iowait_percent"`
-	IRQPercent     float64         `json:"irq_percent"`
-	SoftIRQPercent float64         `json:"soft_irq_percent"`
-	StealPercent   float64         `json:"steal_percent"`
-	LoadAverage    *LoadAverage    `json:"load_average,omitempty"`
+	UsagePercent   float64            `json:"usage_percent"`
+	UserPercent    float64            `json:"user_percent"`
+	SystemPercent  float64            `json:"system_percent"`
+	IdlePercent    float64            `json:"idle_percent"`
+	IowaitPercent  float64            `json:"iowait_percent"`
+	IRQPercent     float64            `json:"irq_percent"`
+	SoftIRQPercent float64            `json:"soft_irq_percent"`
+	StealPercent   float64            `json:"steal_percent"`
+	LoadAverage    *LoadAverage       `json:"load_average,omitempty"`
 	PerCPU         []TimescaleCPUCore `json:"per_cpu,omitempty"`
 }
 
@@ -531,7 +550,7 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 	if data, ok := resp.Data.(*TimescaleMetricsRangeResponse); ok {
 		return data, nil
 	}
-	
+
 	// If type assertion failed, try to handle map[string]interface{} case
 	if dataMap, ok := resp.Data.(map[string]interface{}); ok {
 		// Convert map to JSON and unmarshal into our type
@@ -539,15 +558,15 @@ func (s *MetricsService) GetMetricsRange(ctx context.Context, serverUUID string,
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal data map: %w", err)
 		}
-		
+
 		var result TimescaleMetricsRangeResponse
 		if err := json.Unmarshal(jsonBytes, &result); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into TimescaleMetricsRangeResponse: %w", err)
 		}
-		
+
 		return &result, nil
 	}
-	
+
 	return nil, fmt.Errorf("unexpected response type")
 }
 
