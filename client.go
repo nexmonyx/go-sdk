@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.1.11"
+	Version = "1.2.0"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -340,7 +340,7 @@ func (c *Client) handleError(resp *resty.Response) error {
 
 	// Try to parse error message from response body
 	errorMessage := string(resp.Body())
-	
+
 	switch resp.StatusCode() {
 	case 400:
 		return &ValidationError{
@@ -399,18 +399,18 @@ func (c *Client) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// If the healthy boolean is explicitly true, consider it healthy
 	if health.Healthy {
 		return nil
 	}
-	
+
 	// If the healthy field is false/missing, check if status indicates health
 	// Some APIs may return status="healthy" but omit the healthy boolean field
 	if health.Status == "healthy" || health.Status == "operational" || health.Status == "ok" {
 		return nil
 	}
-	
+
 	// API is definitively unhealthy
 	if health.Status != "" {
 		return fmt.Errorf("API is unhealthy: %s", health.Status)
