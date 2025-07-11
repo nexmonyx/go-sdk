@@ -298,38 +298,38 @@ type AlertChannel struct {
 
 // AlertRule represents a more detailed alert rule configuration
 type AlertRule struct {
-	ID             uint                   `json:"id"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description"`
-	OrganizationID uint                   `json:"organization_id"`
-	
+	ID             uint   `json:"id"`
+	Name           string `json:"name"`
+	Description    string `json:"description"`
+	OrganizationID uint   `json:"organization_id"`
+
 	// Scope configuration
-	ScopeType      string                 `json:"scope_type"` // organization, server, tag, group
-	ScopeID        *uint                  `json:"scope_id,omitempty"`
-	ScopeValue     string                 `json:"scope_value,omitempty"`
-	
+	ScopeType  string `json:"scope_type"` // organization, server, tag, group
+	ScopeID    *uint  `json:"scope_id,omitempty"`
+	ScopeValue string `json:"scope_value,omitempty"`
+
 	// Metric configuration
-	MetricName     string                 `json:"metric_name"`
-	Aggregation    string                 `json:"aggregation"` // avg, sum, min, max, count
-	
+	MetricName  string `json:"metric_name"`
+	Aggregation string `json:"aggregation"` // avg, sum, min, max, count
+
 	// Conditions
-	Conditions     AlertConditions        `json:"conditions"`
-	
+	Conditions AlertConditions `json:"conditions"`
+
 	// Notification settings
-	ChannelIDs     []uint                 `json:"channel_ids"`
-	
+	ChannelIDs []uint `json:"channel_ids"`
+
 	// State
-	Enabled        bool                   `json:"enabled"`
-	LastEvaluated  *time.Time             `json:"last_evaluated,omitempty"`
-	
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	Enabled       bool       `json:"enabled"`
+	LastEvaluated *time.Time `json:"last_evaluated,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // AlertConditions represents the conditions for triggering an alert
 type AlertConditions struct {
-	TimeWindow int                `json:"time_window"` // in minutes
-	Thresholds []AlertThreshold   `json:"thresholds"`
+	TimeWindow int              `json:"time_window"` // in minutes
+	Thresholds []AlertThreshold `json:"thresholds"`
 }
 
 // AlertThreshold represents a threshold configuration
@@ -762,7 +762,6 @@ type TimescaleFilesystem struct {
 	InodesFree  uint64  `json:"inodes_free"`
 }
 
-
 // TimescaleHostInfo represents host system information
 type TimescaleHostInfo struct {
 	Hostname       string `json:"hostname"`
@@ -837,3 +836,79 @@ func (o *HardwareInventoryListOptions) ToQuery() map[string]string {
 	}
 	return params
 }
+
+// Controller health and heartbeat types
+type ControllerHealthInfo struct {
+	Status        string                 `json:"status"`
+	Version       string                 `json:"version"`
+	Uptime        time.Duration          `json:"uptime"`
+	LastHeartbeat *CustomTime            `json:"last_heartbeat,omitempty"`
+	ResourceUsage *ResourceUsageInfo     `json:"resource_usage,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+}
+
+type ControllerHeartbeatRequest struct {
+	ControllerID  string                `json:"controller_id"`
+	Status        string                `json:"status"`
+	Version       string                `json:"version"`
+	Health        *ControllerHealthInfo `json:"health"`
+	ResourceUsage *ResourceUsageInfo    `json:"resource_usage,omitempty"`
+	Timestamp     time.Time             `json:"timestamp"`
+}
+
+type ResourceUsageInfo struct {
+	CPUUsage       float64 `json:"cpu_usage"`
+	MemoryUsage    int64   `json:"memory_usage"`
+	MemoryLimit    int64   `json:"memory_limit,omitempty"`
+	DiskUsage      int64   `json:"disk_usage,omitempty"`
+	NetworkRxBytes int64   `json:"network_rx_bytes,omitempty"`
+	NetworkTxBytes int64   `json:"network_tx_bytes,omitempty"`
+}
+
+// Regional monitoring types
+type MonitoringRegion struct {
+	GormModel
+	Code        string                 `json:"code"`
+	Name        string                 `json:"name"`
+	Status      RegionStatus           `json:"status"`
+	Location    string                 `json:"location,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Enabled     bool                   `json:"enabled"`
+	Priority    int                    `json:"priority"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+type RegionStatus string
+
+const (
+	RegionStatusActive      RegionStatus = "active"
+	RegionStatusInactive    RegionStatus = "inactive"
+	RegionStatusMaintenance RegionStatus = "maintenance"
+)
+
+// Remote cluster types
+type RemoteCluster struct {
+	GormModel
+	Name         string                 `json:"name"`
+	Endpoint     string                 `json:"endpoint"`
+	Region       string                 `json:"region"`
+	Status       string                 `json:"status"`
+	Version      string                 `json:"version,omitempty"`
+	Capabilities []string               `json:"capabilities,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	LastSeen     *CustomTime            `json:"last_seen,omitempty"`
+}
+
+// ControllerHeartbeat represents a controller heartbeat record
+type ControllerHeartbeat struct {
+	GormModel
+	ControllerID  string                `json:"controller_id"`
+	Status        string                `json:"status"`
+	Version       string                `json:"version"`
+	Health        *ControllerHealthInfo `json:"health"`
+	ResourceUsage *ResourceUsageInfo    `json:"resource_usage,omitempty"`
+	Timestamp     time.Time             `json:"timestamp"`
+}
+
+// Type alias for backward compatibility
+type Probe = MonitoringProbe
