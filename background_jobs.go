@@ -261,3 +261,144 @@ func (s *BackgroundJobsService) CreateAlertDigestJob(ctx context.Context, organi
 		},
 	})
 }
+
+// UpdateJobStatus updates the status of a background job
+func (s *BackgroundJobsService) UpdateJobStatus(ctx context.Context, jobID uint, req *BackgroundJobStatusUpdateRequest) (*BackgroundJob, *Response, error) {
+	var resp StandardResponse
+	resp.Data = &BackgroundJob{}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "PATCH",
+		Path:   fmt.Sprintf("/v1/background-jobs/%d/status", jobID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if job, ok := resp.Data.(*BackgroundJob); ok {
+		return job, apiResp, nil
+	}
+	return nil, apiResp, fmt.Errorf("unexpected response type")
+}
+
+// UpdateJobProgress updates the progress of a background job
+func (s *BackgroundJobsService) UpdateJobProgress(ctx context.Context, jobID uint, req *BackgroundJobProgressUpdateRequest) (*BackgroundJob, *Response, error) {
+	var resp StandardResponse
+	resp.Data = &BackgroundJob{}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "PATCH",
+		Path:   fmt.Sprintf("/v1/background-jobs/%d/progress", jobID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if job, ok := resp.Data.(*BackgroundJob); ok {
+		return job, apiResp, nil
+	}
+	return nil, apiResp, fmt.Errorf("unexpected response type")
+}
+
+// CompleteJob marks a background job as completed
+func (s *BackgroundJobsService) CompleteJob(ctx context.Context, jobID uint, result map[string]interface{}) (*BackgroundJob, *Response, error) {
+	var resp StandardResponse
+	resp.Data = &BackgroundJob{}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/background-jobs/%d/complete", jobID),
+		Body: map[string]interface{}{
+			"result": result,
+		},
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if job, ok := resp.Data.(*BackgroundJob); ok {
+		return job, apiResp, nil
+	}
+	return nil, apiResp, fmt.Errorf("unexpected response type")
+}
+
+// FailJob marks a background job as failed
+func (s *BackgroundJobsService) FailJob(ctx context.Context, jobID uint, errorMessage string) (*BackgroundJob, *Response, error) {
+	var resp StandardResponse
+	resp.Data = &BackgroundJob{}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/background-jobs/%d/fail", jobID),
+		Body: map[string]interface{}{
+			"error": errorMessage,
+		},
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if job, ok := resp.Data.(*BackgroundJob); ok {
+		return job, apiResp, nil
+	}
+	return nil, apiResp, fmt.Errorf("unexpected response type")
+}
+
+// GetPendingJobs retrieves pending background jobs
+func (s *BackgroundJobsService) GetPendingJobs(ctx context.Context, opts *GetPendingJobsOptions) ([]*BackgroundJob, *PaginationMeta, error) {
+	var resp PaginatedResponse
+	var jobs []*BackgroundJob
+	resp.Data = &jobs
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/background-jobs/pending",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return jobs, resp.Meta, nil
+}
+
+// BackgroundJobStatusUpdateRequest represents a request to update job status
+type BackgroundJobStatusUpdateRequest struct {
+	Status string `json:"status"`
+}
+
+// BackgroundJobProgressUpdateRequest represents a request to update job progress
+type BackgroundJobProgressUpdateRequest struct {
+	Progress     int    `json:"progress"`
+	ProgressText string `json:"progress_text,omitempty"`
+}
+
+// GetPendingJobsOptions represents options for retrieving pending jobs
+type GetPendingJobsOptions struct {
+	Limit         int  `url:"limit,omitempty"`
+	ImmediateOnly bool `url:"immediate_only,omitempty"`
+}
+
+// ToQuery converts GetPendingJobsOptions to query parameters
+func (o *GetPendingJobsOptions) ToQuery() map[string]string {
+	params := make(map[string]string)
+	if o.Limit > 0 {
+		params["limit"] = fmt.Sprintf("%d", o.Limit)
+	}
+	if o.ImmediateOnly {
+		params["immediate_only"] = "true"
+	}
+	return params
+}
