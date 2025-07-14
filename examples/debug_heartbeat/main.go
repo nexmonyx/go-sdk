@@ -111,7 +111,7 @@ func testUpdateDetails(ctx context.Context, client *nexmonyx.Client, serverUUID 
 		OSArch:       "x86_64",
 		CPUModel:     "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
 		CPUCores:     8,
-		MemoryTotal:  16384 * 1024 * 1024,     // Convert MB to bytes
+		MemoryTotal:  16384 * 1024 * 1024,      // Convert MB to bytes
 		StorageTotal: 500 * 1024 * 1024 * 1024, // Convert GB to bytes
 	}
 
@@ -138,7 +138,7 @@ func testUpdateInfo(ctx context.Context, client *nexmonyx.Client, serverUUID str
 		OSArch:       "x86_64",
 		CPUModel:     "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz",
 		CPUCores:     8,
-		MemoryTotal:  16384 * 1024 * 1024,     // Convert MB to bytes
+		MemoryTotal:  16384 * 1024 * 1024,      // Convert MB to bytes
 		StorageTotal: 500 * 1024 * 1024 * 1024, // Convert GB to bytes
 	}
 

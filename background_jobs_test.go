@@ -95,7 +95,7 @@ func TestBackgroundJobsService_ListJobs(t *testing.T) {
 
 		response := map[string]interface{}{
 			"success": true,
-			"data": jobs,
+			"data":    jobs,
 			"meta": map[string]interface{}{
 				"total":       2,
 				"page":        1,

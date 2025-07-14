@@ -66,7 +66,7 @@ func (c *Client) DebugAuthHeaders(ctx context.Context) error {
 	}
 
 	fmt.Println("\n========================================")
-	
+
 	// Summary
 	if err1 == nil && err2 != nil {
 		fmt.Println("CONCLUSION: API expects headers WITH 'X-' prefix (current SDK format is correct)")
@@ -92,7 +92,7 @@ func (c *Client) testAuthRequest(ctx context.Context, headers map[string]string)
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/v1/server/heartbeat", nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", c.config.BaseURL+"/v1/heartbeat", nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}

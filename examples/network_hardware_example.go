@@ -84,20 +84,20 @@ func main() {
 	// Submit network hardware information
 	ctx := context.Background()
 	serverUUID := os.Getenv("SERVER_UUID")
-	
+
 	// Check for required environment variables
 	if serverUUID == "" {
 		log.Fatal("SERVER_UUID environment variable is required")
 	}
-	
+
 	serverSecret := os.Getenv("SERVER_SECRET")
 	if serverSecret == "" {
 		log.Fatal("SERVER_SECRET environment variable is required")
 	}
-	
+
 	fmt.Printf("Starting network hardware submission for server: %s\n", serverUUID)
 	fmt.Printf("Submitting %d network interfaces...\n", len(interfaces))
-	
+
 	resp, err := client.NetworkHardware.Submit(ctx, serverUUID, interfaces)
 	if err != nil {
 		fmt.Printf("Failed to submit network hardware: %v\n", err)

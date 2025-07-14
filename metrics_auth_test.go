@@ -26,7 +26,7 @@ func TestMetricsServiceAutoSetServerUUID(t *testing.T) {
 				ServerUUID:   "test-server-uuid-123",
 				ServerSecret: "test-server-secret",
 			},
-			payloadServerUUID:  "", // Empty in payload
+			payloadServerUUID:  "",                     // Empty in payload
 			expectedServerUUID: "test-server-uuid-123", // Should be auto-set from config
 			description:        "Should automatically set ServerUUID from config when payload has empty ServerUUID",
 		},

@@ -5,24 +5,11 @@ import (
 	"fmt"
 )
 
-// GetServer retrieves a server by ID
+// GetServer retrieves a server by ID (deprecated - use GetByUUID instead)
+// This method assumes the ID is actually a UUID
 func (s *ServersService) Get(ctx context.Context, id string) (*Server, error) {
-	var resp StandardResponse
-	resp.Data = &Server{}
-
-	_, err := s.client.Do(ctx, &Request{
-		Method: "GET",
-		Path:   fmt.Sprintf("/v1/server/%s", id),
-		Result: &resp,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if server, ok := resp.Data.(*Server); ok {
-		return server, nil
-	}
-	return nil, fmt.Errorf("unexpected response type")
+	// Redirect to GetByUUID since the API only supports UUID-based access
+	return s.GetByUUID(ctx, id)
 }
 
 // GetServerByUUID retrieves a server by UUID
@@ -32,7 +19,7 @@ func (s *ServersService) GetByUUID(ctx context.Context, uuid string) (*Server, e
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/server/uuid/%s", uuid),
+		Path:   fmt.Sprintf("/v1/server/%s/full-details", uuid),
 		Result: &resp,
 	})
 	if err != nil {
@@ -53,7 +40,7 @@ func (s *ServersService) List(ctx context.Context, opts *ListOptions) ([]*Server
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/v1/servers",
+		Path:   "/v2/servers",
 		Result: &resp,
 	}
 
@@ -69,14 +56,17 @@ func (s *ServersService) List(ctx context.Context, opts *ListOptions) ([]*Server
 	return servers, resp.Meta, nil
 }
 
-// CreateServer registers a new server
+// CreateServer registers a new server (deprecated - use RegisterWithKey instead)
+// This method is deprecated as server creation now requires registration keys
 func (s *ServersService) Create(ctx context.Context, server *Server) (*Server, error) {
+	// For backward compatibility, try to register with empty key
+	// This will likely fail unless the API supports it
 	var resp StandardResponse
 	resp.Data = &Server{}
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/servers",
+		Path:   "/v1/register",
 		Body:   server,
 		Result: &resp,
 	})
@@ -90,34 +80,27 @@ func (s *ServersService) Create(ctx context.Context, server *Server) (*Server, e
 	return nil, fmt.Errorf("unexpected response type")
 }
 
-// UpdateServer updates an existing server
+// UpdateServer updates an existing server (deprecated - use UpdateDetails instead)
+// This method assumes the ID is actually a UUID and uses the details endpoint
 func (s *ServersService) Update(ctx context.Context, id string, server *Server) (*Server, error) {
-	var resp StandardResponse
-	resp.Data = &Server{}
-
-	_, err := s.client.Do(ctx, &Request{
-		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/server/%s", id),
-		Body:   server,
-		Result: &resp,
-	})
-	if err != nil {
-		return nil, err
+	// Convert to server update request and use UpdateDetails
+	// This is a best-effort mapping
+	req := &ServerDetailsUpdateRequest{
+		// Map relevant fields from Server to ServerDetailsUpdateRequest
+		Hostname: server.Hostname,
+		// Add other fields as needed
 	}
-
-	if updated, ok := resp.Data.(*Server); ok {
-		return updated, nil
-	}
-	return nil, fmt.Errorf("unexpected response type")
+	return s.UpdateDetails(ctx, id, req)
 }
 
-// DeleteServer deletes a server
+// DeleteServer deletes a server (requires admin permissions)
+// This method assumes the ID is actually a UUID and uses the admin endpoint
 func (s *ServersService) Delete(ctx context.Context, id string) error {
 	var resp StandardResponse
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/v1/server/%s", id),
+		Path:   fmt.Sprintf("/v1/admin/server/%s", id),
 		Result: &resp,
 	})
 	return err
@@ -135,7 +118,7 @@ func (s *ServersService) Register(ctx context.Context, hostname string, organiza
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/server/register",
+		Path:   "/v1/register",
 		Body:   body,
 		Result: &resp,
 	})
@@ -293,7 +276,7 @@ func (s *ServersService) RegisterWithKeyFull(ctx context.Context, registrationKe
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/server/register",
+		Path:   "/v1/register",
 		Headers: map[string]string{
 			"X-Registration-Key": registrationKey,
 		},
@@ -325,7 +308,7 @@ func (s *ServersService) Heartbeat(ctx context.Context) error {
 		Path:   "/v1/heartbeat",
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] Heartbeat: Request failed with error: %v\n", err)
@@ -367,7 +350,7 @@ func (s *ServersService) HeartbeatWithVersion(ctx context.Context, agentVersion 
 		Body:   body,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] HeartbeatWithVersion: Request failed with error: %v\n", err)
@@ -389,9 +372,10 @@ func (s *ServersService) UpdateServer(ctx context.Context, serverUUID string, re
 	var resp StandardResponse
 	resp.Data = &Server{}
 
+	// Use the admin endpoint since there's no general server update endpoint
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/server/%s", serverUUID),
+		Path:   fmt.Sprintf("/v1/admin/server/%s", serverUUID),
 		Body:   req,
 		Result: &resp,
 	})
@@ -408,7 +392,7 @@ func (s *ServersService) UpdateServer(ctx context.Context, serverUUID string, re
 // UpdateDetails updates detailed server information including hardware info
 func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
 	endpoint := fmt.Sprintf("/v1/server/%s/details", serverUUID)
-	
+
 	if s.client.config.Debug {
 		fmt.Printf("[DEBUG] UpdateDetails: Starting server details update\n")
 		fmt.Printf("[DEBUG] UpdateDetails: Endpoint: PUT %s\n", endpoint)
@@ -436,7 +420,7 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 		Body:   req,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] UpdateDetails: Request failed with error: %v\n", err)
@@ -468,7 +452,7 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 // UpdateInfo updates server information (alias for UpdateDetails)
 func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req *ServerDetailsUpdateRequest) (*Server, error) {
 	endpoint := fmt.Sprintf("/v1/server/%s/info", serverUUID)
-	
+
 	if s.client.config.Debug {
 		fmt.Printf("[DEBUG] UpdateInfo: Starting server info update\n")
 		fmt.Printf("[DEBUG] UpdateInfo: Endpoint: PUT %s\n", endpoint)
@@ -496,7 +480,7 @@ func (s *ServersService) UpdateInfo(ctx context.Context, serverUUID string, req 
 		Body:   req,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] UpdateInfo: Request failed with error: %v\n", err)
@@ -569,7 +553,7 @@ func (s *ServersService) GetFullDetails(ctx context.Context, serverUUID string) 
 // UpdateHeartbeat updates the heartbeat for a specific server
 func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string) error {
 	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
-	
+
 	if s.client.config.Debug {
 		fmt.Printf("[DEBUG] UpdateHeartbeat: Starting heartbeat update\n")
 		fmt.Printf("[DEBUG] UpdateHeartbeat: Endpoint: PUT %s\n", endpoint)
@@ -584,7 +568,7 @@ func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string)
 		Path:   endpoint,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] UpdateHeartbeat: Request failed with error: %v\n", err)
@@ -604,7 +588,7 @@ func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string)
 // GetHeartbeat retrieves heartbeat information for a server
 func (s *ServersService) GetHeartbeat(ctx context.Context, serverUUID string) (*HeartbeatResponse, error) {
 	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
-	
+
 	if s.client.config.Debug {
 		fmt.Printf("[DEBUG] GetHeartbeat: Starting heartbeat retrieval\n")
 		fmt.Printf("[DEBUG] GetHeartbeat: Endpoint: GET %s\n", endpoint)
@@ -620,7 +604,7 @@ func (s *ServersService) GetHeartbeat(ctx context.Context, serverUUID string) (*
 		Path:   endpoint,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if err != nil {
 			fmt.Printf("[DEBUG] GetHeartbeat: Request failed with error: %v\n", err)

@@ -415,18 +415,20 @@ type HardwareInventoryInfo struct {
 	AdditionalInfo   map[string]interface{} `json:"additional_info,omitempty"`
 
 	// Structured hardware components
-	System          *SystemHardwareInfo  `json:"system,omitempty"`
-	Motherboard     *MotherboardInfo     `json:"motherboard,omitempty"`
-	CPUs            []CPUInfo            `json:"cpus,omitempty"`
-	Memory          *MemoryInfo          `json:"memory,omitempty"`
-	MemoryModules   []MemoryModuleInfo   `json:"memory_modules,omitempty"`
-	Storage         []StorageDeviceInfo  `json:"storage,omitempty"`
-	StorageDevices  []StorageDeviceInfo  `json:"storage_devices,omitempty"` // Alias for Storage
-	Network         []NetworkCardInfo    `json:"network,omitempty"`
-	NetworkCards    []NetworkCardInfo    `json:"network_cards,omitempty"` // Alias for Network
-	GPUs            []GPUInfo            `json:"gpus,omitempty"`
-	PowerSupplies   []PowerSupplyInfo    `json:"power_supplies,omitempty"`
-	RAIDControllers []RAIDControllerInfo `json:"raid_controllers,omitempty"`
+	System              *SystemHardwareInfo    `json:"system,omitempty"`
+	Motherboard         *MotherboardInfo       `json:"motherboard,omitempty"`
+	CPUs                []CPUInfo              `json:"cpus,omitempty"`
+	Memory              *MemoryInfo            `json:"memory,omitempty"`
+	MemoryModules       []MemoryModuleInfo     `json:"memory_modules,omitempty"`
+	Storage             []StorageDeviceInfo    `json:"storage,omitempty"`
+	StorageDevices      []StorageDeviceInfo    `json:"storage_devices,omitempty"` // Alias for Storage
+	Network             []NetworkCardInfo      `json:"network,omitempty"`
+	NetworkCards        []NetworkCardInfo      `json:"network_cards,omitempty"` // Alias for Network
+	GPUs                []GPUInfo              `json:"gpus,omitempty"`
+	PowerSupplies       []PowerSupplyInfo      `json:"power_supplies,omitempty"`
+	RAIDControllers     []RAIDControllerInfo   `json:"raid_controllers,omitempty"`
+	TemperatureSensors  []TemperatureSensorInfo `json:"temperature_sensors,omitempty"`
+	Services            *ServiceInfo           `json:"services,omitempty"`
 }
 
 // SystemHardwareInfo represents system-level hardware information
@@ -548,13 +550,20 @@ type GPUInfo struct {
 
 // PowerSupplyInfo represents power supply information
 type PowerSupplyInfo struct {
-	Model         string `json:"model,omitempty"`
-	Manufacturer  string `json:"manufacturer,omitempty"`
-	SerialNumber  string `json:"serial_number,omitempty"`
-	MaxPowerWatts int    `json:"max_power_watts,omitempty"`
-	Type          string `json:"type,omitempty"`
-	Status        string `json:"status,omitempty"`
-	Efficiency    string `json:"efficiency,omitempty"`
+	Model             string  `json:"model,omitempty"`
+	Manufacturer      string  `json:"manufacturer,omitempty"`
+	SerialNumber      string  `json:"serial_number,omitempty"`
+	MaxPowerWatts     int     `json:"max_power_watts,omitempty"`
+	Type              string  `json:"type,omitempty"`
+	Status            string  `json:"status,omitempty"`
+	Efficiency        string  `json:"efficiency,omitempty"`
+	CurrentPowerWatts float64 `json:"current_power_watts,omitempty"`
+	Voltage           float64 `json:"voltage,omitempty"`
+	Current           float64 `json:"current,omitempty"`
+	Temperature       float64 `json:"temperature,omitempty"`
+	FanSpeed          int     `json:"fan_speed,omitempty"`
+	InputVoltage      float64 `json:"input_voltage,omitempty"`
+	OutputVoltage     float64 `json:"output_voltage,omitempty"`
 }
 
 // SystemInfo represents system information for metrics
@@ -671,6 +680,9 @@ type ComprehensiveMetricsRequest struct {
 	DiskUsageAggregate *DiskUsageAggregate    `json:"disk_usage_aggregate,omitempty"`
 	Network            []NetworkMetrics       `json:"network,omitempty"`
 	Processes          []ProcessMetrics       `json:"processes,omitempty"`
+	Temperature        *TemperatureMetrics    `json:"temperature,omitempty"`
+	Power              *PowerMetrics          `json:"power,omitempty"`
+	Services           *ServiceInfo           `json:"services,omitempty"`
 	CustomMetrics      map[string]interface{} `json:"custom_metrics,omitempty"`
 }
 
@@ -1039,6 +1051,106 @@ type GPUAggregation struct {
 	MaxTemperature    float64 `json:"max_temperature"`
 	PowerUsageWatts   float64 `json:"power_usage_watts"`
 	CalculatedAt      string  `json:"calculated_at"`
+}
+
+// TemperatureMetrics represents temperature sensor data
+type TemperatureMetrics struct {
+	Sensors []TemperatureSensorData `json:"sensors,omitempty"`
+}
+
+// TemperatureSensorData represents individual temperature sensor data
+type TemperatureSensorData struct {
+	SensorID      string  `json:"sensor_id"`
+	SensorName    string  `json:"sensor_name"`
+	Temperature   float64 `json:"temperature"`      // in Celsius
+	Status        string  `json:"status"`           // ok, warning, critical
+	Type          string  `json:"type,omitempty"`   // cpu, system, disk, gpu, etc.
+	Location      string  `json:"location,omitempty"`
+	UpperWarning  float64 `json:"upper_warning,omitempty"`
+	UpperCritical float64 `json:"upper_critical,omitempty"`
+}
+
+// PowerMetrics represents power supply data
+type PowerMetrics struct {
+	PowerSupplies []PowerSupplyMetrics `json:"power_supplies,omitempty"`
+	TotalPowerW   float64             `json:"total_power_watts,omitempty"`
+}
+
+// PowerSupplyMetrics represents individual power supply metrics
+type PowerSupplyMetrics struct {
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Status        string  `json:"status"`        // ok, warning, critical, failed
+	PowerWatts    float64 `json:"power_watts"`   // current power draw
+	MaxPowerWatts float64 `json:"max_power_watts"`
+	Voltage       float64 `json:"voltage,omitempty"`
+	Current       float64 `json:"current,omitempty"`
+	Efficiency    float64 `json:"efficiency,omitempty"` // percentage
+	Temperature   float64 `json:"temperature,omitempty"`
+}
+
+// TemperatureSensorInfo represents temperature sensor information for hardware inventory
+type TemperatureSensorInfo struct {
+	SensorID      string  `json:"sensor_id"`
+	SensorName    string  `json:"sensor_name"`
+	Type          string  `json:"type"`
+	Location      string  `json:"location,omitempty"`
+	MaxTemp       float64 `json:"max_temp,omitempty"`
+	MinTemp       float64 `json:"min_temp,omitempty"`
+}
+
+// ServiceInfo contains service monitoring data
+type ServiceInfo struct {
+	Services []*ServiceMonitoringInfo      `json:"services,omitempty"`
+	Metrics  []*ServiceMetrics             `json:"metrics,omitempty"`
+	Logs     map[string][]ServiceLogEntry  `json:"logs,omitempty"`
+}
+
+// ServiceMonitoringInfo represents service monitoring data
+type ServiceMonitoringInfo struct {
+	Name          string     `json:"name"`
+	State         string     `json:"state"`         // active, inactive, failed
+	SubState      string     `json:"sub_state"`     // running, dead, exited, etc.
+	LoadState     string     `json:"load_state"`    // loaded, not-found, masked
+	Description   string     `json:"description"`
+	MainPID       int        `json:"main_pid"`
+	MemoryCurrent uint64     `json:"memory_current"`
+	CPUUsageNSec  uint64     `json:"cpu_usage_nsec"`
+	TasksCurrent  uint64     `json:"tasks_current"`
+	RestartCount  int        `json:"restart_count"`
+	ActiveSince   *time.Time `json:"active_since,omitempty"`
+}
+
+// ServiceMetrics represents service resource metrics
+type ServiceMetrics struct {
+	ServiceName  string    `json:"service_name"`
+	Timestamp    time.Time `json:"timestamp"`
+	CPUPercent   float64   `json:"cpu_percent"`
+	MemoryRSS    uint64    `json:"memory_rss"`
+	ProcessCount int       `json:"process_count"`
+	ThreadCount  int       `json:"thread_count"`
+}
+
+// ServiceLogEntry represents a service log entry
+type ServiceLogEntry struct {
+	Timestamp time.Time         `json:"timestamp"`
+	Level     string            `json:"level"`
+	Message   string            `json:"message"`
+	Fields    map[string]string `json:"fields,omitempty"`
+}
+
+// ServiceMonitoringConfig represents configuration for service monitoring
+type ServiceMonitoringConfig struct {
+	Enabled         bool     `json:"enabled"`          // Enable service monitoring
+	IncludeServices []string `json:"include_services"` // Specific services to monitor
+	ExcludeServices []string `json:"exclude_services"` // Services to exclude
+	IncludePatterns []string `json:"include_patterns"` // Patterns like "nginx*", "apache*"
+	ExcludePatterns []string `json:"exclude_patterns"` // Patterns like "*.scope", "*.slice"
+	CollectMetrics  bool     `json:"collect_metrics"`  // Collect resource metrics
+	CollectLogs     bool     `json:"collect_logs"`     // Collect recent logs
+	LogLines        int      `json:"log_lines"`        // Number of recent log lines
+	MetricsInterval string   `json:"metrics_interval"` // How often to collect metrics
+	LogStateFile    string   `json:"log_state_file"`   // Path to log state file
 }
 
 // Type alias for backward compatibility

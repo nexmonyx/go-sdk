@@ -78,14 +78,14 @@ func main() {
 	err = client.Servers.Heartbeat(ctx)
 	if err != nil {
 		fmt.Printf("❌ Heartbeat failed: %v\n", err)
-		
+
 		// Provide diagnostic information
 		fmt.Println("\nDiagnostic Information:")
 		fmt.Println("- Ensure the server UUID and secret are correct")
 		fmt.Println("- Verify the API endpoint is accessible")
 		fmt.Println("- Run with -test-auth flag to test different header formats")
 		fmt.Println("- Run with -debug flag to see request details")
-		
+
 		os.Exit(1)
 	}
 

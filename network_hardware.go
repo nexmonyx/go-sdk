@@ -63,10 +63,10 @@ type NetworkHardwareInfo struct {
 	Domains          []string `json:"domains,omitempty"`
 
 	// VLAN configuration
-	VlanID       int   `json:"vlan_id,omitempty"`
+	VlanID       int    `json:"vlan_id,omitempty"`
 	VlanParent   string `json:"vlan_parent,omitempty"`
-	NativeVlan   int   `json:"native_vlan,omitempty"`
-	AllowedVlans []int `json:"allowed_vlans,omitempty"`
+	NativeVlan   int    `json:"native_vlan,omitempty"`
+	AllowedVlans []int  `json:"allowed_vlans,omitempty"`
 
 	// Bonding/Teaming configuration
 	BondMode        string   `json:"bond_mode,omitempty"`
@@ -166,7 +166,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 		fmt.Printf("[DEBUG] NetworkHardware.Submit: Request payload:\n")
 		fmt.Printf("[DEBUG] NetworkHardware.Submit:   ServerUUID: %s\n", req.ServerUUID)
 		fmt.Printf("[DEBUG] NetworkHardware.Submit:   Interfaces count: %d\n", len(req.Interfaces))
-		
+
 		for i, iface := range req.Interfaces {
 			fmt.Printf("[DEBUG] NetworkHardware.Submit:   Interface[%d]:\n", i)
 			fmt.Printf("[DEBUG] NetworkHardware.Submit:     Name: %s\n", iface.InterfaceName)
@@ -178,7 +178,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 			fmt.Printf("[DEBUG] NetworkHardware.Submit:     IPs: %v\n", iface.IPAddresses)
 			fmt.Printf("[DEBUG] NetworkHardware.Submit:     RX Bytes: %d\n", iface.RxBytes)
 			fmt.Printf("[DEBUG] NetworkHardware.Submit:     TX Bytes: %d\n", iface.TxBytes)
-			
+
 			if iface.InterfaceType == "bond" {
 				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bond Mode: %s\n", iface.BondMode)
 				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bond Slaves: %v\n", iface.BondSlaves)
@@ -192,7 +192,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 				fmt.Printf("[DEBUG] NetworkHardware.Submit:     Bridge STP: %t\n", iface.BridgeSTP)
 			}
 		}
-		
+
 		fmt.Printf("[DEBUG] NetworkHardware.Submit: Using authentication method: %s\n", s.client.getAuthMethod())
 	}
 
@@ -203,7 +203,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 		Body:   req,
 		Result: &resp,
 	})
-	
+
 	if s.client.config.Debug {
 		if httpResp != nil {
 			fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Status: %d\n", httpResp.StatusCode)
@@ -213,11 +213,11 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 				fmt.Printf("[DEBUG] NetworkHardware.Submit: HTTP Response Body: %s\n", string(httpResp.Body))
 			}
 		}
-		
+
 		if err != nil {
 			fmt.Printf("[DEBUG] NetworkHardware.Submit: ERROR - Request failed: %v\n", err)
 			fmt.Printf("[DEBUG] NetworkHardware.Submit: Error type: %T\n", err)
-			
+
 			// Check if it's an API error and log details
 			if apiErr, ok := err.(*APIError); ok {
 				fmt.Printf("[DEBUG] NetworkHardware.Submit: API Error Details:\n")
@@ -237,7 +237,7 @@ func (s *NetworkHardwareService) Submit(ctx context.Context, serverUUID string, 
 			}
 		}
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}

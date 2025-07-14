@@ -241,7 +241,6 @@ func TestGetMetricsRange(t *testing.T) {
 			Data:   rangeResponse,
 		}
 
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(response)
@@ -268,7 +267,6 @@ func TestGetMetricsRange(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotNil(t, result, "Result should not be nil")
-
 
 	assert.Equal(t, "test-uuid", result.ServerUUID)
 	assert.Equal(t, 2, result.Count)
