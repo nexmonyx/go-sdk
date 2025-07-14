@@ -49,7 +49,7 @@ func main() {
 	fmt.Printf("Server UUID: %s\n", *serverUUID)
 	fmt.Printf("Test Type: %s\n", *testType)
 	fmt.Println("Debug Mode: ENABLED")
-	fmt.Println("========================================\n")
+	fmt.Println("========================================")
 
 	// Create client with debug mode enabled
 	client, err := nexmonyx.NewClient(&nexmonyx.Config{
@@ -73,15 +73,13 @@ func main() {
 		testUpdateDetails(ctx, client, *serverUUID)
 	case "update-info":
 		testUpdateInfo(ctx, client, *serverUUID)
-	case "get-heartbeat":
-		testGetHeartbeat(ctx, client, *serverUUID)
 	default:
 		log.Fatalf("Unknown test type: %s", *testType)
 	}
 }
 
 func testHeartbeat(ctx context.Context, client *nexmonyx.Client) {
-	fmt.Println("\n=== Testing Heartbeat ===\n")
+	fmt.Println("\n=== Testing Heartbeat ===")
 
 	// Test basic heartbeat
 	err := client.Servers.Heartbeat(ctx)
@@ -92,7 +90,7 @@ func testHeartbeat(ctx context.Context, client *nexmonyx.Client) {
 	}
 
 	// Test heartbeat with version
-	fmt.Println("\n=== Testing Heartbeat with Version ===\n")
+	fmt.Println("\n=== Testing Heartbeat with Version ===")
 	err = client.Servers.HeartbeatWithVersion(ctx, "v1.0.0")
 	if err != nil {
 		fmt.Printf("\n❌ Heartbeat with version failed: %v\n", err)
@@ -102,7 +100,7 @@ func testHeartbeat(ctx context.Context, client *nexmonyx.Client) {
 }
 
 func testUpdateDetails(ctx context.Context, client *nexmonyx.Client, serverUUID string) {
-	fmt.Println("\n=== Testing Update Details ===\n")
+	fmt.Println("\n=== Testing Update Details ===")
 
 	details := &nexmonyx.ServerDetailsUpdateRequest{
 		Hostname:     "debug-test-server",
@@ -129,7 +127,7 @@ func testUpdateDetails(ctx context.Context, client *nexmonyx.Client, serverUUID 
 }
 
 func testUpdateInfo(ctx context.Context, client *nexmonyx.Client, serverUUID string) {
-	fmt.Println("\n=== Testing Update Info ===\n")
+	fmt.Println("\n=== Testing Update Info ===")
 
 	info := &nexmonyx.ServerDetailsUpdateRequest{
 		Hostname:     "debug-test-server-info",
@@ -155,21 +153,3 @@ func testUpdateInfo(ctx context.Context, client *nexmonyx.Client, serverUUID str
 	}
 }
 
-func testGetHeartbeat(ctx context.Context, client *nexmonyx.Client, serverUUID string) {
-	fmt.Println("\n=== Testing Get Heartbeat ===\n")
-
-	heartbeat, err := client.Servers.GetHeartbeat(ctx, serverUUID)
-	if err != nil {
-		fmt.Printf("\n❌ Get heartbeat failed: %v\n", err)
-	} else {
-		fmt.Printf("\n✅ Get heartbeat successful!\n")
-		if heartbeat != nil {
-			fmt.Printf("Server UUID: %s\n", heartbeat.ServerUUID)
-			fmt.Printf("Server Status: %s\n", heartbeat.ServerStatus)
-			if heartbeat.LastHeartbeat != nil {
-				fmt.Printf("Last Heartbeat: %v\n", *heartbeat.LastHeartbeat)
-			}
-			fmt.Printf("Heartbeat Count: %d\n", heartbeat.HeartbeatCount)
-		}
-	}
-}

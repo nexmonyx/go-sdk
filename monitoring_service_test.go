@@ -79,24 +79,14 @@ func TestMonitoringService_ListAgents(t *testing.T) {
 
 		agents := []MonitoringAgent{
 			{
-				NodeUUID:      "agent-uuid-1",
-				Name:          "test-agent-1",
-				Type:          "private",
-				Status:        "active",
-				Region:        "us-east-1",
-				Enabled:       true,
-				MaxProbes:     100,
-				CurrentProbes: 25,
+				UUID:   "agent-uuid-1",
+				Name:   "test-agent-1",
+				Status: "active",
 			},
 			{
-				NodeUUID:      "agent-uuid-2",
-				Name:          "test-agent-2",
-				Type:          "private",
-				Status:        "active",
-				Region:        "us-west-2",
-				Enabled:       true,
-				MaxProbes:     100,
-				CurrentProbes: 50,
+				UUID:   "agent-uuid-2",
+				Name:   "test-agent-2",
+				Status: "active",
 			},
 		}
 
@@ -145,8 +135,8 @@ func TestMonitoringService_ListAgents(t *testing.T) {
 	if len(agents) != 2 {
 		t.Errorf("Expected 2 agents, got %d", len(agents))
 	}
-	if agents[0].NodeUUID != "agent-uuid-1" {
-		t.Errorf("Expected first agent UUID 'agent-uuid-1', got '%s'", agents[0].NodeUUID)
+	if agents[0].UUID != "agent-uuid-1" {
+		t.Errorf("Expected first agent UUID 'agent-uuid-1', got '%s'", agents[0].UUID)
 	}
 	if meta.TotalItems != 2 {
 		t.Errorf("Expected total items 2, got %d", meta.TotalItems)
@@ -170,14 +160,9 @@ func TestMonitoringService_RegisterAgent(t *testing.T) {
 		}
 
 		agent := MonitoringAgent{
-			NodeUUID:      "new-agent-uuid",
-			Name:          req.Name,
-			Type:          req.Type,
-			Status:        "active",
-			Region:        req.Region,
-			Enabled:       true,
-			MaxProbes:     req.MaxProbes,
-			CurrentProbes: 0,
+			UUID:   "new-agent-uuid",
+			Name:   req.Name,
+			Status: "active",
 		}
 
 		response := struct {
@@ -213,8 +198,8 @@ func TestMonitoringService_RegisterAgent(t *testing.T) {
 		t.Fatalf("RegisterAgent failed: %v", err)
 	}
 
-	if agent.NodeUUID != "new-agent-uuid" {
-		t.Errorf("Expected agent UUID 'new-agent-uuid', got '%s'", agent.NodeUUID)
+	if agent.UUID != "new-agent-uuid" {
+		t.Errorf("Expected agent UUID 'new-agent-uuid', got '%s'", agent.UUID)
 	}
 	if agent.Name != "test-agent" {
 		t.Errorf("Expected agent name 'test-agent', got '%s'", agent.Name)

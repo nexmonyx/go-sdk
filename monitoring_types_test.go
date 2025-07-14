@@ -97,18 +97,12 @@ func TestProbeResultMarshaling(t *testing.T) {
 
 func TestMonitoringAgentMarshaling(t *testing.T) {
 	agent := &MonitoringAgent{
-		NodeUUID:       "node-uuid-456",
+		UUID:           "node-uuid-456",
 		Name:           "test-agent",
-		Description:    "Test monitoring agent",
-		OrganizationID: uintPtr(1),
-		Type:           "private",
+		OrganizationID: 1,
 		Status:         "active",
-		Region:         "us-west-2",
-		Location:       "California",
-		IPAddress:      "192.168.1.100",
-		Enabled:        true,
-		MaxProbes:      100,
-		CurrentProbes:  25,
+		Version:        "v1.0.0",
+		ServerUUID:     "server-123",
 	}
 
 	// Test marshaling
@@ -125,8 +119,8 @@ func TestMonitoringAgentMarshaling(t *testing.T) {
 	}
 
 	// Verify critical fields
-	if unmarshaled.NodeUUID != agent.NodeUUID {
-		t.Errorf("Expected node UUID %s, got %s", agent.NodeUUID, unmarshaled.NodeUUID)
+	if unmarshaled.UUID != agent.UUID {
+		t.Errorf("Expected UUID %s, got %s", agent.UUID, unmarshaled.UUID)
 	}
 	if unmarshaled.Name != agent.Name {
 		t.Errorf("Expected name %s, got %s", agent.Name, unmarshaled.Name)

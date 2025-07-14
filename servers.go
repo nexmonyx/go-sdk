@@ -19,7 +19,7 @@ func (s *ServersService) GetByUUID(ctx context.Context, uuid string) (*Server, e
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/server/%s/full-details", uuid),
+		Path:   fmt.Sprintf("/v1/server/%s/details", uuid),
 		Result: &resp,
 	})
 	if err != nil {
@@ -133,12 +133,13 @@ func (s *ServersService) Register(ctx context.Context, hostname string, organiza
 }
 
 // SendHeartbeat sends a heartbeat for a server
+// Deprecated: UUID parameter is ignored. Use Heartbeat() method instead which uses server credentials from client config.
 func (s *ServersService) SendHeartbeat(ctx context.Context, uuid string) error {
 	var resp StandardResponse
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v1/server/%s/heartbeat", uuid),
+		Path:   "/v1/heartbeat",
 		Result: &resp,
 	})
 	return err
@@ -529,109 +530,5 @@ func (s *ServersService) GetDetails(ctx context.Context, serverUUID string) (*Se
 	return nil, fmt.Errorf("unexpected response type")
 }
 
-// GetFullDetails retrieves comprehensive server details including CPU information
-// This endpoint requires JWT authentication with servers:read permission
-func (s *ServersService) GetFullDetails(ctx context.Context, serverUUID string) (*Server, error) {
-	var resp StandardResponse
-	resp.Data = &Server{}
 
-	_, err := s.client.Do(ctx, &Request{
-		Method: "GET",
-		Path:   fmt.Sprintf("/v1/server/%s/full-details", serverUUID),
-		Result: &resp,
-	})
-	if err != nil {
-		return nil, err
-	}
 
-	if server, ok := resp.Data.(*Server); ok {
-		return server, nil
-	}
-	return nil, fmt.Errorf("unexpected response type")
-}
-
-// UpdateHeartbeat updates the heartbeat for a specific server
-func (s *ServersService) UpdateHeartbeat(ctx context.Context, serverUUID string) error {
-	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
-
-	if s.client.config.Debug {
-		fmt.Printf("[DEBUG] UpdateHeartbeat: Starting heartbeat update\n")
-		fmt.Printf("[DEBUG] UpdateHeartbeat: Endpoint: PUT %s\n", endpoint)
-		fmt.Printf("[DEBUG] UpdateHeartbeat: Server UUID: %s\n", serverUUID)
-		fmt.Printf("[DEBUG] UpdateHeartbeat: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
-	}
-
-	var resp StandardResponse
-
-	httpResp, err := s.client.Do(ctx, &Request{
-		Method: "PUT",
-		Path:   endpoint,
-		Result: &resp,
-	})
-
-	if s.client.config.Debug {
-		if err != nil {
-			fmt.Printf("[DEBUG] UpdateHeartbeat: Request failed with error: %v\n", err)
-		} else {
-			fmt.Printf("[DEBUG] UpdateHeartbeat: Request successful\n")
-			fmt.Printf("[DEBUG] UpdateHeartbeat: Response status: %s\n", resp.Status)
-			fmt.Printf("[DEBUG] UpdateHeartbeat: Response message: %s\n", resp.Message)
-			if httpResp != nil {
-				fmt.Printf("[DEBUG] UpdateHeartbeat: HTTP Status Code: %d\n", httpResp.StatusCode)
-			}
-		}
-	}
-
-	return err
-}
-
-// GetHeartbeat retrieves heartbeat information for a server
-func (s *ServersService) GetHeartbeat(ctx context.Context, serverUUID string) (*HeartbeatResponse, error) {
-	endpoint := fmt.Sprintf("/v1/server/%s/heartbeat", serverUUID)
-
-	if s.client.config.Debug {
-		fmt.Printf("[DEBUG] GetHeartbeat: Starting heartbeat retrieval\n")
-		fmt.Printf("[DEBUG] GetHeartbeat: Endpoint: GET %s\n", endpoint)
-		fmt.Printf("[DEBUG] GetHeartbeat: Server UUID: %s\n", serverUUID)
-		fmt.Printf("[DEBUG] GetHeartbeat: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
-	}
-
-	var resp StandardResponse
-	resp.Data = &HeartbeatResponse{}
-
-	httpResp, err := s.client.Do(ctx, &Request{
-		Method: "GET",
-		Path:   endpoint,
-		Result: &resp,
-	})
-
-	if s.client.config.Debug {
-		if err != nil {
-			fmt.Printf("[DEBUG] GetHeartbeat: Request failed with error: %v\n", err)
-		} else {
-			fmt.Printf("[DEBUG] GetHeartbeat: Request successful\n")
-			fmt.Printf("[DEBUG] GetHeartbeat: Response status: %s\n", resp.Status)
-			fmt.Printf("[DEBUG] GetHeartbeat: Response message: %s\n", resp.Message)
-			if httpResp != nil {
-				fmt.Printf("[DEBUG] GetHeartbeat: HTTP Status Code: %d\n", httpResp.StatusCode)
-			}
-			if heartbeat, ok := resp.Data.(*HeartbeatResponse); ok && heartbeat != nil {
-				fmt.Printf("[DEBUG] GetHeartbeat: Server UUID: %s\n", heartbeat.ServerUUID)
-				fmt.Printf("[DEBUG] GetHeartbeat: Server Status: %s\n", heartbeat.ServerStatus)
-				if heartbeat.LastHeartbeat != nil {
-					fmt.Printf("[DEBUG] GetHeartbeat: Last Heartbeat: %v\n", *heartbeat.LastHeartbeat)
-				}
-				fmt.Printf("[DEBUG] GetHeartbeat: Heartbeat Count: %d\n", heartbeat.HeartbeatCount)
-			}
-		}
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	if heartbeat, ok := resp.Data.(*HeartbeatResponse); ok {
-		return heartbeat, nil
-	}
-	return nil, fmt.Errorf("unexpected response type")
-}
