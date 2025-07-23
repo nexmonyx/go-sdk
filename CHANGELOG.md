@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-07-23
+
+### Added
+- **Monitoring Agent Keys Service**: Complete monitoring agent key management functionality
+  - `MonitoringAgentKeysService` with admin and customer methods
+  - `CreateAdmin()` method for admin-only key creation (region enrollment)
+  - `Create()`, `List()`, `Revoke()` methods for customer self-service
+  - Comprehensive models: `MonitoringAgentKey`, `CreateMonitoringAgentKeyRequest`, `CreateMonitoringAgentKeyResponse`
+  - Full token format support: `mag_<keyID>.<secretKey>`
+- **Documentation**: Updated README.md with detailed monitoring agent keys examples
+- **Example Application**: Added complete example in `examples/monitoring_agent_keys/`
+- **Authentication Support**: Works with both JWT tokens and API key/secret authentication
+
+### Enhanced  
+- **SDK Structure**: Added monitoring agent keys to main client service roster
+- **Type Safety**: Full Go type definitions for all monitoring agent key operations
+- **Error Handling**: Comprehensive error handling for key management operations
+
 ## [1.1.11] - 2025-07-09
 
 ### Added
