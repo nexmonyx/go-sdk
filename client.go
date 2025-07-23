@@ -60,6 +60,7 @@ type Client struct {
 	RemoteClusters        *RemoteClustersService
 	Health                *HealthService
 	ServiceMonitoring     *ServiceMonitoringService
+	Probes                *ProbesService
 }
 
 // Config holds the configuration for the client
@@ -214,6 +215,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.RemoteClusters = &RemoteClustersService{client: client}
 	client.Health = &HealthService{client: client}
 	client.ServiceMonitoring = &ServiceMonitoringService{client: client}
+	client.Probes = &ProbesService{client: client}
 
 	return client, nil
 }

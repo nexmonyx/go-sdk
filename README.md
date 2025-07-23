@@ -987,17 +987,56 @@ usage, _, err := client.APIKeys.GetUsage(ctx, apiKey.ID, &nexmonyx.UsageTimeRang
 err = client.APIKeys.Delete(ctx, apiKey.ID)
 
 // Admin operations
-// List monitoring agent keys (admin only)
-agentKeys, _, err := client.APIKeys.ListMonitoringAgentKeys(ctx, "org-id", &nexmonyx.ListOptions{
-    Filters: map[string]string{
-        "cluster": "production",
-    },
-})
 
 // Get API key audit log (admin only)
 auditLog, _, err := client.APIKeys.GetAuditLog(ctx, apiKey.ID, &nexmonyx.ListOptions{
     Limit: 100,
 })
+```
+
+### Monitoring Agent Keys
+
+Monitoring agent keys are specialized API keys used by monitoring agents to authenticate with the API and submit probe results.
+
+```go
+// Admin operations - create monitoring agent keys for region enrollment
+adminKeyReq := &nexmonyx.CreateMonitoringAgentKeyRequest{
+    OrganizationID:  1,
+    RemoteClusterID: nil, // Optional cluster restriction
+    Description:     "Production monitoring agent key",
+    Capabilities:    "probe_execution,heartbeat",
+}
+
+agentKeyResp, err := client.MonitoringAgentKeys.CreateAdmin(ctx, adminKeyReq)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Created monitoring agent key: %s\n", agentKeyResp.FullToken)
+
+// Customer operations - self-service key creation
+customerKeyResp, err := client.MonitoringAgentKeys.Create(ctx, "org-uuid", "Development environment monitoring")
+if err != nil {
+    log.Fatal(err)
+}
+
+// List organization's monitoring agent keys
+keys, pagination, err := client.MonitoringAgentKeys.List(ctx, "org-uuid", &nexmonyx.ListMonitoringAgentKeysOptions{
+    Page:      1,
+    Limit:     50,
+    Namespace: "production",
+})
+
+for _, key := range keys {
+    fmt.Printf("Key: %s, Status: %s, Description: %s\n", 
+        key.KeyPrefix, key.Status, key.Description)
+}
+
+// Revoke a monitoring agent key
+err = client.MonitoringAgentKeys.Revoke(ctx, "org-uuid", "mag_abc123")
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
 ### System Health and Information
