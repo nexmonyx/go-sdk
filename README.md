@@ -96,6 +96,70 @@ config := &nexmonyx.Config{
 client, err := nexmonyx.NewClient(config)
 ```
 
+### Monitoring Agent (MON_ Key Authentication)
+
+```go
+// Create monitoring agent client
+client, err := nexmonyx.NewMonitoringAgentClient(&nexmonyx.Config{
+    BaseURL: "https://api.nexmonyx.com",
+    Auth: nexmonyx.AuthConfig{
+        MonitoringKey: "MON_your_monitoring_key_here",
+    },
+    Debug: true, // Enable debug logging
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+ctx := context.Background()
+
+// Test authentication
+if err := client.HealthCheck(ctx); err != nil {
+    log.Fatal("Authentication failed:", err)
+}
+
+// Get assigned probes for a region
+probes, err := client.Monitoring.GetAssignedProbes(ctx, "us-east-1")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Execute probes and submit results
+results := []nexmonyx.ProbeExecutionResult{
+    {
+        ProbeID:      probes[0].ProbeID,
+        ProbeUUID:    probes[0].ProbeUUID,
+        ExecutedAt:   time.Now(),
+        Region:       "us-east-1",
+        Status:       "success",
+        ResponseTime: 150, // milliseconds
+        StatusCode:   200,
+    },
+}
+
+err = client.Monitoring.SubmitResults(ctx, results)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Send heartbeat with node information
+nodeInfo := nexmonyx.NodeInfo{
+    AgentID:        "my-monitoring-agent",
+    AgentVersion:   "1.0.0",
+    Region:         "us-east-1",
+    Status:         "healthy",
+    ProbesAssigned: len(probes),
+    SupportedTypes: []string{"http", "https", "tcp", "icmp"},
+}
+
+err = client.Monitoring.Heartbeat(ctx, nodeInfo)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+For complete monitoring agent examples, see the [examples/monitoring/](./examples/monitoring/) directory.
+
 ## API Services
 
 The SDK is organized into service clients for different API domains:

@@ -638,3 +638,167 @@ type AlertConfig struct {
 	SlackToken string   `json:"slack_token,omitempty"`
 	Channel    string   `json:"channel,omitempty"`
 }
+
+// ========================
+// Monitoring Agent Methods
+// ========================
+
+// GetAssignedProbes retrieves probes assigned to a monitoring agent for a specific region
+func (s *MonitoringService) GetAssignedProbes(ctx context.Context, region string) ([]*ProbeAssignment, error) {
+	var resp StandardResponse
+	var assignments []*ProbeAssignment
+	resp.Data = &assignments
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/monitoring/probes",
+		Result: &resp,
+	}
+
+	// Add region as query parameter if provided
+	if region != "" {
+		req.Query = map[string]string{
+			"region": region,
+		}
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return assignments, nil
+}
+
+// SubmitResults submits probe execution results from a monitoring agent
+func (s *MonitoringService) SubmitResults(ctx context.Context, results []ProbeExecutionResult) error {
+	var resp StandardResponse
+
+	resultsPayload := &ProbeResultsSubmission{
+		Results: results,
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/monitoring/results",
+		Body:   resultsPayload,
+		Result: &resp,
+	})
+	
+	return err
+}
+
+// Heartbeat sends a heartbeat from a monitoring agent with node information
+func (s *MonitoringService) Heartbeat(ctx context.Context, nodeInfo NodeInfo) error {
+	var resp StandardResponse
+
+	heartbeatPayload := &MonitoringAgentHeartbeat{
+		NodeInfo:  nodeInfo,
+		Timestamp: time.Now(),
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/monitoring/heartbeat",
+		Body:   heartbeatPayload,
+		Result: &resp,
+	})
+	
+	return err
+}
+
+// ==========================================
+// Monitoring Agent Data Structures
+// ==========================================
+
+// ProbeAssignment represents a probe assignment to a monitoring agent
+type ProbeAssignment struct {
+	ProbeID        uint                   `json:"probe_id"`
+	ProbeUUID      string                 `json:"probe_uuid"`
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"`           // http, https, tcp, icmp, dns
+	Target         string                 `json:"target"`
+	Interval       int                    `json:"interval"`       // seconds
+	Timeout        int                    `json:"timeout"`        // seconds
+	Enabled        bool                   `json:"enabled"`
+	Configuration  map[string]interface{} `json:"configuration,omitempty"`
+	Region         string                 `json:"region"`
+	OrganizationID uint                   `json:"organization_id"`
+	AssignedAt     *CustomTime            `json:"assigned_at,omitempty"`
+	LastExecuted   *CustomTime            `json:"last_executed,omitempty"`
+}
+
+// ProbeExecutionResult represents the result of executing a probe
+type ProbeExecutionResult struct {
+	ProbeID        uint                   `json:"probe_id"`
+	ProbeUUID      string                 `json:"probe_uuid"`
+	ExecutedAt     time.Time              `json:"executed_at"`
+	Region         string                 `json:"region"`
+	Status         string                 `json:"status"`         // success, failed, timeout, error
+	ResponseTime   int                    `json:"response_time"`  // milliseconds
+	StatusCode     int                    `json:"status_code,omitempty"`
+	Error          string                 `json:"error,omitempty"`
+	Details        map[string]interface{} `json:"details,omitempty"`
+	
+	// Additional timing metrics
+	DNSTime        int `json:"dns_time,omitempty"`        // milliseconds
+	ConnectTime    int `json:"connect_time,omitempty"`    // milliseconds
+	TLSTime        int `json:"tls_time,omitempty"`        // milliseconds
+	FirstByteTime  int `json:"first_byte_time,omitempty"` // milliseconds
+	TotalTime      int `json:"total_time,omitempty"`      // milliseconds
+	
+	// Content validation
+	ContentMatch   *bool   `json:"content_match,omitempty"`
+	ResponseSize   int     `json:"response_size,omitempty"`   // bytes
+	ResponseBody   string  `json:"response_body,omitempty"`   // truncated for large responses
+}
+
+// ProbeResultsSubmission represents a submission of multiple probe results
+type ProbeResultsSubmission struct {
+	Results   []ProbeExecutionResult `json:"results"`
+	AgentInfo *NodeInfo              `json:"agent_info,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
+}
+
+// NodeInfo represents information about the monitoring agent node
+type NodeInfo struct {
+	AgentID       string                 `json:"agent_id"`
+	AgentVersion  string                 `json:"agent_version"`
+	Region        string                 `json:"region"`
+	Hostname      string                 `json:"hostname,omitempty"`
+	IPAddress     string                 `json:"ip_address,omitempty"`
+	Status        string                 `json:"status"`         // healthy, degraded, unhealthy
+	Uptime        time.Duration          `json:"uptime"`         // how long agent has been running
+	LastSeen      time.Time              `json:"last_seen"`
+	
+	// Resource usage
+	CPUUsage      float64                `json:"cpu_usage,omitempty"`      // percentage
+	MemoryUsage   int64                  `json:"memory_usage,omitempty"`   // bytes
+	DiskUsage     int64                  `json:"disk_usage,omitempty"`     // bytes
+	NetworkRx     int64                  `json:"network_rx,omitempty"`     // bytes
+	NetworkTx     int64                  `json:"network_tx,omitempty"`     // bytes
+	
+	// Probe execution statistics
+	ProbesAssigned     int     `json:"probes_assigned"`
+	ProbesExecuted     int64   `json:"probes_executed"`
+	ProbesSuccessful   int64   `json:"probes_successful"`
+	ProbesFailed       int64   `json:"probes_failed"`
+	SuccessRate        float64 `json:"success_rate"`          // percentage
+	AvgResponseTime    float64 `json:"avg_response_time"`     // milliseconds
+	
+	// Configuration and capabilities
+	MaxConcurrency int      `json:"max_concurrency,omitempty"`
+	SupportedTypes []string `json:"supported_types,omitempty"`
+	Capabilities   []string `json:"capabilities,omitempty"`
+	
+	// Additional metadata
+	Environment string                 `json:"environment,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// MonitoringAgentHeartbeat represents a heartbeat message from a monitoring agent
+type MonitoringAgentHeartbeat struct {
+	NodeInfo  NodeInfo  `json:"node_info"`
+	Timestamp time.Time `json:"timestamp"`
+}
+

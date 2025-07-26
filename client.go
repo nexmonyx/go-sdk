@@ -262,6 +262,41 @@ func (c *Client) WithServerCredentials(uuid, secret string) *Client {
 	return newClient
 }
 
+// WithMonitoringKey creates a new client with monitoring key authentication (for monitoring agents)
+func (c *Client) WithMonitoringKey(key string) *Client {
+	newConfig := *c.config
+	newConfig.Auth.Token = ""
+	newConfig.Auth.APIKey = ""
+	newConfig.Auth.APISecret = ""
+	newConfig.Auth.ServerUUID = ""
+	newConfig.Auth.ServerSecret = ""
+	newConfig.Auth.MonitoringKey = key
+
+	newClient, _ := NewClient(&newConfig)
+	return newClient
+}
+
+// NewMonitoringAgentClient creates a new client specifically for monitoring agents
+func NewMonitoringAgentClient(config *Config) (*Client, error) {
+	if config == nil {
+		config = &Config{}
+	}
+
+	// Validate that monitoring key is provided
+	if config.Auth.MonitoringKey == "" {
+		return nil, fmt.Errorf("monitoring key is required for monitoring agent client")
+	}
+
+	// Ensure no other auth methods are set
+	config.Auth.Token = ""
+	config.Auth.APIKey = ""
+	config.Auth.APISecret = ""
+	config.Auth.ServerUUID = ""
+	config.Auth.ServerSecret = ""
+
+	return NewClient(config)
+}
+
 // Do performs a raw HTTP request
 func (c *Client) Do(ctx context.Context, req *Request) (*Response, error) {
 	// Build resty request
