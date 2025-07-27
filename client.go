@@ -157,7 +157,8 @@ func NewClient(config *Config) (*Client, error) {
 		restyClient.SetHeader("X-Server-UUID", config.Auth.ServerUUID)
 		restyClient.SetHeader("X-Server-Secret", config.Auth.ServerSecret)
 	} else if config.Auth.MonitoringKey != "" {
-		restyClient.SetHeader("X-Monitoring-Key", config.Auth.MonitoringKey)
+		// Use standard Bearer token format for monitoring key authentication
+		restyClient.SetAuthToken(config.Auth.MonitoringKey)
 	}
 
 	// Set custom headers
