@@ -1155,3 +1155,137 @@ type ServiceMonitoringConfig struct {
 
 // Type alias for backward compatibility
 type Probe = MonitoringProbe
+
+// IncidentSeverity represents the severity level of an incident
+type IncidentSeverity string
+
+const (
+	// IncidentSeverityCritical indicates a critical incident requiring immediate attention
+	IncidentSeverityCritical IncidentSeverity = "critical"
+	// IncidentSeverityWarning indicates a warning-level incident
+	IncidentSeverityWarning IncidentSeverity = "warning"
+	// IncidentSeverityInfo indicates an informational incident
+	IncidentSeverityInfo IncidentSeverity = "info"
+)
+
+// IncidentStatus represents the current status of an incident
+type IncidentStatus string
+
+const (
+	// IncidentStatusActive indicates the incident is active and needs attention
+	IncidentStatusActive IncidentStatus = "active"
+	// IncidentStatusResolved indicates the incident has been resolved
+	IncidentStatusResolved IncidentStatus = "resolved"
+	// IncidentStatusAcknowledged indicates the incident has been acknowledged
+	IncidentStatusAcknowledged IncidentStatus = "acknowledged"
+)
+
+// IncidentSource represents the source that created the incident
+type IncidentSource string
+
+const (
+	// IncidentSourceProbe indicates the incident was created from a probe failure
+	IncidentSourceProbe IncidentSource = "probe"
+	// IncidentSourceAlert indicates the incident was created from an alert
+	IncidentSourceAlert IncidentSource = "alert"
+	// IncidentSourceManual indicates the incident was created manually
+	IncidentSourceManual IncidentSource = "manual"
+)
+
+// IncidentEventType represents the type of event in an incident timeline
+type IncidentEventType string
+
+const (
+	// IncidentEventTypeCreated indicates the incident was created
+	IncidentEventTypeCreated IncidentEventType = "created"
+	// IncidentEventTypeUpdated indicates the incident was updated
+	IncidentEventTypeUpdated IncidentEventType = "updated"
+	// IncidentEventTypeResolved indicates the incident was resolved
+	IncidentEventTypeResolved IncidentEventType = "resolved"
+	// IncidentEventTypeAcknowledged indicates the incident was acknowledged
+	IncidentEventTypeAcknowledged IncidentEventType = "acknowledged"
+	// IncidentEventTypeEscalated indicates the incident was escalated
+	IncidentEventTypeEscalated IncidentEventType = "escalated"
+	// IncidentEventTypeAssigned indicates the incident was assigned to someone
+	IncidentEventTypeAssigned IncidentEventType = "assigned"
+	// IncidentEventTypeComment indicates a comment was added to the incident
+	IncidentEventTypeComment IncidentEventType = "comment"
+)
+
+// AffectedResource represents a resource affected by an incident
+type AffectedResource struct {
+	Type string `json:"type"` // "server", "probe", "service"
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
+// Incident represents an incident in the system
+type Incident struct {
+	GormModel
+	OrganizationID    uint                  `json:"organization_id"`
+	Organization      *Organization         `json:"organization,omitempty"`
+	Title             string                `json:"title"`
+	Description       string                `json:"description"`
+	Severity          IncidentSeverity      `json:"severity"`
+	Status            IncidentStatus        `json:"status"`
+	Source            IncidentSource        `json:"source"`
+	SourceID          *uint                 `json:"source_id,omitempty"`
+	AffectedResources []AffectedResource    `json:"affected_resources"`
+	StartedAt         *CustomTime           `json:"started_at"`
+	ResolvedAt        *CustomTime           `json:"resolved_at,omitempty"`
+	Events            []IncidentEvent       `json:"events,omitempty"`
+}
+
+// IncidentEvent represents an event in an incident timeline
+type IncidentEvent struct {
+	GormModel
+	IncidentID uint              `json:"incident_id"`
+	Incident   *Incident         `json:"incident,omitempty"`
+	EventType  IncidentEventType `json:"event_type"`
+	Message    string            `json:"message"`
+	CreatedBy  *uint             `json:"created_by,omitempty"`
+	User       *User             `json:"user,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata"`
+}
+
+// CreateIncidentRequest represents a request to create an incident
+type CreateIncidentRequest struct {
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	Severity          IncidentSeverity   `json:"severity"`
+	ServerID          *uint              `json:"server_id,omitempty"`
+	ProbeID           *uint              `json:"probe_id,omitempty"`
+	Tags              []string           `json:"tags,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UpdateIncidentRequest represents a request to update an incident
+type UpdateIncidentRequest struct {
+	Title       string                 `json:"title,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Severity    IncidentSeverity       `json:"severity,omitempty"`
+	Status      IncidentStatus         `json:"status,omitempty"`
+	Tags        []string               `json:"tags,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// IncidentListOptions represents options for listing incidents
+type IncidentListOptions struct {
+	ListOptions
+	Status   string `url:"status,omitempty"`
+	Severity string `url:"severity,omitempty"`
+	ServerID uint   `url:"server_id,omitempty"`
+	ProbeID  uint   `url:"probe_id,omitempty"`
+	Sort     string `url:"sort,omitempty"`
+}
+
+// IncidentStats represents incident statistics
+type IncidentStats struct {
+	TotalCount     int            `json:"total_count"`
+	ActiveCount    int            `json:"active_count"`
+	BySeverity     map[string]int `json:"by_severity"`
+	MTTRMinutes    float64        `json:"mttr_minutes"`
+	RecentCount    int64          `json:"recent_count"`
+	RecentResolved int64          `json:"recent_resolved"`
+	RecentMTTR     float64        `json:"recent_mttr"`
+}

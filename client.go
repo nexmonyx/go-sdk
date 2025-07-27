@@ -61,6 +61,7 @@ type Client struct {
 	Health                *HealthService
 	ServiceMonitoring     *ServiceMonitoringService
 	Probes                *ProbesService
+	Incidents             *IncidentsService
 }
 
 // Config holds the configuration for the client
@@ -217,6 +218,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Health = &HealthService{client: client}
 	client.ServiceMonitoring = &ServiceMonitoringService{client: client}
 	client.Probes = &ProbesService{client: client}
+	client.Incidents = &IncidentsService{client: client}
 
 	return client, nil
 }
@@ -506,6 +508,7 @@ type NamespaceDeploymentsService struct{ client *Client }
 type MonitoringAgentKeysService struct{ client *Client }
 type RemoteClustersService struct{ client *Client }
 type HealthService struct{ client *Client }
+type IncidentsService struct{ client *Client }
 
 // getAuthMethod returns a string describing the authentication method being used
 func (c *Client) getAuthMethod() string {
