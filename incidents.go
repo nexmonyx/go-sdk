@@ -5,10 +5,7 @@ import (
 	"fmt"
 )
 
-// IncidentsService handles communication with the incidents endpoints
-type IncidentsService struct {
-	client *Client
-}
+// IncidentsService is defined in client.go
 
 // CreateIncident creates a new incident
 func (s *IncidentsService) CreateIncident(ctx context.Context, req CreateIncidentRequest) (*Incident, error) {

@@ -1060,15 +1060,65 @@ auditLog, _, err := client.APIKeys.GetAuditLog(ctx, apiKey.ID, &nexmonyx.ListOpt
 
 ### Monitoring Agent Keys
 
-Monitoring agent keys are specialized API keys used by monitoring agents to authenticate with the API and submit probe results.
+Monitoring agent keys are specialized API keys used by monitoring agents to authenticate with the API and submit probe results. Keys can be created for two types of agents:
+
+- **Public Agents**: Nexmonyx-managed agents that can only execute public probes and require a region code
+- **Private Agents**: Customer-managed agents that can execute both public and private probes
 
 ```go
-// Admin operations - create monitoring agent keys for region enrollment
+// Create a private monitoring agent key (customer-managed)
+privateKeyReq := nexmonyx.NewPrivateAgentKeyRequest(
+    "My Private Monitoring Agent",
+    "private-agent-1",
+    "NYC3", // Region code is optional for private agents
+)
+
+privateKey, err := client.MonitoringAgentKeys.Create(ctx, "114", privateKeyReq)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Private Agent Key: %s\n", privateKey.FullToken)
+fmt.Printf("Allowed Scopes: %v\n", privateKey.AllowedProbeScopes) // ["public", "private"]
+
+// Create a public monitoring agent key (Nexmonyx-managed)
+publicKeyReq := nexmonyx.NewPublicAgentKeyRequest(
+    "NYC3 Public Monitoring Agent",
+    "public-agent-nyc3",
+    "NYC3", // Region code is REQUIRED for public agents
+)
+
+publicKey, err := client.MonitoringAgentKeys.Create(ctx, "114", publicKeyReq)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Public Agent Key: %s\n", publicKey.FullToken)
+fmt.Printf("Allowed Scopes: %v\n", publicKey.AllowedProbeScopes) // ["public"]
+
+// Custom key creation with full control
+customKeyReq := &nexmonyx.CreateMonitoringAgentKeyRequest{
+    Description:        "Custom monitoring agent",
+    NamespaceName:      "custom-agent-1",
+    AgentType:          "private",
+    RegionCode:         "NYC3",
+    AllowedProbeScopes: []string{"public", "private"},
+    Capabilities:       `["probe:read","probe:write","node:register"]`,
+}
+
+customKey, err := client.MonitoringAgentKeys.Create(ctx, "114", customKeyReq)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Admin operations - create monitoring agent keys for any organization
 adminKeyReq := &nexmonyx.CreateMonitoringAgentKeyRequest{
-    OrganizationID:  1,
-    RemoteClusterID: nil, // Optional cluster restriction
-    Description:     "Production monitoring agent key",
-    Capabilities:    "probe_execution,heartbeat",
+    OrganizationID:     114,
+    Description:        "Admin-created monitoring agent",
+    NamespaceName:      "admin-agent-1",
+    AgentType:          "private",
+    RegionCode:         "NYC3",
+    AllowedProbeScopes: []string{"public", "private"},
 }
 
 agentKeyResp, err := client.MonitoringAgentKeys.CreateAdmin(ctx, adminKeyReq)
@@ -1078,26 +1128,26 @@ if err != nil {
 
 fmt.Printf("Created monitoring agent key: %s\n", agentKeyResp.FullToken)
 
-// Customer operations - self-service key creation
-customerKeyResp, err := client.MonitoringAgentKeys.Create(ctx, "org-uuid", "Development environment monitoring")
-if err != nil {
-    log.Fatal(err)
-}
-
 // List organization's monitoring agent keys
-keys, pagination, err := client.MonitoringAgentKeys.List(ctx, "org-uuid", &nexmonyx.ListMonitoringAgentKeysOptions{
+keys, pagination, err := client.MonitoringAgentKeys.List(ctx, "114", &nexmonyx.ListMonitoringAgentKeysOptions{
     Page:      1,
     Limit:     50,
     Namespace: "production",
 })
 
 for _, key := range keys {
-    fmt.Printf("Key: %s, Status: %s, Description: %s\n", 
-        key.KeyPrefix, key.Status, key.Description)
+    fmt.Printf("Key: %s (%s), Type: %s, Region: %s, Status: %s\n", 
+        key.KeyID, key.Description, key.AgentType, key.RegionCode, key.Status)
+    
+    if key.IsPublic() {
+        fmt.Println("  This is a public agent key")
+    } else if key.IsPrivate() {
+        fmt.Println("  This is a private agent key")
+    }
 }
 
 // Revoke a monitoring agent key
-err = client.MonitoringAgentKeys.Revoke(ctx, "org-uuid", "mag_abc123")
+err = client.MonitoringAgentKeys.Revoke(ctx, "114", "mag_abc123")
 if err != nil {
     log.Fatal(err)
 }
