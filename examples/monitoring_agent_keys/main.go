@@ -33,10 +33,14 @@ func main() {
 
 	// Admin: Create monitoring agent key for region enrollment
 	adminKeyReq := &nexmonyx.CreateMonitoringAgentKeyRequest{
-		OrganizationID:  1, // Target organization ID
-		RemoteClusterID: nil, // No cluster restriction
-		Description:     "Test region monitoring agent key",
-		Capabilities:    "probe_execution,heartbeat",
+		OrganizationID:     1, // Target organization ID
+		RemoteClusterID:    nil, // No cluster restriction
+		Description:        "Test region monitoring agent key",
+		NamespaceName:      "test-region-agent",
+		AgentType:          "public", // Public agent for Nexmonyx-managed regions
+		RegionCode:         "NYC3",   // Required for public agents
+		AllowedProbeScopes: []string{"public"},
+		Capabilities:       `["probe:read","probe:write","node:register","node:heartbeat"]`,
 	}
 
 	fmt.Printf("Creating admin monitoring agent key...\n")
@@ -46,6 +50,8 @@ func main() {
 	} else {
 		fmt.Printf("✅ Created monitoring agent key: %s\n", agentKeyResp.FullToken)
 		fmt.Printf("   Key ID: %s\n", agentKeyResp.KeyID)
+		fmt.Printf("   Agent Type: %s\n", agentKeyResp.AgentType)
+		fmt.Printf("   Allowed Scopes: %v\n", agentKeyResp.AllowedProbeScopes)
 		fmt.Printf("   Description: %s\n", agentKeyResp.Key.Description)
 	}
 
@@ -73,13 +79,20 @@ func main() {
 
 	// Customer: Create monitoring agent key for their own use
 	fmt.Printf("Creating customer monitoring agent key...\n")
+	privateKeyReq := nexmonyx.NewPrivateAgentKeyRequest(
+		"Development environment monitoring",
+		"dev-agent-1",
+		"NYC3", // Optional region for private agents
+	)
 	customerKeyResp, err := customerClient.MonitoringAgentKeys.Create(ctx, 
 		organizationID, 
-		"Development environment monitoring")
+		privateKeyReq)
 	if err != nil {
 		log.Printf("Failed to create customer monitoring agent key: %v", err)
 	} else {
 		fmt.Printf("✅ Created customer monitoring agent key: %s\n", customerKeyResp.FullToken)
+		fmt.Printf("   Agent Type: %s\n", customerKeyResp.AgentType)
+		fmt.Printf("   Allowed Scopes: %v\n", customerKeyResp.AllowedProbeScopes)
 	}
 
 	// Customer: List monitoring agent keys
@@ -94,8 +107,8 @@ func main() {
 		fmt.Printf("Found %d monitoring agent keys (page %d of %d):\n", 
 			len(keys), pagination.Page, pagination.TotalPages)
 		for i, key := range keys {
-			fmt.Printf("  %d. %s - %s (%s)\n", 
-				i+1, key.KeyPrefix, key.Description, key.Status)
+			fmt.Printf("  %d. %s - %s (%s) Type: %s, Region: %s\n", 
+				i+1, key.KeyID, key.Description, key.Status, key.AgentType, key.RegionCode)
 		}
 	}
 
