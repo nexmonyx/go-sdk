@@ -5,10 +5,7 @@ import (
 	"fmt"
 )
 
-// ProbesService handles probe-related API operations
-type ProbesService struct {
-	client *Client
-}
+// ProbesService is defined in client.go
 
 // Create creates a new probe
 func (s *ProbesService) Create(ctx context.Context, req *ProbeCreateRequest) (*MonitoringProbe, error) {

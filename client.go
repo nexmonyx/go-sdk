@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.2.0"
+	Version = "1.3.2"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -508,6 +508,7 @@ type NamespaceDeploymentsService struct{ client *Client }
 type MonitoringAgentKeysService struct{ client *Client }
 type RemoteClustersService struct{ client *Client }
 type HealthService struct{ client *Client }
+type ProbesService struct{ client *Client }
 type IncidentsService struct{ client *Client }
 
 // getAuthMethod returns a string describing the authentication method being used
