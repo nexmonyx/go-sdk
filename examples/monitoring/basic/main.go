@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/nexmonyx/go-sdk"
+	"github.com/nexmonyx/go-sdk/v2"
 )
 
 // BasicMonitoringAgent demonstrates the basic functionality of a monitoring agent

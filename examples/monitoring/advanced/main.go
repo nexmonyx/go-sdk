@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nexmonyx/go-sdk"
+	"github.com/nexmonyx/go-sdk/v2"
 )
 
 // AdvancedMonitoringAgent demonstrates a more realistic monitoring agent

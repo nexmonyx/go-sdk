@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	nexmonyx "github.com/nexmonyx/go-sdk"
+	nexmonyx "github.com/nexmonyx/go-sdk/v2"
 )
 
 // contextKey is a custom type for context keys to avoid collisions

@@ -73,5 +73,5 @@ Both header formats should now work successfully.
 ## Contact
 
 For any issues or questions:
-- SDK Team: [GitHub Issues](https://github.com/nexmonyx/go-sdk/issues)
+- SDK Team: [GitHub Issues](https://github.com/nexmonyx/go-sdk/v2/issues)
 - API Team: Internal support channels

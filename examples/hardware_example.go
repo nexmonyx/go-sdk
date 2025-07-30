@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	nexmonyx "github.com/nexmonyx/go-sdk"
+	nexmonyx "github.com/nexmonyx/go-sdk/v2"
 )
 
 // DemoHardwareInventorySubmit demonstrates how to submit hardware inventory data

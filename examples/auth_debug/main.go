@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	nexmonyx "github.com/nexmonyx/go-sdk"
+	nexmonyx "github.com/nexmonyx/go-sdk/v2"
 )
 
 func main() {

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/nexmonyx/go-sdk"
+	"github.com/nexmonyx/go-sdk/v2"
 )
 
 func main() {

@@ -246,4 +246,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLAUDE.md file for AI assistance
 - Integration guides for common scenarios
 
-[1.0.0]: https://github.com/nexmonyx/go-sdk/releases/tag/v1.0.0
+[1.0.0]: https://github.com/nexmonyx/go-sdk/v2/releases/tag/v1.0.0

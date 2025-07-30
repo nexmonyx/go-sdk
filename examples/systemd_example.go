@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	nexmonyx "github.com/nexmonyx/go-sdk"
+	nexmonyx "github.com/nexmonyx/go-sdk/v2"
 )
 
 // This example demonstrates how to use the Systemd service in the Nexmonyx SDK

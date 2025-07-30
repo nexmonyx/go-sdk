@@ -3,7 +3,7 @@ package nexmonyx_test
 import (
 	"testing"
 
-	"github.com/nexmonyx/go-sdk"
+	"github.com/nexmonyx/go-sdk/v2"
 	"github.com/stretchr/testify/assert"
 )
 

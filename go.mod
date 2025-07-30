@@ -1,4 +1,4 @@
-module github.com/nexmonyx/go-sdk
+module github.com/nexmonyx/go-sdk/v2
 
 go 1.24
 

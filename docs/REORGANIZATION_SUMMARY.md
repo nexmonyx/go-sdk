@@ -46,7 +46,7 @@ nexmonyx-go-sdk/
 
 ### Before (still works):
 ```go
-import "github.com/nexmonyx/go-sdk"
+import "github.com/nexmonyx/go-sdk/v2"
 
 client, err := nexmonyx.NewClient(&nexmonyx.Config{...})
 ```
@@ -54,7 +54,7 @@ client, err := nexmonyx.NewClient(&nexmonyx.Config{...})
 ### After (new internal structure):
 ```go
 // Still works exactly the same!
-import "github.com/nexmonyx/go-sdk"
+import "github.com/nexmonyx/go-sdk/v2"
 
 client, err := nexmonyx.NewClient(&nexmonyx.Config{...})
 ```
@@ -93,13 +93,13 @@ While not required, developers can optionally migrate to the new internal struct
 
 ```go
 // Old way (still works)
-import "github.com/nexmonyx/go-sdk"
+import "github.com/nexmonyx/go-sdk/v2"
 
 // New way (optional, cleaner)
 import (
-    "github.com/nexmonyx/go-sdk/pkg/nexmonyx"
-    "github.com/nexmonyx/go-sdk/pkg/nexmonyx/services"
-    "github.com/nexmonyx/go-sdk/pkg/nexmonyx/models"
+    "github.com/nexmonyx/go-sdk/v2/pkg/nexmonyx"
+    "github.com/nexmonyx/go-sdk/v2/pkg/nexmonyx/services"
+    "github.com/nexmonyx/go-sdk/v2/pkg/nexmonyx/models"
 )
 ```
 
