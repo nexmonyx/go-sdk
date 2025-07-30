@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "1.3.2"
+	Version = "2.3.1"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
