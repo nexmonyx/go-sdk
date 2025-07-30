@@ -150,11 +150,11 @@ func NewClient(config *Config) (*Client, error) {
 	if config.Auth.Token != "" {
 		restyClient.SetAuthToken(config.Auth.Token)
 	} else if config.Auth.APIKey != "" && config.Auth.APISecret != "" {
-		restyClient.SetHeader("X-API-Key", config.Auth.APIKey)
-		restyClient.SetHeader("X-API-Secret", config.Auth.APISecret)
+		restyClient.SetHeader("Access-Key", config.Auth.APIKey)
+		restyClient.SetHeader("Access-Secret", config.Auth.APISecret)
 	} else if config.Auth.ServerUUID != "" && config.Auth.ServerSecret != "" {
-		// Note: API currently expects X- prefix for server authentication
-		// This may change in the future once API authentication is standardized
+		// Note: Server authentication uses X- prefix headers while API Key/Secret uses Access- prefix
+		// This inconsistency should be addressed in future API standardization
 		restyClient.SetHeader("X-Server-UUID", config.Auth.ServerUUID)
 		restyClient.SetHeader("X-Server-Secret", config.Auth.ServerSecret)
 	} else if config.Auth.MonitoringKey != "" {
