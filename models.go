@@ -1289,3 +1289,324 @@ type IncidentStats struct {
 	RecentResolved int64          `json:"recent_resolved"`
 	RecentMTTR     float64        `json:"recent_mttr"`
 }
+
+// =============================================================================
+// Unified API Key System
+// =============================================================================
+
+// APIKeyType represents the type of API key
+type APIKeyType string
+
+const (
+	// APIKeyTypeUser represents user-created keys for personal access
+	APIKeyTypeUser APIKeyType = "user"
+	// APIKeyTypeAdmin represents admin keys with elevated permissions
+	APIKeyTypeAdmin APIKeyType = "admin"
+	// APIKeyTypeMonitoringAgent represents keys for monitoring agents
+	APIKeyTypeMonitoringAgent APIKeyType = "monitoring_agent"
+	// APIKeyTypeSystem represents keys for system-to-system communication
+	APIKeyTypeSystem APIKeyType = "system"
+	// APIKeyTypePublicAgent represents keys for public monitoring agents
+	APIKeyTypePublicAgent APIKeyType = "public_agent"
+	// APIKeyTypeRegistration represents keys for server registration
+	APIKeyTypeRegistration APIKeyType = "registration"
+	// APIKeyTypeOrgMonitoring represents organization-level monitoring keys
+	APIKeyTypeOrgMonitoring APIKeyType = "org_monitoring"
+)
+
+// APIKeyStatus represents the status of an API key
+type APIKeyStatus string
+
+const (
+	// APIKeyStatusActive indicates the key is active and can be used
+	APIKeyStatusActive APIKeyStatus = "active"
+	// APIKeyStatusRevoked indicates the key has been revoked
+	APIKeyStatusRevoked APIKeyStatus = "revoked"
+	// APIKeyStatusExpired indicates the key has expired
+	APIKeyStatusExpired APIKeyStatus = "expired"
+	// APIKeyStatusPending indicates the key is pending activation
+	APIKeyStatusPending APIKeyStatus = "pending"
+)
+
+// UnifiedAPIKey represents a unified API key that supports all key types and capabilities
+type UnifiedAPIKey struct {
+	GormModel
+
+	// Basic identification
+	KeyID       string `json:"key_id"`                // Unique identifier for the key
+	Name        string `json:"name"`                  // Human-readable name
+	Description string `json:"description,omitempty"` // Optional description
+	KeyPrefix   string `json:"key_prefix"`            // First few characters for display
+
+	// Key data (only returned on creation for security)
+	Key       string `json:"key,omitempty"`        // The actual key (only on creation)
+	Secret    string `json:"secret,omitempty"`     // The secret part (only on creation)
+	FullToken string `json:"full_token,omitempty"` // Complete token (only on creation)
+
+	// Type and permissions
+	Type         APIKeyType `json:"type"`              // Type of API key
+	Capabilities []string   `json:"capabilities"`      // Fine-grained permissions
+	Scopes       []string   `json:"scopes,omitempty"`  // Legacy scopes for backward compatibility
+
+	// Ownership and organization
+	OrganizationID uint          `json:"organization_id"`
+	Organization   *Organization `json:"organization,omitempty"`
+	UserID         *uint         `json:"user_id,omitempty"`
+	User           *User         `json:"user,omitempty"`
+
+	// Monitoring-specific fields (for monitoring agent keys)
+	RemoteClusterID    *uint          `json:"remote_cluster_id,omitempty"`
+	RemoteCluster      *RemoteCluster `json:"remote_cluster,omitempty"`
+	NamespaceName      string         `json:"namespace_name,omitempty"`
+	AgentType          string         `json:"agent_type,omitempty"`          // public, private
+	RegionCode         string         `json:"region_code,omitempty"`
+	AllowedProbeScopes []string       `json:"allowed_probe_scopes,omitempty"`
+
+	// Status and usage tracking
+	Status     APIKeyStatus `json:"status"`                  // Current status
+	ExpiresAt  *CustomTime  `json:"expires_at,omitempty"`    // Optional expiration
+	LastUsedAt *CustomTime  `json:"last_used_at,omitempty"`  // Last usage timestamp
+	LastUsedIP string       `json:"last_used_ip,omitempty"`  // Last used IP address
+	UsageCount int          `json:"usage_count"`             // Number of times used
+
+	// Security and rate limiting
+	RateLimitPerHour int      `json:"rate_limit_per_hour,omitempty"` // Requests per hour limit
+	AllowedIPs       []string `json:"allowed_ips,omitempty"`          // IP whitelist
+
+	// Metadata and tagging
+	Tags     []string               `json:"tags,omitempty"`     // Tags for organization
+	Metadata map[string]interface{} `json:"metadata,omitempty"` // Custom metadata
+}
+
+// IsActive returns true if the API key is active and not expired
+func (k *UnifiedAPIKey) IsActive() bool {
+	if k.Status != APIKeyStatusActive {
+		return false
+	}
+	if k.ExpiresAt != nil && k.ExpiresAt.Before(time.Now()) {
+		return false
+	}
+	return true
+}
+
+// IsExpired returns true if the API key has expired
+func (k *UnifiedAPIKey) IsExpired() bool {
+	return k.ExpiresAt != nil && k.ExpiresAt.Before(time.Now())
+}
+
+// IsRevoked returns true if the API key has been revoked
+func (k *UnifiedAPIKey) IsRevoked() bool {
+	return k.Status == APIKeyStatusRevoked
+}
+
+// HasCapability checks if the API key has the specified capability
+func (k *UnifiedAPIKey) HasCapability(capability string) bool {
+	for _, cap := range k.Capabilities {
+		if cap == capability || cap == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+// HasScope checks if the API key has the specified scope (for backward compatibility)
+func (k *UnifiedAPIKey) HasScope(scope string) bool {
+	for _, s := range k.Scopes {
+		if s == scope || s == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+// IsMonitoringAgent returns true if this is a monitoring agent key
+func (k *UnifiedAPIKey) IsMonitoringAgent() bool {
+	return k.Type == APIKeyTypeMonitoringAgent || k.Type == APIKeyTypePublicAgent
+}
+
+// IsRegistrationKey returns true if this is a registration key
+func (k *UnifiedAPIKey) IsRegistrationKey() bool {
+	return k.Type == APIKeyTypeRegistration
+}
+
+// CanRegisterServers returns true if this key can register servers
+func (k *UnifiedAPIKey) CanRegisterServers() bool {
+	return k.IsRegistrationKey() || k.HasCapability("servers:register") || k.HasCapability("servers:*") || k.HasCapability("*")
+}
+
+// CanAccessOrganization returns true if this key can access the specified organization
+func (k *UnifiedAPIKey) CanAccessOrganization(orgID uint) bool {
+	return k.OrganizationID == orgID || k.Type == APIKeyTypeSystem || k.Type == APIKeyTypeAdmin
+}
+
+// IsPublicAgent returns true if this is a public monitoring agent key
+func (k *UnifiedAPIKey) IsPublicAgent() bool {
+	return k.Type == APIKeyTypePublicAgent || (k.Type == APIKeyTypeMonitoringAgent && k.AgentType == "public")
+}
+
+// IsPrivateAgent returns true if this is a private monitoring agent key
+func (k *UnifiedAPIKey) IsPrivateAgent() bool {
+	return k.Type == APIKeyTypeMonitoringAgent && k.AgentType == "private"
+}
+
+// GetAuthenticationMethod returns the preferred authentication method for this key type
+func (k *UnifiedAPIKey) GetAuthenticationMethod() string {
+	switch k.Type {
+	case APIKeyTypeMonitoringAgent, APIKeyTypePublicAgent:
+		return "bearer" // Use Bearer token
+	case APIKeyTypeRegistration:
+		return "headers" // Use X-Registration-Key header
+	default:
+		return "headers" // Use Access-Key/Access-Secret headers
+	}
+}
+
+// CreateUnifiedAPIKeyRequest represents a request to create a unified API key
+type CreateUnifiedAPIKeyRequest struct {
+	Name               string            `json:"name"`
+	Description        string            `json:"description,omitempty"`
+	Type               APIKeyType        `json:"type"`
+	Capabilities       []string          `json:"capabilities,omitempty"`
+	OrganizationID     uint              `json:"organization_id,omitempty"`     // Only for admin creation
+	ExpiresAt          *CustomTime       `json:"expires_at,omitempty"`
+	RateLimitPerHour   int               `json:"rate_limit_per_hour,omitempty"`
+	AllowedIPs         []string          `json:"allowed_ips,omitempty"`
+	Tags               []string          `json:"tags,omitempty"`
+	Metadata           map[string]interface{} `json:"metadata,omitempty"`
+
+	// Monitoring-specific fields
+	RemoteClusterID    *uint    `json:"remote_cluster_id,omitempty"`
+	NamespaceName      string   `json:"namespace_name,omitempty"`
+	AgentType          string   `json:"agent_type,omitempty"`          // public, private
+	RegionCode         string   `json:"region_code,omitempty"`
+	AllowedProbeScopes []string `json:"allowed_probe_scopes,omitempty"`
+}
+
+// CreateUnifiedAPIKeyResponse represents the response when creating a unified API key
+type CreateUnifiedAPIKeyResponse struct {
+	Key       *UnifiedAPIKey `json:"key"`
+	KeyID     string         `json:"key_id"`
+	KeyValue  string         `json:"key_value"`         // The actual key
+	Secret    string         `json:"secret,omitempty"`  // Secret if using key/secret auth
+	FullToken string         `json:"full_token"`        // Complete token for bearer auth
+}
+
+// UpdateUnifiedAPIKeyRequest represents a request to update a unified API key
+type UpdateUnifiedAPIKeyRequest struct {
+	Name             *string           `json:"name,omitempty"`
+	Description      *string           `json:"description,omitempty"`
+	Capabilities     []string          `json:"capabilities,omitempty"`
+	Status           APIKeyStatus      `json:"status,omitempty"`
+	ExpiresAt        *CustomTime       `json:"expires_at,omitempty"`
+	RateLimitPerHour *int              `json:"rate_limit_per_hour,omitempty"`
+	AllowedIPs       []string          `json:"allowed_ips,omitempty"`
+	Tags             []string          `json:"tags,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ListUnifiedAPIKeysOptions represents options for listing unified API keys
+type ListUnifiedAPIKeysOptions struct {
+	ListOptions
+	Type         APIKeyType   `url:"type,omitempty"`
+	Status       APIKeyStatus `url:"status,omitempty"`
+	UserID       uint         `url:"user_id,omitempty"`
+	AgentType    string       `url:"agent_type,omitempty"`
+	RegionCode   string       `url:"region_code,omitempty"`
+	Namespace    string       `url:"namespace,omitempty"`
+	Capability   string       `url:"capability,omitempty"`
+	Tag          string       `url:"tag,omitempty"`
+}
+
+// Backward compatibility type alias
+// This allows existing code to continue working while gradually migrating to UnifiedAPIKey
+type APIKey = UnifiedAPIKey
+
+// Legacy constructor functions for backward compatibility
+// These create UnifiedAPIKey instances with appropriate types
+
+// NewUserAPIKey creates a new user API key request
+func NewUserAPIKey(name, description string, capabilities []string) *CreateUnifiedAPIKeyRequest {
+	return &CreateUnifiedAPIKeyRequest{
+		Name:         name,
+		Description:  description,
+		Type:         APIKeyTypeUser,
+		Capabilities: capabilities,
+	}
+}
+
+// NewAdminAPIKey creates a new admin API key request
+func NewAdminAPIKey(name, description string, capabilities []string, orgID uint) *CreateUnifiedAPIKeyRequest {
+	return &CreateUnifiedAPIKeyRequest{
+		Name:           name,
+		Description:    description,
+		Type:           APIKeyTypeAdmin,
+		Capabilities:   capabilities,
+		OrganizationID: orgID,
+	}
+}
+
+// NewMonitoringAgentKey creates a new monitoring agent key request
+func NewMonitoringAgentKey(name, description, namespace, agentType, regionCode string, allowedScopes []string) *CreateUnifiedAPIKeyRequest {
+	return &CreateUnifiedAPIKeyRequest{
+		Name:               name,
+		Description:        description,
+		Type:               APIKeyTypeMonitoringAgent,
+		NamespaceName:      namespace,
+		AgentType:          agentType,
+		RegionCode:         regionCode,
+		AllowedProbeScopes: allowedScopes,
+		Capabilities:       []string{"monitoring:execute", "probes:execute"},
+	}
+}
+
+// NewRegistrationKey creates a new registration key request
+func NewRegistrationKey(name, description string, orgID uint) *CreateUnifiedAPIKeyRequest {
+	return &CreateUnifiedAPIKeyRequest{
+		Name:           name,
+		Description:    description,
+		Type:           APIKeyTypeRegistration,
+		OrganizationID: orgID,
+		Capabilities:   []string{"servers:register", "servers:update"},
+	}
+}
+
+// Standard capability constants
+const (
+	// Server capabilities
+	CapabilityServersRead     = "servers:read"
+	CapabilityServersWrite    = "servers:write"
+	CapabilityServersRegister = "servers:register"
+	CapabilityServersDelete   = "servers:delete"
+	CapabilityServersAll      = "servers:*"
+
+	// Monitoring capabilities
+	CapabilityMonitoringRead    = "monitoring:read"
+	CapabilityMonitoringWrite   = "monitoring:write"
+	CapabilityMonitoringExecute = "monitoring:execute"
+	CapabilityMonitoringAll     = "monitoring:*"
+
+	// Probe capabilities
+	CapabilityProbesRead    = "probes:read"
+	CapabilityProbesWrite   = "probes:write"
+	CapabilityProbesExecute = "probes:execute"
+	CapabilityProbesAll     = "probes:*"
+
+	// Metrics capabilities
+	CapabilityMetricsRead   = "metrics:read"
+	CapabilityMetricsWrite  = "metrics:write"
+	CapabilityMetricsSubmit = "metrics:submit"
+	CapabilityMetricsAll    = "metrics:*"
+
+	// Organization capabilities
+	CapabilityOrganizationRead  = "organization:read"
+	CapabilityOrganizationWrite = "organization:write"
+	CapabilityOrganizationAll   = "organization:*"
+
+	// Admin capabilities
+	CapabilityAdminRead  = "admin:read"
+	CapabilityAdminWrite = "admin:write"
+	CapabilityAdminAll   = "admin:*"
+
+	// Wildcard capability (full access)
+	CapabilityAll = "*"
+)

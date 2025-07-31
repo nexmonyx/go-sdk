@@ -294,6 +294,90 @@ func (s *ServersService) RegisterWithKeyFull(ctx context.Context, registrationKe
 	return nil, fmt.Errorf("unexpected response type")
 }
 
+// =============================================================================
+// Unified Registration Key Methods
+// =============================================================================
+
+// RegisterWithUnifiedKey registers a new server using a unified registration key
+func (s *ServersService) RegisterWithUnifiedKey(ctx context.Context, key *UnifiedAPIKey, req *ServerCreateRequest) (*Server, error) {
+	if !key.CanRegisterServers() {
+		return nil, fmt.Errorf("API key does not have server registration capabilities")
+	}
+
+	resp, err := s.RegisterWithUnifiedKeyFull(ctx, key, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Server, nil
+}
+
+// RegisterWithUnifiedKeyFull registers a new server using a unified registration key and returns the full response
+func (s *ServersService) RegisterWithUnifiedKeyFull(ctx context.Context, key *UnifiedAPIKey, req *ServerCreateRequest) (*ServerRegistrationResponse, error) {
+	if !key.CanRegisterServers() {
+		return nil, fmt.Errorf("API key does not have server registration capabilities")
+	}
+
+	var headers map[string]string
+	switch key.GetAuthenticationMethod() {
+	case "headers":
+		if key.Type == APIKeyTypeRegistration {
+			headers = map[string]string{
+				"X-Registration-Key": key.FullToken,
+			}
+		} else {
+			headers = map[string]string{
+				"Access-Key":    key.Key,
+				"Access-Secret": key.Secret,
+			}
+		}
+	case "bearer":
+		headers = map[string]string{
+			"Authorization": "Bearer " + key.FullToken,
+		}
+	}
+
+	var resp StandardResponse
+	resp.Data = &ServerRegistrationResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method:  "POST",
+		Path:    "/v1/register",
+		Headers: headers,
+		Body:    req,
+		Result:  &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if regResp, ok := resp.Data.(*ServerRegistrationResponse); ok {
+		return regResp, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// ValidateRegistrationKey validates that a unified API key can be used for server registration
+func (s *ServersService) ValidateRegistrationKey(ctx context.Context, key *UnifiedAPIKey) error {
+	if !key.IsActive() {
+		return fmt.Errorf("registration key is not active")
+	}
+
+	if !key.CanRegisterServers() {
+		return fmt.Errorf("API key does not have server registration capabilities")
+	}
+
+	// For registration keys, we might also want to check organization access
+	// This would depend on the API implementation
+	return nil
+}
+
+// RegisterServerQuick is a convenience method that creates a registration key and immediately uses it
+func (s *ServersService) RegisterServerQuick(ctx context.Context, orgID uint, hostname, mainIP string) (*ServerRegistrationResponse, error) {
+	// This would require admin privileges to create a registration key
+	// For now, return an error indicating this needs to be done in two steps
+	return nil, fmt.Errorf("quick registration not supported - create a registration key first using APIKeys.CreateRegistrationKey()")
+}
+
 // Heartbeat sends a heartbeat from the authenticated server
 func (s *ServersService) Heartbeat(ctx context.Context) error {
 	if s.client.config.Debug {

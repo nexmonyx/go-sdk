@@ -95,16 +95,23 @@ type AuthConfig struct {
 	// JWT Token (for user authentication via Auth0)
 	Token string
 
-	// API Key authentication
+	// Unified API Key authentication (preferred method)
+	UnifiedAPIKey string // Complete token for bearer auth or key for key/secret auth
+	APIKeySecret  string // Secret part when using key/secret authentication
+
+	// Legacy API Key authentication (deprecated, use UnifiedAPIKey instead)
 	APIKey    string
 	APISecret string
 
-	// Server authentication (for agents)
+	// Server authentication (for agents) - will be migrated to unified keys
 	ServerUUID   string
 	ServerSecret string
 
-	// Monitoring key authentication
+	// Monitoring key authentication (deprecated, use UnifiedAPIKey instead)
 	MonitoringKey string
+
+	// Registration key authentication (for server registration)
+	RegistrationKey string
 }
 
 // NewClient creates a new Nexmonyx API client
@@ -146,19 +153,35 @@ func NewClient(config *Config) (*Client, error) {
 	restyClient.SetHeader("Content-Type", "application/json")
 	restyClient.SetHeader("Accept", "application/json")
 
-	// Set authentication headers
+	// Set authentication headers (priority order: JWT Token, Unified API Key, Legacy methods)
 	if config.Auth.Token != "" {
+		// JWT Token authentication (highest priority)
 		restyClient.SetAuthToken(config.Auth.Token)
+	} else if config.Auth.UnifiedAPIKey != "" {
+		// Unified API Key authentication (preferred method)
+		if config.Auth.APIKeySecret != "" {
+			// Key/Secret authentication
+			restyClient.SetHeader("Access-Key", config.Auth.UnifiedAPIKey)
+			restyClient.SetHeader("Access-Secret", config.Auth.APIKeySecret)
+		} else {
+			// Bearer token authentication (for monitoring agents, etc.)
+			restyClient.SetAuthToken(config.Auth.UnifiedAPIKey)
+		}
+	} else if config.Auth.RegistrationKey != "" {
+		// Registration key authentication (for server registration)
+		restyClient.SetHeader("X-Registration-Key", config.Auth.RegistrationKey)
 	} else if config.Auth.APIKey != "" && config.Auth.APISecret != "" {
+		// Legacy API Key authentication (deprecated)
 		restyClient.SetHeader("Access-Key", config.Auth.APIKey)
 		restyClient.SetHeader("Access-Secret", config.Auth.APISecret)
 	} else if config.Auth.ServerUUID != "" && config.Auth.ServerSecret != "" {
+		// Server authentication (for agents) - will be migrated to unified keys
 		// Note: Server authentication uses X- prefix headers while API Key/Secret uses Access- prefix
 		// This inconsistency should be addressed in future API standardization
 		restyClient.SetHeader("X-Server-UUID", config.Auth.ServerUUID)
 		restyClient.SetHeader("X-Server-Secret", config.Auth.ServerSecret)
 	} else if config.Auth.MonitoringKey != "" {
-		// Use standard Bearer token format for monitoring key authentication
+		// Legacy monitoring key authentication (deprecated)
 		restyClient.SetAuthToken(config.Auth.MonitoringKey)
 	}
 
@@ -227,25 +250,82 @@ func NewClient(config *Config) (*Client, error) {
 func (c *Client) WithToken(token string) *Client {
 	newConfig := *c.config
 	newConfig.Auth.Token = token
+	newConfig.Auth.UnifiedAPIKey = ""
+	newConfig.Auth.APIKeySecret = ""
 	newConfig.Auth.APIKey = ""
 	newConfig.Auth.APISecret = ""
 	newConfig.Auth.ServerUUID = ""
 	newConfig.Auth.ServerSecret = ""
 	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = ""
 
 	newClient, _ := NewClient(&newConfig)
 	return newClient
 }
 
-// WithAPIKey creates a new client with API key authentication
+// WithUnifiedAPIKey creates a new client with unified API key authentication (bearer token)
+func (c *Client) WithUnifiedAPIKey(key string) *Client {
+	newConfig := *c.config
+	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = key
+	newConfig.Auth.APIKeySecret = ""
+	newConfig.Auth.APIKey = ""
+	newConfig.Auth.APISecret = ""
+	newConfig.Auth.ServerUUID = ""
+	newConfig.Auth.ServerSecret = ""
+	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = ""
+
+	newClient, _ := NewClient(&newConfig)
+	return newClient
+}
+
+// WithUnifiedAPIKeyAndSecret creates a new client with unified API key authentication (key/secret)
+func (c *Client) WithUnifiedAPIKeyAndSecret(key, secret string) *Client {
+	newConfig := *c.config
+	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = key
+	newConfig.Auth.APIKeySecret = secret
+	newConfig.Auth.APIKey = ""
+	newConfig.Auth.APISecret = ""
+	newConfig.Auth.ServerUUID = ""
+	newConfig.Auth.ServerSecret = ""
+	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = ""
+
+	newClient, _ := NewClient(&newConfig)
+	return newClient
+}
+
+// WithRegistrationKey creates a new client with registration key authentication
+func (c *Client) WithRegistrationKey(key string) *Client {
+	newConfig := *c.config
+	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = ""
+	newConfig.Auth.APIKeySecret = ""
+	newConfig.Auth.APIKey = ""
+	newConfig.Auth.APISecret = ""
+	newConfig.Auth.ServerUUID = ""
+	newConfig.Auth.ServerSecret = ""
+	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = key
+
+	newClient, _ := NewClient(&newConfig)
+	return newClient
+}
+
+// WithAPIKey creates a new client with API key authentication (legacy method)
 func (c *Client) WithAPIKey(key, secret string) *Client {
 	newConfig := *c.config
 	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = ""
+	newConfig.Auth.APIKeySecret = ""
 	newConfig.Auth.APIKey = key
 	newConfig.Auth.APISecret = secret
 	newConfig.Auth.ServerUUID = ""
 	newConfig.Auth.ServerSecret = ""
 	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = ""
 
 	newClient, _ := NewClient(&newConfig)
 	return newClient
@@ -255,25 +335,31 @@ func (c *Client) WithAPIKey(key, secret string) *Client {
 func (c *Client) WithServerCredentials(uuid, secret string) *Client {
 	newConfig := *c.config
 	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = ""
+	newConfig.Auth.APIKeySecret = ""
 	newConfig.Auth.APIKey = ""
 	newConfig.Auth.APISecret = ""
 	newConfig.Auth.ServerUUID = uuid
 	newConfig.Auth.ServerSecret = secret
 	newConfig.Auth.MonitoringKey = ""
+	newConfig.Auth.RegistrationKey = ""
 
 	newClient, _ := NewClient(&newConfig)
 	return newClient
 }
 
-// WithMonitoringKey creates a new client with monitoring key authentication (for monitoring agents)
+// WithMonitoringKey creates a new client with monitoring key authentication (legacy method)
 func (c *Client) WithMonitoringKey(key string) *Client {
 	newConfig := *c.config
 	newConfig.Auth.Token = ""
+	newConfig.Auth.UnifiedAPIKey = ""
+	newConfig.Auth.APIKeySecret = ""
 	newConfig.Auth.APIKey = ""
 	newConfig.Auth.APISecret = ""
 	newConfig.Auth.ServerUUID = ""
 	newConfig.Auth.ServerSecret = ""
 	newConfig.Auth.MonitoringKey = key
+	newConfig.Auth.RegistrationKey = ""
 
 	newClient, _ := NewClient(&newConfig)
 	return newClient
@@ -516,14 +602,23 @@ func (c *Client) getAuthMethod() string {
 	if c.config.Auth.Token != "" {
 		return "JWT Token"
 	}
+	if c.config.Auth.UnifiedAPIKey != "" {
+		if c.config.Auth.APIKeySecret != "" {
+			return "Unified API Key (Key/Secret)"
+		}
+		return "Unified API Key (Bearer)"
+	}
+	if c.config.Auth.RegistrationKey != "" {
+		return "Registration Key"
+	}
 	if c.config.Auth.APIKey != "" && c.config.Auth.APISecret != "" {
-		return "API Key/Secret"
+		return "API Key/Secret (Legacy)"
 	}
 	if c.config.Auth.ServerUUID != "" && c.config.Auth.ServerSecret != "" {
 		return "Server Credentials"
 	}
 	if c.config.Auth.MonitoringKey != "" {
-		return "Monitoring Key"
+		return "Monitoring Key (Legacy)"
 	}
 	return "None"
 }
