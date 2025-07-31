@@ -11,9 +11,13 @@ import (
 
 // SendHeartbeat sends a heartbeat from a controller to the API
 func (s *ControllersService) SendHeartbeat(ctx context.Context, req *ControllerHeartbeatRequest) error {
+	if req.ControllerName == "" {
+		return fmt.Errorf("controller name is required")
+	}
+	
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/controllers/heartbeat",
+		Path:   fmt.Sprintf("/v1/controllers/%s/heartbeat", req.ControllerName),
 		Body:   req,
 	})
 	return err
