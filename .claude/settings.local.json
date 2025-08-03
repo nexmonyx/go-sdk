@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(grep:*)",
+      "Bash(mv:*)",
+      "Bash(true)",
+      "Bash(rm:*)",
+      "Bash(tree:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)",
+      "Bash(git pull:*)",
+      "Bash(git config:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(go list:*)",
+      "Bash(GOPROXY=https://proxy.golang.org go list -m github.com/nexmonyx/go-sdk@v1.0.0)",
+      "Bash(go fmt:*)",
+      "Bash(go run:*)",
+      "Bash(git reset:*)",
+      "Bash(gh release view:*)",
+      "Bash(chmod:*)",
+      "Bash(./fix_api_paths.sh:*)",
+      "Bash(./test_headers.sh:*)",
+      "Bash(./test_metrics.sh:*)",
+      "Bash(./test_all_endpoints.sh:*)",
+      "Bash(kubectl:*)",
+      "Bash(rg:*)",
+      "Bash(gh release list:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run watch:*)",
+      "Bash(SERVER_UUID=test-server-uuid SERVER_SECRET=test-secret go run network_hardware_example.go)"
+    ],
+    "deny": [],
+    "additionalDirectories": [
+      "/home/mmattox/go/src/github.com/nexmonyx/nexmonyx/"
+    ]
+  }
+}

@@ -1610,3 +1610,43 @@ const (
 	// Wildcard capability (full access)
 	CapabilityAll = "*"
 )
+
+// AgentVersion represents an agent version
+type AgentVersion struct {
+	GormModel
+	Version             string                 `json:"version"`
+	Environment         string                 `json:"environment,omitempty"`
+	Platform            string                 `json:"platform"`
+	Architectures       []string               `json:"architectures,omitempty"`
+	DownloadURLs        map[string]string      `json:"download_urls,omitempty"`
+	UpdaterURLs         map[string]string      `json:"updater_urls,omitempty"`
+	ReleaseNotes        string                 `json:"release_notes,omitempty"`
+	MinimumAPIVersion   string                 `json:"minimum_api_version,omitempty"`
+	ReleaseDate         *CustomTime            `json:"release_date,omitempty"`
+	IsStable            bool                   `json:"is_stable"`
+	IsPrerelease        bool                   `json:"is_prerelease"`
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AgentVersionRequest represents a request to register a new agent version
+type AgentVersionRequest struct {
+	Version           string                 `json:"version"`
+	Environment       string                 `json:"environment,omitempty"`
+	Platform          string                 `json:"platform"`
+	Architectures     []string               `json:"architectures,omitempty"`
+	DownloadURLs      map[string]string      `json:"download_urls,omitempty"`
+	UpdaterURLs       map[string]string      `json:"updater_urls,omitempty"`
+	ReleaseNotes      string                 `json:"release_notes,omitempty"`
+	MinimumAPIVersion string                 `json:"minimum_api_version,omitempty"`
+	IsStable          *bool                  `json:"is_stable,omitempty"`
+	IsPrerelease      *bool                  `json:"is_prerelease,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AgentBinaryRequest represents a request to add a binary for an agent version
+type AgentBinaryRequest struct {
+	Platform     string `json:"platform"`
+	Architecture string `json:"architecture"`
+	DownloadURL  string `json:"download_url"`
+	FileHash     string `json:"file_hash"`
+}
