@@ -11,7 +11,7 @@ func (s *AgentVersionsService) RegisterVersion(ctx context.Context, req *AgentVe
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/agent/versions",
+		Path:   "/v1/agent/versions",
 		Body:   req,
 		Result: &resp,
 	})
@@ -29,7 +29,7 @@ func (s *AgentVersionsService) CreateVersion(ctx context.Context, req *AgentVers
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/api/v1/agent/versions",
+		Path:   "/v1/agent/versions",
 		Body:   req,
 		Result: &resp,
 	})
@@ -50,7 +50,7 @@ func (s *AgentVersionsService) GetVersion(ctx context.Context, version string) (
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/v1/agent/versions/%s", version),
+		Path:   fmt.Sprintf("/v1/agent/versions/%s", version),
 		Result: &resp,
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *AgentVersionsService) ListVersions(ctx context.Context, opts *ListOptio
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/api/v1/agent/versions",
+		Path:   "/v1/agent/versions",
 		Result: &resp,
 	}
 
@@ -93,7 +93,7 @@ func (s *AgentVersionsService) AddBinary(ctx context.Context, versionID uint, re
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/api/v1/agent/versions/%d/binaries", versionID),
+		Path:   fmt.Sprintf("/v1/agent/versions/%d/binaries", versionID),
 		Body:   req,
 		Result: &resp,
 	})
