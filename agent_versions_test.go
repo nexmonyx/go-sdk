@@ -1,7 +1,6 @@
 package nexmonyx
 
 import (
-	"context"
 	"testing"
 )
 

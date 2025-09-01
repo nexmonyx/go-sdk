@@ -6,6 +6,7 @@ The official Go SDK for the Nexmonyx API - a comprehensive server monitoring and
 
 - **Multiple Authentication Methods**: JWT tokens, API keys, server credentials, and monitoring keys
 - **Complete API Coverage**: Full support for all Nexmonyx API endpoints
+- **Enhanced Hardware Support**: Detailed hardware arrays including individual disk information
 - **Type Safety**: Comprehensive Go types for all API models and responses
 - **Error Handling**: Structured error types with detailed error information
 - **Retry Logic**: Built-in retry mechanism with exponential backoff
@@ -13,6 +14,9 @@ The official Go SDK for the Nexmonyx API - a comprehensive server monitoring and
 - **Pagination**: Easy-to-use pagination support for list operations
 - **Context Support**: Full context.Context support for cancellation and timeouts
 - **Debug Mode**: Optional request/response logging for debugging
+- **Fluent Builder Pattern**: Easy-to-use builders for complex requests
+- **WebSocket Support**: Real-time bidirectional communication for agent commands
+- **Backward Compatibility**: Legacy API support maintained
 
 ## Installation
 
@@ -216,6 +220,324 @@ When working with the Nexmonyx SDK, use this decision tree to select the appropr
    ├── Public Website → Public, StatusPages, Distros
    └── Administrative Tool → Admin, Settings, Jobs
 ```
+
+## Enhanced Hardware Support
+
+The SDK provides comprehensive support for detailed hardware information, particularly enabling individual disk metrics collection:
+
+### Key Features
+
+- **Individual Disk Information**: Collect detailed information for each disk device
+- **Comprehensive Hardware Arrays**: CPU, Memory, Network, and Disk details
+- **Fluent Builder Pattern**: Easy-to-use construction methods
+- **Backward Compatibility**: Existing legacy hardware fields continue to work
+- **API Compatible**: JSON structure matches server expectations
+
+### Quick Example
+
+```go
+// Create enhanced hardware details request
+req := NewServerDetailsUpdateRequest().
+    WithBasicInfo("server-01", "192.168.1.100", "production", "dc1", "web").
+    WithDisks([]ServerDiskInfo{
+        {
+            Device:       "/dev/sda",
+            DiskModel:    "Samsung SSD 980 PRO",
+            SerialNumber: "S5P2NS0R123456",
+            Size:         1000204886016,
+            Type:         "NVMe",
+            Vendor:       "Samsung",
+        },
+        {
+            Device:       "/dev/sdb",
+            DiskModel:    "WD Red Plus WD40EFPX",
+            SerialNumber: "WD-WX12345678901",
+            Size:         4000787030016,
+            Type:         "HDD",
+            Vendor:       "Western Digital",
+        },
+    })
+
+// Send to API
+server, err := client.Servers.UpdateDetails(ctx, "server-uuid", req)
+```
+
+### Helper Methods
+
+```go
+// Check if request has hardware details
+if req.HasHardwareDetails() {
+    fmt.Println("Enhanced hardware details present")
+}
+
+// Check specifically for disk information
+if req.HasDisks() {
+    fmt.Printf("Request contains %d disks\n", len(req.Hardware.Disks))
+}
+```
+
+📖 **For complete hardware enhancement documentation, see [HARDWARE_ENHANCEMENT.md](HARDWARE_ENHANCEMENT.md)**
+
+## WebSocket Support
+
+The SDK provides comprehensive WebSocket support for real-time bidirectional communication with agents. This enables sending commands to agents and receiving responses with proper correlation tracking.
+
+### Features
+
+- **8 System Commands**: Complete support for all agent commands
+  - `run_collection` - Trigger metrics collection
+  - `force_collection` - Force comprehensive collection
+  - `update_agent` - Update agent version
+  - `check_updates` - Check for available updates
+  - `restart_agent` - Restart agent service
+  - `graceful_restart` - Gracefully restart agent
+  - `agent_health` - Get agent health status
+  - `system_status` - Get system status information
+
+- **Connection Management**: Automatic connection, authentication, and heartbeat handling
+- **Response Correlation**: Command responses matched via correlation IDs
+- **Timeout Handling**: Configurable timeouts with context support
+- **Event Handlers**: Connection, disconnection, and message event callbacks
+- **Error Handling**: Comprehensive error handling for all scenarios
+
+### Quick Start
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "time"
+    
+    "github.com/nexmonyx/go-sdk/v2"
+)
+
+func main() {
+    // Create client with server credentials (required for WebSocket)
+    config := &nexmonyx.Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: nexmonyx.AuthConfig{
+            ServerUUID:   "your-server-uuid",
+            ServerSecret: "your-server-secret",
+        },
+    }
+
+    client, err := nexmonyx.NewClient(config)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Initialize WebSocket service
+    wsService, err := client.NewWebSocketService()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Set up event handlers
+    wsService.OnConnect(func() {
+        fmt.Println("WebSocket connected successfully")
+    })
+
+    wsService.OnDisconnect(func(err error) {
+        fmt.Printf("WebSocket disconnected: %v\n", err)
+    })
+
+    // Connect to WebSocket
+    if err := wsService.Connect(); err != nil {
+        log.Fatal(err)
+    }
+    defer wsService.Disconnect()
+
+    // Send commands to agents
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+
+    // Check agent health
+    response, err := wsService.AgentHealth(ctx, "target-server-uuid")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    if response.Success {
+        fmt.Printf("Agent is healthy: %s\n", string(response.Data))
+    } else {
+        fmt.Printf("Agent health check failed: %s\n", response.Error)
+    }
+}
+```
+
+### System Commands
+
+#### Metrics Collection
+
+```go
+// Run standard collection
+collectionReq := &nexmonyx.CollectionRequest{
+    CollectorTypes: []string{"cpu", "memory", "network"},
+    Comprehensive:  false,
+    Timeout:        30,
+}
+response, err := wsService.RunCollection(ctx, serverUUID, collectionReq)
+
+// Force comprehensive collection
+response, err := wsService.ForceCollection(ctx, serverUUID, &nexmonyx.CollectionRequest{
+    CollectorTypes: []string{"all"},
+    Timeout:        60,
+})
+```
+
+#### Agent Management
+
+```go
+// Check for updates
+response, err := wsService.CheckUpdates(ctx, serverUUID)
+
+// Update agent to specific version
+updateReq := &nexmonyx.UpdateRequest{
+    Version:   "2.1.5",
+    Force:     false,
+    Immediate: false,
+}
+response, err := wsService.UpdateAgent(ctx, serverUUID, updateReq)
+
+// Graceful restart with delay
+restartReq := &nexmonyx.RestartRequest{
+    Delay:  10,
+    Reason: "Scheduled maintenance",
+}
+response, err := wsService.GracefulRestart(ctx, serverUUID, restartReq)
+```
+
+#### Status and Health Monitoring
+
+```go
+// Get agent health status
+response, err := wsService.AgentHealth(ctx, serverUUID)
+if response.Success {
+    var health map[string]interface{}
+    json.Unmarshal(response.Data, &health)
+    fmt.Printf("Agent Status: %s, Version: %s\n", 
+        health["status"], health["version"])
+}
+
+// Get system status
+response, err := wsService.SystemStatus(ctx, serverUUID)
+if response.Success {
+    var status map[string]interface{}
+    json.Unmarshal(response.Data, &status)
+    fmt.Printf("Load Average: %v\n", status["load_average"])
+}
+```
+
+### Advanced Usage
+
+#### Custom Event Handling
+
+```go
+wsService.OnMessage(func(msg *nexmonyx.WSMessage) {
+    switch msg.Type {
+    case nexmonyx.WSTypeUpdateProgress:
+        fmt.Printf("Update progress: %s\n", string(msg.Payload))
+    case nexmonyx.WSTypeError:
+        fmt.Printf("WebSocket error: %s\n", string(msg.Payload))
+    default:
+        fmt.Printf("Received message: type=%s\n", msg.Type)
+    }
+})
+```
+
+#### Batch Operations
+
+```go
+// Send commands to multiple servers
+servers := []string{"server-1", "server-2", "server-3"}
+results := make(map[string]*nexmonyx.WSCommandResponse)
+
+for _, serverUUID := range servers {
+    response, err := wsService.AgentHealth(ctx, serverUUID)
+    if err != nil {
+        fmt.Printf("Health check failed for %s: %v\n", serverUUID, err)
+        continue
+    }
+    results[serverUUID] = response
+}
+
+// Process results
+for serverUUID, response := range results {
+    status := "FAILED"
+    if response.Success {
+        status = "OK"
+    }
+    fmt.Printf("Server %s: %s\n", serverUUID, status)
+}
+```
+
+#### Configuration Options
+
+```go
+wsService, err := client.NewWebSocketService()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Configure timeouts and retry behavior
+wsService.SetTimeout(60 * time.Second)
+wsService.SetReconnectDelay(10 * time.Second)
+wsService.SetMaxReconnects(3)
+```
+
+### Error Handling
+
+```go
+response, err := wsService.AgentHealth(ctx, serverUUID)
+if err != nil {
+    switch {
+    case strings.Contains(err.Error(), "not connected"):
+        fmt.Println("WebSocket is not connected")
+    case strings.Contains(err.Error(), "timeout"):
+        fmt.Println("Command timed out")
+    case strings.Contains(err.Error(), "context deadline exceeded"):
+        fmt.Println("Context timeout reached")
+    default:
+        fmt.Printf("Command failed: %v\n", err)
+    }
+    return
+}
+
+if !response.Success {
+    fmt.Printf("Agent command failed: %s\n", response.Error)
+    return
+}
+
+// Process successful response
+fmt.Printf("Command executed in %.0fms\n", 
+    response.Metadata["execution_time_ms"].(float64))
+```
+
+### Authentication Requirements
+
+**Important**: WebSocket functionality requires server authentication credentials (`ServerUUID` and `ServerSecret`). Other authentication methods (JWT tokens, API keys) are not supported for WebSocket connections.
+
+```go
+// ✅ Correct - Server credentials
+config := &nexmonyx.Config{
+    Auth: nexmonyx.AuthConfig{
+        ServerUUID:   "your-server-uuid",
+        ServerSecret: "your-server-secret",
+    },
+}
+
+// ❌ Incorrect - JWT token won't work for WebSocket
+config := &nexmonyx.Config{
+    Auth: nexmonyx.AuthConfig{
+        Token: "jwt-token",
+    },
+}
+```
+
+📖 **For complete WebSocket examples, see [websocket_examples.go](websocket_examples.go)**
 
 ## Comprehensive Examples
 

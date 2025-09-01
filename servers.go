@@ -492,6 +492,34 @@ func (s *ServersService) UpdateDetails(ctx context.Context, serverUUID string, r
 			fmt.Printf("[DEBUG]   CPUCores: %d\n", req.CPUCores)
 			fmt.Printf("[DEBUG]   MemoryTotal: %d\n", req.MemoryTotal)
 			fmt.Printf("[DEBUG]   StorageTotal: %d\n", req.StorageTotal)
+			
+			// Debug enhanced hardware details
+			if req.HasHardwareDetails() {
+				fmt.Printf("[DEBUG] UpdateDetails: Enhanced hardware details present\n")
+				if req.Hardware.CPU != nil && len(req.Hardware.CPU) > 0 {
+					fmt.Printf("[DEBUG]   CPU Count: %d\n", len(req.Hardware.CPU))
+					for i, cpu := range req.Hardware.CPU {
+						fmt.Printf("[DEBUG]   CPU[%d]: %s %s (%d cores)\n", i, cpu.Manufacturer, cpu.ModelName, cpu.PhysicalCores)
+					}
+				}
+				if req.Hardware.Memory != nil {
+					fmt.Printf("[DEBUG]   Memory: %d bytes total, %s type\n", req.Hardware.Memory.TotalSize, req.Hardware.Memory.MemoryType)
+				}
+				if req.Hardware.Network != nil && len(req.Hardware.Network) > 0 {
+					fmt.Printf("[DEBUG]   Network Interfaces: %d\n", len(req.Hardware.Network))
+					for i, iface := range req.Hardware.Network {
+						fmt.Printf("[DEBUG]   Interface[%d]: %s (%s) - %d Mbps\n", i, iface.Name, iface.HardwareAddr, iface.SpeedMbps)
+					}
+				}
+				if req.HasDisks() {
+					fmt.Printf("[DEBUG]   Disks: %d\n", len(req.Hardware.Disks))
+					for i, disk := range req.Hardware.Disks {
+						fmt.Printf("[DEBUG]   Disk[%d]: %s (%s) %s - %d bytes\n", i, disk.Device, disk.DiskModel, disk.Type, disk.Size)
+					}
+				}
+			} else {
+				fmt.Printf("[DEBUG] UpdateDetails: No enhanced hardware details\n")
+			}
 		}
 		fmt.Printf("[DEBUG] UpdateDetails: Using authentication - Server UUID: %s\n", s.client.config.Auth.ServerUUID)
 	}

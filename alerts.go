@@ -12,7 +12,7 @@ func (s *AlertsService) Create(ctx context.Context, alert *Alert) (*Alert, error
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/alerts",
+		Path:   "/v1/alerts/rules",
 		Body:   alert,
 		Result: &resp,
 	})
@@ -33,7 +33,7 @@ func (s *AlertsService) Get(ctx context.Context, id string) (*Alert, error) {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/rules/%s", id),
 		Result: &resp,
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *AlertsService) List(ctx context.Context, opts *ListOptions) ([]*Alert, 
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/v1/alerts",
+		Path:   "/v1/alerts/rules",
 		Result: &resp,
 	}
 
@@ -77,7 +77,7 @@ func (s *AlertsService) Update(ctx context.Context, id string, alert *Alert) (*A
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/rules/%s", id),
 		Body:   alert,
 		Result: &resp,
 	})
@@ -97,7 +97,7 @@ func (s *AlertsService) Delete(ctx context.Context, id string) error {
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "DELETE",
-		Path:   fmt.Sprintf("/v1/alerts/%s", id),
+		Path:   fmt.Sprintf("/v1/alerts/rules/%s", id),
 		Result: &resp,
 	})
 	return err

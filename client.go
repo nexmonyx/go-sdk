@@ -63,6 +63,10 @@ type Client struct {
 	Probes                *ProbesService
 	Incidents             *IncidentsService
 	AgentVersions         *AgentVersionsService
+	DiskIO                *DiskIOService
+	SmartHealth           *SmartHealthService
+	Filesystem            *FilesystemService
+	WebSocket             *WebSocketServiceImpl
 }
 
 // Config holds the configuration for the client
@@ -244,6 +248,13 @@ func NewClient(config *Config) (*Client, error) {
 	client.Probes = &ProbesService{client: client}
 	client.Incidents = &IncidentsService{client: client}
 	client.AgentVersions = &AgentVersionsService{client: client}
+	client.DiskIO = &DiskIOService{client: client}
+	client.SmartHealth = &SmartHealthService{client: client}
+	client.Filesystem = &FilesystemService{client: client}
+	
+	// Note: WebSocket service requires separate initialization via NewWebSocketService()
+	// to ensure proper server credentials validation and connection management
+	client.WebSocket = nil
 
 	return client, nil
 }

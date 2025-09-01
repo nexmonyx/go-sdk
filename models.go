@@ -218,6 +218,78 @@ type ServerUpdateRequest struct {
 	Classification string `json:"classification,omitempty"`
 }
 
+// HardwareDetails represents detailed hardware information for server updates
+type HardwareDetails struct {
+	CPU     []ServerCPUInfo              `json:"cpu,omitempty"`
+	Memory  *ServerMemoryInfo            `json:"memory,omitempty"`
+	Network []ServerNetworkInterfaceInfo `json:"network,omitempty"`
+	Disks   []ServerDiskInfo             `json:"disks,omitempty"`
+}
+
+// ServerCPUInfo represents CPU hardware information for server update requests
+type ServerCPUInfo struct {
+	PhysicalID       string  `json:"physical_id,omitempty"`
+	Manufacturer     string  `json:"manufacturer,omitempty"`
+	ModelName        string  `json:"model_name,omitempty"`
+	Family           string  `json:"family,omitempty"`
+	Model            string  `json:"model,omitempty"`
+	Stepping         string  `json:"stepping,omitempty"`
+	Microcode        string  `json:"microcode,omitempty"`
+	Architecture     string  `json:"architecture,omitempty"`
+	SocketType       string  `json:"socket_type,omitempty"`
+	BaseSpeed        float64 `json:"base_speed,omitempty"`
+	MaxSpeed         float64 `json:"max_speed,omitempty"`
+	CurrentSpeed     float64 `json:"current_speed,omitempty"`
+	BusSpeed         float64 `json:"bus_speed,omitempty"`
+	SocketCount      int     `json:"socket_count,omitempty"`
+	PhysicalCores    int     `json:"physical_cores,omitempty"`
+	LogicalCores     int     `json:"logical_cores,omitempty"`
+	L1Cache          int     `json:"l1_cache,omitempty"`
+	L2Cache          int     `json:"l2_cache,omitempty"`
+	L3Cache          int     `json:"l3_cache,omitempty"`
+	Flags            string  `json:"flags,omitempty"`
+	Virtualization   string  `json:"virtualization,omitempty"`
+	PowerFeatures    string  `json:"power_features,omitempty"`
+	Usage            float64 `json:"usage,omitempty"`
+	Temperature      float64 `json:"temperature,omitempty"`
+	PowerConsumption float64 `json:"power_consumption,omitempty"`
+}
+
+// ServerMemoryInfo represents memory hardware information for server update requests
+type ServerMemoryInfo struct {
+	TotalSize     uint64 `json:"total_size,omitempty"`
+	AvailableSize uint64 `json:"available_size,omitempty"`
+	UsedSize      uint64 `json:"used_size,omitempty"`
+	MemoryType    string `json:"memory_type,omitempty"`
+	Speed         int    `json:"speed,omitempty"`
+	ModuleCount   int    `json:"module_count,omitempty"`
+	ECCSupported  bool   `json:"ecc_supported,omitempty"`
+}
+
+// ServerNetworkInterfaceInfo represents network interface hardware information for server update requests
+type ServerNetworkInterfaceInfo struct {
+	Name          string `json:"name,omitempty"`
+	HardwareAddr  string `json:"hardware_addr,omitempty"`
+	MTU           int    `json:"mtu,omitempty"`
+	Flags         string `json:"flags,omitempty"`
+	Addrs         string `json:"addrs,omitempty"`
+	BytesReceived uint64 `json:"bytes_received,omitempty"`
+	BytesSent     uint64 `json:"bytes_sent,omitempty"`
+	SpeedMbps     int    `json:"speed_mbps,omitempty"`
+	IsUp          bool   `json:"is_up,omitempty"`
+	IsWireless    bool   `json:"is_wireless,omitempty"`
+}
+
+// ServerDiskInfo represents disk hardware information for server update requests
+type ServerDiskInfo struct {
+	Device       string `json:"device,omitempty"`
+	DiskModel    string `json:"disk_model,omitempty"`
+	SerialNumber string `json:"serial_number,omitempty"`
+	Size         int64  `json:"size,omitempty"`
+	Type         string `json:"type,omitempty"`
+	Vendor       string `json:"vendor,omitempty"`
+}
+
 // ServerDetailsUpdateRequest represents a request to update detailed server information
 type ServerDetailsUpdateRequest struct {
 	// Basic server information
@@ -232,12 +304,14 @@ type ServerDetailsUpdateRequest struct {
 	OSArch       string `json:"os_arch,omitempty"`
 	SerialNumber string `json:"serial_number,omitempty"`
 	MacAddress   string `json:"mac_address,omitempty"`
-	// Hardware details
+	// Hardware details (legacy fields for backward compatibility)
 	CPUModel     string `json:"cpu_model,omitempty"`
 	CPUCount     int    `json:"cpu_count,omitempty"`
 	CPUCores     int    `json:"cpu_cores,omitempty"`
 	MemoryTotal  uint64 `json:"memory_total,omitempty"`
 	StorageTotal uint64 `json:"storage_total,omitempty"`
+	// Enhanced hardware details (optional)
+	Hardware *HardwareDetails `json:"hardware,omitempty"`
 }
 
 // Alert represents an alert
@@ -1568,6 +1642,93 @@ func NewRegistrationKey(name, description string, orgID uint) *CreateUnifiedAPIK
 		OrganizationID: orgID,
 		Capabilities:   []string{"servers:register", "servers:update"},
 	}
+}
+
+// NewServerDetailsUpdateRequest creates a new server details update request with hardware information
+func NewServerDetailsUpdateRequest() *ServerDetailsUpdateRequest {
+	return &ServerDetailsUpdateRequest{}
+}
+
+// WithBasicInfo sets basic server information
+func (r *ServerDetailsUpdateRequest) WithBasicInfo(hostname, mainIP, environment, location, classification string) *ServerDetailsUpdateRequest {
+	r.Hostname = hostname
+	r.MainIP = mainIP
+	r.Environment = environment
+	r.Location = location
+	r.Classification = classification
+	return r
+}
+
+// WithSystemInfo sets system information
+func (r *ServerDetailsUpdateRequest) WithSystemInfo(os, osVersion, osArch, serialNumber, macAddress string) *ServerDetailsUpdateRequest {
+	r.OS = os
+	r.OSVersion = osVersion
+	r.OSArch = osArch
+	r.SerialNumber = serialNumber
+	r.MacAddress = macAddress
+	return r
+}
+
+// WithLegacyHardware sets legacy hardware fields for backward compatibility
+func (r *ServerDetailsUpdateRequest) WithLegacyHardware(cpuModel string, cpuCount, cpuCores int, memoryTotal, storageTotal uint64) *ServerDetailsUpdateRequest {
+	r.CPUModel = cpuModel
+	r.CPUCount = cpuCount
+	r.CPUCores = cpuCores
+	r.MemoryTotal = memoryTotal
+	r.StorageTotal = storageTotal
+	return r
+}
+
+// WithHardwareDetails sets detailed hardware information
+func (r *ServerDetailsUpdateRequest) WithHardwareDetails(hardware *HardwareDetails) *ServerDetailsUpdateRequest {
+	r.Hardware = hardware
+	return r
+}
+
+// WithCPUs adds CPU information to hardware details
+func (r *ServerDetailsUpdateRequest) WithCPUs(cpus []ServerCPUInfo) *ServerDetailsUpdateRequest {
+	if r.Hardware == nil {
+		r.Hardware = &HardwareDetails{}
+	}
+	r.Hardware.CPU = cpus
+	return r
+}
+
+// WithMemory adds memory information to hardware details
+func (r *ServerDetailsUpdateRequest) WithMemory(memory *ServerMemoryInfo) *ServerDetailsUpdateRequest {
+	if r.Hardware == nil {
+		r.Hardware = &HardwareDetails{}
+	}
+	r.Hardware.Memory = memory
+	return r
+}
+
+// WithNetworkInterfaces adds network interface information to hardware details
+func (r *ServerDetailsUpdateRequest) WithNetworkInterfaces(interfaces []ServerNetworkInterfaceInfo) *ServerDetailsUpdateRequest {
+	if r.Hardware == nil {
+		r.Hardware = &HardwareDetails{}
+	}
+	r.Hardware.Network = interfaces
+	return r
+}
+
+// WithDisks adds disk information to hardware details
+func (r *ServerDetailsUpdateRequest) WithDisks(disks []ServerDiskInfo) *ServerDetailsUpdateRequest {
+	if r.Hardware == nil {
+		r.Hardware = &HardwareDetails{}
+	}
+	r.Hardware.Disks = disks
+	return r
+}
+
+// HasHardwareDetails returns true if the request contains enhanced hardware details
+func (r *ServerDetailsUpdateRequest) HasHardwareDetails() bool {
+	return r.Hardware != nil
+}
+
+// HasDisks returns true if the request contains disk information
+func (r *ServerDetailsUpdateRequest) HasDisks() bool {
+	return r.Hardware != nil && len(r.Hardware.Disks) > 0
 }
 
 // Standard capability constants
