@@ -56,7 +56,7 @@ jobs:
 
       - name: Security scanning
         run: |
-          gosec $(go list ./... | grep -v /vendor/) || true
+          gosec -exclude-generated ./... || true
 
       - name: Run unit tests
         run: |

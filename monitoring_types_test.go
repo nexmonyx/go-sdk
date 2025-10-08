@@ -226,7 +226,3 @@ func intPtr(i int) *int {
 func boolPtr(b bool) *bool {
 	return &b
 }
-
-func uintPtr(u uint) *uint {
-	return &u
-}
