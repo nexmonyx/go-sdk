@@ -180,6 +180,9 @@ The SDK is organized into service clients for different API domains:
 | **ServerGroups** | Server grouping and organization | JWT | Create, List, Add Servers, Get Members |
 | **Search** | Comprehensive search across servers, tags, and resources | JWT | Search Servers, Search Tags, Tag Statistics |
 | **Audit** | Audit log tracking and compliance reporting | JWT | List Logs, Export, Statistics, User History |
+| **Tasks** | Task management, scheduling, and workflow automation | JWT | Create, List, Get, Update Status, Cancel |
+| **Clusters** | Kubernetes cluster management and monitoring | JWT (Admin) | Create, List, Get, Update, Delete |
+| **Packages** | Organization package/tier management and limits | Public, JWT | Tiers, Package Info, Upgrade, Validate Config |
 | **Users** | User profile and preference management | JWT | Profile, Preferences, Avatar |
 | **Metrics** | Metrics submission and querying | Server Credentials, JWT | Submit, Query, History |
 | **Monitoring** | Probes, regions, and monitoring infrastructure | JWT, Monitoring Key | Probes, Results, Regions |
@@ -2051,6 +2054,1711 @@ allTags, _, err := client.Search.SearchTags(ctx,
 tagNames := make(map[string]int)
 for _, tag := range allTags {
 	tagNames[tag.TagName]++
+}
+```
+
+### Audit
+
+The Audit service provides comprehensive audit log tracking, compliance reporting, and security monitoring capabilities.
+
+#### Retrieve Audit Logs
+
+```go
+// Get all audit logs with pagination
+logs, meta, err := client.Audit.GetAuditLogs(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	nil)  // No filters
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Found %d audit logs:\n", meta.TotalItems)
+for _, auditLog := range logs {
+	fmt.Printf("[%s] %s: %s %s - %s\n",
+		auditLog.CreatedAt.Format("2006-01-02 15:04:05"),
+		auditLog.UserEmail,
+		auditLog.Action,
+		auditLog.ResourceType,
+		auditLog.Description)
+
+	if auditLog.Status != "success" {
+		fmt.Printf("  ⚠️  Status: %s", auditLog.Status)
+		if auditLog.ErrorMessage != "" {
+			fmt.Printf(" - %s", auditLog.ErrorMessage)
+		}
+		fmt.Println()
+	}
+}
+
+// Filter audit logs by specific criteria
+logs, meta, err := client.Audit.GetAuditLogs(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	map[string]interface{}{
+		"action":        "delete",          // Specific action type
+		"resource_type": "server",          // Specific resource type
+		"severity":      "critical",        // Critical events only
+		"user_id":       uint(123),         // Specific user
+		"start_date":    "2024-01-01T00:00:00Z",
+		"end_date":      "2024-12-31T23:59:59Z",
+		"ip_address":    "192.168.1.100",   // Specific IP address
+	})
+
+// Get a specific audit log entry
+log, err := client.Audit.GetAuditLog(ctx, 12345)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Audit Log Details:\n")
+fmt.Printf("Action: %s %s\n", log.Action, log.ResourceType)
+fmt.Printf("User: %s (%s)\n", log.UserName, log.UserEmail)
+fmt.Printf("Resource: %s (ID: %s)\n", log.ResourceName, log.ResourceID)
+fmt.Printf("Status: %s\n", log.Status)
+fmt.Printf("IP Address: %s\n", log.IPAddress)
+fmt.Printf("Location: %s\n", log.Location)
+fmt.Printf("Device: %s\n", log.DeviceType)
+fmt.Printf("Duration: %dms\n", log.DurationMs)
+
+if len(log.ComplianceFlags) > 0 {
+	fmt.Printf("Compliance: %s\n", strings.Join(log.ComplianceFlags, ", "))
+}
+
+if log.Changes != nil {
+	fmt.Println("Changes:")
+	for key, value := range log.Changes {
+		fmt.Printf("  %s: %v\n", key, value)
+	}
+}
+```
+
+#### Export Audit Logs
+
+```go
+// Export audit logs to CSV
+csvData, err := client.Audit.ExportAuditLogs(ctx,
+	"csv",  // Format: csv, json, or pdf
+	map[string]interface{}{
+		"start_date": "2024-01-01T00:00:00Z",
+		"end_date":   "2024-01-31T23:59:59Z",
+		"action":     "delete",  // Optional filters
+		"severity":   "critical",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Save to file
+err = os.WriteFile("audit-logs-jan-2024.csv", csvData, 0644)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Println("Audit logs exported to audit-logs-jan-2024.csv")
+
+// Export to JSON for programmatic processing
+jsonData, err := client.Audit.ExportAuditLogs(ctx,
+	"json",
+	map[string]interface{}{
+		"user_id":       uint(123),
+		"resource_type": "server",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Parse and process JSON data
+var auditLogs []nexmonyx.AuditLog
+json.Unmarshal(jsonData, &auditLogs)
+fmt.Printf("Exported %d audit logs\n", len(auditLogs))
+
+// Export compliance report to PDF
+pdfData, err := client.Audit.ExportAuditLogs(ctx,
+	"pdf",
+	map[string]interface{}{
+		"start_date": "2024-01-01T00:00:00Z",
+		"end_date":   "2024-03-31T23:59:59Z",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+os.WriteFile("compliance-report-q1-2024.pdf", pdfData, 0644)
+```
+
+#### Audit Statistics
+
+```go
+// Get comprehensive audit statistics
+stats, err := client.Audit.GetAuditStatistics(ctx, "", "")
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Audit Statistics:\n")
+fmt.Printf("Total Logs: %d\n", stats.TotalLogs)
+fmt.Printf("Total Users: %d\n", stats.TotalUsers)
+fmt.Printf("Total Actions: %d\n", stats.TotalActions)
+fmt.Printf("Failed Attempts: %d\n", stats.FailedAttempts)
+fmt.Printf("Critical Events: %d\n", stats.CriticalEvents)
+fmt.Printf("Average Duration: %.2fms\n", stats.AverageDurationMs)
+
+// Action breakdown
+fmt.Println("\nActions:")
+for action, count := range stats.ActionBreakdown {
+	fmt.Printf("- %s: %d\n", action, count)
+}
+
+// Resource breakdown
+fmt.Println("\nResources:")
+for resource, count := range stats.ResourceBreakdown {
+	fmt.Printf("- %s: %d\n", resource, count)
+}
+
+// Severity breakdown
+fmt.Println("\nSeverity:")
+for severity, count := range stats.SeverityBreakdown {
+	fmt.Printf("- %s: %d\n", severity, count)
+}
+
+// Status breakdown
+fmt.Println("\nStatus:")
+for status, count := range stats.StatusBreakdown {
+	percentage := float64(count) / float64(stats.TotalLogs) * 100
+	fmt.Printf("- %s: %d (%.1f%%)\n", status, count, percentage)
+}
+
+// Top users
+fmt.Println("\nMost Active Users:")
+for i, user := range stats.TopUsers {
+	fmt.Printf("%d. %s (%s)\n", i+1, user.UserName, user.UserEmail)
+	fmt.Printf("   Actions: %d | Failed: %d | Last: %s\n",
+		user.ActionCount,
+		user.FailedAttempts,
+		user.LastActivity.Format("2006-01-02 15:04:05"))
+	if len(user.TopActions) > 0 {
+		fmt.Printf("   Top Actions: %s\n", strings.Join(user.TopActions, ", "))
+	}
+}
+
+// Top actions with success rates
+fmt.Println("\nMost Common Actions:")
+for i, action := range stats.TopActions {
+	fmt.Printf("%d. %s: %d times (%.1f%% success rate)\n",
+		i+1,
+		action.Action,
+		action.Count,
+		action.SuccessRate)
+}
+
+// Compliance breakdown
+if len(stats.ComplianceBreakdown) > 0 {
+	fmt.Println("\nCompliance Events:")
+	for flag, count := range stats.ComplianceBreakdown {
+		fmt.Printf("- %s: %d\n", flag, count)
+	}
+}
+
+// Statistics for a specific time range
+stats, err := client.Audit.GetAuditStatistics(ctx,
+	"2024-01-01T00:00:00Z",  // Start date
+	"2024-01-31T23:59:59Z")  // End date
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("January 2024 Statistics: %d logs\n", stats.TotalLogs)
+```
+
+#### User Audit History
+
+```go
+// Get audit history for a specific user
+userID := uint(123)
+logs, meta, err := client.Audit.GetUserAuditHistory(ctx,
+	userID,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	"",  // No start date filter
+	"")  // No end date filter
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Audit History for User %d:\n", userID)
+fmt.Printf("Total Events: %d\n\n", meta.TotalItems)
+
+for _, log := range logs {
+	fmt.Printf("[%s] %s %s - %s\n",
+		log.CreatedAt.Format("2006-01-02 15:04:05"),
+		log.Action,
+		log.ResourceType,
+		log.Description)
+
+	if log.IPAddress != "" {
+		fmt.Printf("  From: %s", log.IPAddress)
+		if log.Location != "" {
+			fmt.Printf(" (%s)", log.Location)
+		}
+		fmt.Println()
+	}
+}
+
+// Get user history for a specific date range
+logs, meta, err := client.Audit.GetUserAuditHistory(ctx,
+	userID,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	"2024-01-01T00:00:00Z",  // Start date
+	"2024-01-31T23:59:59Z")  // End date
+
+fmt.Printf("User activity in January: %d events\n", meta.TotalItems)
+```
+
+#### Common Audit Use Cases
+
+```go
+// Monitor failed login attempts
+failedLogins, _, err := client.Audit.GetAuditLogs(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	map[string]interface{}{
+		"action":     "login",
+		"status":     "failure",
+		"start_date": time.Now().AddDate(0, 0, -7).Format(time.RFC3339),
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+if len(failedLogins) > 0 {
+	fmt.Printf("⚠️  %d failed login attempts in the last 7 days\n", len(failedLogins))
+
+	// Group by IP address to detect brute force
+	ipCounts := make(map[string]int)
+	for _, log := range failedLogins {
+		ipCounts[log.IPAddress]++
+	}
+
+	for ip, count := range ipCounts {
+		if count >= 5 {
+			fmt.Printf("🚨 Suspicious activity from %s: %d failed attempts\n", ip, count)
+		}
+	}
+}
+
+// Track critical operations
+criticalOps, _, err := client.Audit.GetAuditLogs(ctx,
+	nil,
+	map[string]interface{}{
+		"action":   "delete",
+		"severity": "critical",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Critical delete operations: %d\n", len(criticalOps))
+for _, op := range criticalOps {
+	fmt.Printf("- %s deleted %s '%s' by %s\n",
+		op.CreatedAt.Format("2006-01-02 15:04"),
+		op.ResourceType,
+		op.ResourceName,
+		op.UserEmail)
+}
+
+// Generate compliance report
+stats, err := client.Audit.GetAuditStatistics(ctx,
+	"2024-01-01T00:00:00Z",
+	"2024-12-31T23:59:59Z")
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println("Annual Compliance Report:")
+fmt.Printf("Total Security Events: %d\n", stats.TotalLogs)
+fmt.Printf("Failed Access Attempts: %d\n", stats.FailedAttempts)
+fmt.Printf("Critical Events: %d\n", stats.CriticalEvents)
+fmt.Printf("Success Rate: %.2f%%\n",
+	float64(stats.StatusBreakdown["success"])/float64(stats.TotalLogs)*100)
+
+if len(stats.ComplianceBreakdown) > 0 {
+	fmt.Println("\nCompliance Coverage:")
+	for standard, events := range stats.ComplianceBreakdown {
+		fmt.Printf("- %s: %d tracked events\n", standard, events)
+	}
+}
+
+// Export quarterly compliance report
+quarter := "Q1-2024"
+startDate := "2024-01-01T00:00:00Z"
+endDate := "2024-03-31T23:59:59Z"
+
+pdfData, err := client.Audit.ExportAuditLogs(ctx,
+	"pdf",
+	map[string]interface{}{
+		"start_date": startDate,
+		"end_date":   endDate,
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+filename := fmt.Sprintf("compliance-report-%s.pdf", quarter)
+os.WriteFile(filename, pdfData, 0644)
+fmt.Printf("Compliance report saved: %s\n", filename)
+```
+
+### Tasks
+
+The Tasks service provides comprehensive background task management, job scheduling, and workflow automation capabilities. Tasks can be one-time operations or recurring jobs with cron-style scheduling.
+
+#### Task Types and Statuses
+
+**Task Types:**
+- `report_generation`: Generate reports and analytics
+- `data_export`: Export data in various formats
+- `cleanup`: Data cleanup and maintenance operations
+- `backup`: Backup operations
+- `notification`: Send bulk notifications
+- `sync`: Synchronization operations
+- `maintenance`: System maintenance tasks
+
+**Task Statuses:**
+- `pending`: Task is queued and waiting to execute
+- `running`: Task is currently executing
+- `completed`: Task finished successfully
+- `failed`: Task encountered an error
+- `cancelled`: Task was manually cancelled
+
+**Task Priorities:**
+- `low`: Can be delayed if resources are constrained
+- `normal`: Standard priority for most tasks
+- `high`: Should execute sooner than normal tasks
+- `critical`: Execute as soon as possible
+
+#### Creating Tasks
+
+```go
+// Create a one-time task
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Generate Monthly Report",
+	Type:     "report_generation",
+	Priority: "high",
+	Parameters: map[string]interface{}{
+		"month":      "January",
+		"year":       2024,
+		"format":     "pdf",
+		"recipients": []string{"admin@example.com"},
+	},
+	TimeoutSeconds: 600, // 10 minutes
+	MaxRetries:     3,
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Task created: %s (ID: %d)\n", task.Name, task.ID)
+
+// Create a recurring task with cron schedule
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Daily Database Backup",
+	Type:     "backup",
+	Priority: "high",
+	Schedule: "0 2 * * *", // Every day at 2 AM
+	Parameters: map[string]interface{}{
+		"backup_type":   "full",
+		"retention_days": 30,
+		"compression":    true,
+	},
+	TimeoutSeconds: 3600, // 1 hour
+	MaxRetries:     2,
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Recurring task created: %s\n", task.Name)
+
+// Create a data export task
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Export Server Metrics",
+	Type:     "data_export",
+	Priority: "normal",
+	Parameters: map[string]interface{}{
+		"start_date":  "2024-01-01",
+		"end_date":    "2024-01-31",
+		"format":      "csv",
+		"servers":     []uint{1, 2, 3, 4, 5},
+		"metrics":     []string{"cpu", "memory", "network"},
+		"destination": "s3://backups/metrics/",
+	},
+})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+#### Listing and Filtering Tasks
+
+```go
+// List all tasks with pagination
+tasks, meta, err := client.Tasks.ListTasks(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	nil)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Found %d tasks (page %d of %d)\n",
+	len(tasks), meta.Page, meta.TotalPages)
+
+// Filter tasks by status
+runningTasks, _, err := client.Tasks.ListTasks(ctx,
+	nil,
+	map[string]interface{}{
+		"status": "running",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Currently running tasks: %d\n", len(runningTasks))
+
+// Filter by type and priority
+criticalBackups, _, err := client.Tasks.ListTasks(ctx,
+	nil,
+	map[string]interface{}{
+		"type":     "backup",
+		"priority": "critical",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Filter by scheduled date range
+scheduledTasks, _, err := client.Tasks.ListTasks(ctx,
+	nil,
+	map[string]interface{}{
+		"scheduled_after":  "2024-01-01T00:00:00Z",
+		"scheduled_before": "2024-01-31T23:59:59Z",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Tasks scheduled in January: %d\n", len(scheduledTasks))
+
+// Combine multiple filters
+pendingReports, _, err := client.Tasks.ListTasks(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 20},
+	map[string]interface{}{
+		"status":   "pending",
+		"type":     "report_generation",
+		"priority": "high",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+#### Monitoring Task Execution
+
+```go
+// Get detailed task information
+task, err := client.Tasks.GetTask(ctx, taskID)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Task: %s\n", task.Name)
+fmt.Printf("Status: %s\n", task.Status)
+fmt.Printf("Progress: %d%%\n", task.Progress)
+fmt.Printf("Type: %s\n", task.Type)
+fmt.Printf("Priority: %s\n", task.Priority)
+
+// Check execution times
+if task.ScheduledAt != nil {
+	fmt.Printf("Scheduled at: %s\n", task.ScheduledAt.Time)
+}
+if task.StartedAt != nil {
+	fmt.Printf("Started at: %s\n", task.StartedAt.Time)
+}
+if task.CompletedAt != nil {
+	fmt.Printf("Completed at: %s\n", task.CompletedAt.Time)
+	duration := task.CompletedAt.Time.Sub(task.StartedAt.Time)
+	fmt.Printf("Duration: %s\n", duration)
+}
+
+// Check recurring task schedule
+if task.Schedule != "" {
+	fmt.Printf("Cron schedule: %s\n", task.Schedule)
+	if task.NextExecutionAt != nil {
+		fmt.Printf("Next execution: %s\n", task.NextExecutionAt.Time)
+	}
+	fmt.Printf("Execution count: %d\n", task.ExecutionCount)
+}
+
+// Check task parameters and results
+if task.Parameters != nil {
+	fmt.Printf("Parameters: %+v\n", task.Parameters)
+}
+if task.Result != nil {
+	fmt.Printf("Result: %+v\n", task.Result)
+}
+
+// Check for errors
+if task.Status == "failed" && task.ErrorMessage != "" {
+	fmt.Printf("Error: %s\n", task.ErrorMessage)
+	fmt.Printf("Retry count: %d/%d\n", task.CurrentRetry, task.MaxRetries)
+}
+```
+
+#### Updating Task Status
+
+```go
+// Update task status to running (typically done by task executor)
+task, err := client.Tasks.UpdateTaskStatus(ctx, taskID, "running", nil)
+if err != nil {
+	log.Fatal(err)
+}
+
+// Update task with progress
+task, err = client.Tasks.UpdateTaskStatus(ctx, taskID, "running",
+	map[string]interface{}{
+		"progress": 50,
+		"message":  "Processing 500 of 1000 records",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Mark task as completed with results
+task, err = client.Tasks.UpdateTaskStatus(ctx, taskID, "completed",
+	map[string]interface{}{
+		"records_processed": 1000,
+		"file_size":         2048576,
+		"output_path":       "/exports/data-2024-01.csv",
+		"duration_ms":       45000,
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Mark task as failed with error information
+task, err = client.Tasks.UpdateTaskStatus(ctx, taskID, "failed",
+	map[string]interface{}{
+		"error_code":    "TIMEOUT",
+		"error_message": "Operation exceeded timeout of 600 seconds",
+		"records_processed_before_failure": 750,
+	})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+#### Cancelling Tasks
+
+```go
+// Cancel a pending task
+err := client.Tasks.CancelTask(ctx, taskID)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Task %d cancelled\n", taskID)
+
+// Cancel all pending tasks of a specific type
+tasks, _, err := client.Tasks.ListTasks(ctx, nil, map[string]interface{}{
+	"status": "pending",
+	"type":   "data_export",
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+for _, task := range tasks {
+	err := client.Tasks.CancelTask(ctx, task.ID)
+	if err != nil {
+		log.Printf("Failed to cancel task %d: %v\n", task.ID, err)
+		continue
+	}
+	fmt.Printf("Cancelled task: %s (ID: %d)\n", task.Name, task.ID)
+}
+```
+
+#### Common Use Cases
+
+**1. Scheduled Report Generation:**
+```go
+// Generate weekly reports every Monday at 8 AM
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Weekly Performance Report",
+	Type:     "report_generation",
+	Priority: "high",
+	Schedule: "0 8 * * 1", // Monday at 8 AM
+	Parameters: map[string]interface{}{
+		"report_type": "performance",
+		"period":      "week",
+		"format":      "pdf",
+		"recipients":  []string{"management@example.com"},
+		"include_charts": true,
+	},
+	TimeoutSeconds: 1800,
+})
+```
+
+**2. Automated Data Cleanup:**
+```go
+// Clean up old logs every night at 3 AM
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Cleanup Old Audit Logs",
+	Type:     "cleanup",
+	Priority: "low",
+	Schedule: "0 3 * * *", // Every day at 3 AM
+	Parameters: map[string]interface{}{
+		"resource_type":   "audit_logs",
+		"retention_days":  90,
+		"archive_before_delete": true,
+		"archive_location": "s3://archives/logs/",
+	},
+	MaxRetries: 3,
+})
+```
+
+**3. Periodic System Maintenance:**
+```go
+// Database optimization on first Sunday of each month
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Monthly Database Optimization",
+	Type:     "maintenance",
+	Priority: "high",
+	Schedule: "0 2 * * 0", // Sunday at 2 AM (check in task logic for first Sunday)
+	Parameters: map[string]interface{}{
+		"operations": []string{
+			"vacuum",
+			"analyze",
+			"reindex",
+		},
+		"tables": []string{"servers", "cpu_metrics", "memory_metrics"},
+	},
+	TimeoutSeconds: 7200, // 2 hours
+})
+```
+
+**4. Bulk Notification Delivery:**
+```go
+// Send bulk notifications (one-time task)
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Send Maintenance Notification",
+	Type:     "notification",
+	Priority: "high",
+	Parameters: map[string]interface{}{
+		"notification_type": "email",
+		"template":          "scheduled_maintenance",
+		"recipients":        []string{"all_users"},
+		"scheduled_for":     "2024-02-15T00:00:00Z",
+		"subject":           "Scheduled Maintenance - February 15",
+		"variables": map[string]interface{}{
+			"maintenance_window": "February 15, 2024 02:00-04:00 UTC",
+			"expected_downtime":  "30 minutes",
+		},
+	},
+})
+```
+
+**5. Data Synchronization:**
+```go
+// Sync data between systems every hour
+task, err := client.Tasks.CreateTask(ctx, &nexmonyx.TaskConfiguration{
+	Name:     "Hourly Metrics Sync",
+	Type:     "sync",
+	Priority: "normal",
+	Schedule: "0 * * * *", // Every hour
+	Parameters: map[string]interface{}{
+		"source_system":      "nexmonyx",
+		"destination_system": "data_warehouse",
+		"sync_type":          "incremental",
+		"resources":          []string{"servers", "metrics", "alerts"},
+		"batch_size":         1000,
+	},
+	TimeoutSeconds: 600,
+	MaxRetries:     3,
+})
+```
+
+**6. Task Monitoring Dashboard:**
+```go
+// Build a simple task monitoring dashboard
+func monitorTasks(client *nexmonyx.Client, ctx context.Context) {
+	// Get task statistics
+	stats := make(map[string]int)
+
+	for _, status := range []string{"pending", "running", "completed", "failed"} {
+		tasks, _, err := client.Tasks.ListTasks(ctx, nil, map[string]interface{}{
+			"status": status,
+		})
+		if err != nil {
+			log.Printf("Error getting %s tasks: %v\n", status, err)
+			continue
+		}
+		stats[status] = len(tasks)
+	}
+
+	fmt.Println("\n=== Task Status Summary ===")
+	fmt.Printf("Pending:   %d\n", stats["pending"])
+	fmt.Printf("Running:   %d\n", stats["running"])
+	fmt.Printf("Completed: %d\n", stats["completed"])
+	fmt.Printf("Failed:    %d\n", stats["failed"])
+
+	// Show currently running tasks with progress
+	if stats["running"] > 0 {
+		runningTasks, _, _ := client.Tasks.ListTasks(ctx, nil, map[string]interface{}{
+			"status": "running",
+		})
+
+		fmt.Println("\n=== Running Tasks ===")
+		for _, task := range runningTasks {
+			fmt.Printf("- %s: %d%% complete\n", task.Name, task.Progress)
+			if task.StartedAt != nil {
+				elapsed := time.Since(task.StartedAt.Time)
+				fmt.Printf("  Runtime: %s\n", elapsed.Round(time.Second))
+			}
+		}
+	}
+
+	// Show failed tasks that need attention
+	if stats["failed"] > 0 {
+		failedTasks, _, _ := client.Tasks.ListTasks(ctx, nil, map[string]interface{}{
+			"status": "failed",
+		})
+
+		fmt.Println("\n=== Failed Tasks ===")
+		for _, task := range failedTasks {
+			fmt.Printf("- %s (ID: %d)\n", task.Name, task.ID)
+			if task.ErrorMessage != "" {
+				fmt.Printf("  Error: %s\n", task.ErrorMessage)
+			}
+			fmt.Printf("  Retries: %d/%d\n", task.CurrentRetry, task.MaxRetries)
+		}
+	}
+}
+```
+
+### Clusters
+
+The Clusters service provides comprehensive Kubernetes cluster management and monitoring capabilities. **Admin authentication required** for all cluster operations.
+
+#### Cluster Statuses
+
+Clusters can have the following statuses:
+- `unknown`: Initial state, not yet checked
+- `online`: Cluster is reachable and responding
+- `offline`: Cluster is not reachable
+- `error`: Error occurred during connection attempt
+
+#### Creating Clusters
+
+```go
+// Create a new production Kubernetes cluster
+cluster, err := client.Clusters.CreateCluster(ctx, &nexmonyx.ClusterCreateRequest{
+	Name:         "Production Cluster",
+	APIServerURL: "https://k8s.prod.example.com:6443",
+	Token:        "eyJhbGciOiJSUzI1NiIsImtpZCI6Ii0yNX...", // Service account token
+	CACert:       "-----BEGIN CERTIFICATE-----\nMIIC5zCCAc+gAwIBAgIBATANB...\n-----END CERTIFICATE-----",
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Cluster created: %s (ID: %d, Status: %s)\n",
+	cluster.Name, cluster.ID, cluster.Status)
+
+// Create a staging cluster with minimal configuration
+cluster, err := client.Clusters.CreateCluster(ctx, &nexmonyx.ClusterCreateRequest{
+	Name:         "Staging Cluster",
+	APIServerURL: "https://k8s.staging.example.com:6443",
+	Token:        "service-account-token",
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Create a cluster with monitoring disabled initially
+isActive := false
+cluster, err := client.Clusters.CreateCluster(ctx, &nexmonyx.ClusterCreateRequest{
+	Name:         "Development Cluster",
+	APIServerURL: "https://k8s.dev.example.com:6443",
+	Token:        "dev-sa-token",
+	CACert:       "-----BEGIN CERTIFICATE-----\n...",
+	IsActive:     &isActive, // Monitoring disabled
+})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+#### Listing Clusters
+
+```go
+// List all clusters
+clusters, meta, err := client.Clusters.ListClusters(ctx, nil)
+if err != nil {
+	log.Fatal(err)
+}
+
+for _, cluster := range clusters {
+	fmt.Printf("Cluster: %s (Status: %s)\n", cluster.Name, cluster.Status)
+	fmt.Printf("  Nodes: %d, Pods: %d\n", cluster.NodeCount, cluster.PodCount)
+	if cluster.LastConnected != nil {
+		fmt.Printf("  Last Connected: %s\n", cluster.LastConnected.Time)
+	}
+}
+
+// List clusters with pagination
+clusters, meta, err := client.Clusters.ListClusters(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 20})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Page %d of %d (Total: %d clusters)\n",
+	meta.Page, meta.TotalPages, meta.TotalItems)
+
+// Iterate through all pages
+page := 1
+for {
+	clusters, meta, err := client.Clusters.ListClusters(ctx,
+		&nexmonyx.PaginationOptions{Page: page, Limit: 50})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, cluster := range clusters {
+		fmt.Printf("Processing cluster: %s\n", cluster.Name)
+	}
+
+	if page >= meta.TotalPages {
+		break
+	}
+	page++
+}
+```
+
+#### Getting Cluster Details
+
+```go
+// Get specific cluster details
+cluster, err := client.Clusters.GetCluster(ctx, clusterID)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Cluster Details:\n")
+fmt.Printf("  Name: %s\n", cluster.Name)
+fmt.Printf("  API Server: %s\n", cluster.APIServerURL)
+fmt.Printf("  Status: %s\n", cluster.Status)
+fmt.Printf("  Active: %v\n", cluster.IsActive)
+fmt.Printf("  Nodes: %d\n", cluster.NodeCount)
+fmt.Printf("  Pods: %d\n", cluster.PodCount)
+
+// Check connection status
+if cluster.LastChecked != nil {
+	fmt.Printf("  Last Checked: %s\n", cluster.LastChecked.Time)
+}
+if cluster.LastConnected != nil {
+	fmt.Printf("  Last Connected: %s\n", cluster.LastConnected.Time)
+	uptime := time.Since(cluster.LastConnected.Time)
+	fmt.Printf("  Connection Age: %s\n", uptime.Round(time.Second))
+}
+
+// Check for errors
+if cluster.ErrorMessage != "" {
+	fmt.Printf("  Error: %s\n", cluster.ErrorMessage)
+}
+
+// Display credentials (use carefully)
+fmt.Printf("  Token: %s\n", cluster.Token[:20]+"...") // Only show prefix
+if cluster.CACert != "" {
+	fmt.Printf("  CA Cert: Present\n")
+}
+```
+
+#### Updating Clusters
+
+```go
+// Update cluster name
+updatedName := "Production K8s Cluster"
+cluster, err := client.Clusters.UpdateCluster(ctx, clusterID, &nexmonyx.ClusterUpdateRequest{
+	Name: &updatedName,
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Cluster renamed to: %s\n", cluster.Name)
+
+// Update API server URL and credentials
+newURL := "https://k8s-new.example.com:6443"
+newToken := "new-service-account-token"
+cluster, err := client.Clusters.UpdateCluster(ctx, clusterID, &nexmonyx.ClusterUpdateRequest{
+	APIServerURL: &newURL,
+	Token:        &newToken,
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Update CA certificate
+newCACert := "-----BEGIN CERTIFICATE-----\nMIIC...\n-----END CERTIFICATE-----"
+cluster, err := client.Clusters.UpdateCluster(ctx, clusterID, &nexmonyx.ClusterUpdateRequest{
+	CACert: &newCACert,
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Enable/disable monitoring
+isActive := false
+cluster, err := client.Clusters.UpdateCluster(ctx, clusterID, &nexmonyx.ClusterUpdateRequest{
+	IsActive: &isActive,
+})
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Monitoring %s for cluster: %s\n",
+	map[bool]string{true: "enabled", false: "disabled"}[cluster.IsActive],
+	cluster.Name)
+
+// Update multiple fields at once
+updatedName = "Updated Cluster"
+updatedURL = "https://k8s-updated.example.com:6443"
+isActive = true
+cluster, err := client.Clusters.UpdateCluster(ctx, clusterID, &nexmonyx.ClusterUpdateRequest{
+	Name:         &updatedName,
+	APIServerURL: &updatedURL,
+	IsActive:     &isActive,
+})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+#### Deleting Clusters
+
+```go
+// Delete a cluster
+err := client.Clusters.DeleteCluster(ctx, clusterID)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Cluster %d deleted successfully\n", clusterID)
+
+// Delete multiple clusters
+clusterIDs := []uint{1, 2, 3, 4, 5}
+for _, id := range clusterIDs {
+	err := client.Clusters.DeleteCluster(ctx, id)
+	if err != nil {
+		log.Printf("Failed to delete cluster %d: %v\n", id, err)
+		continue
+	}
+	fmt.Printf("Deleted cluster %d\n", id)
+}
+
+// Safe deletion with confirmation
+cluster, err := client.Clusters.GetCluster(ctx, clusterID)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("About to delete cluster: %s (ID: %d)\n", cluster.Name, cluster.ID)
+fmt.Printf("This cluster has %d nodes and %d pods\n",
+	cluster.NodeCount, cluster.PodCount)
+fmt.Print("Are you sure? (yes/no): ")
+
+var confirm string
+fmt.Scanln(&confirm)
+if confirm == "yes" {
+	err = client.Clusters.DeleteCluster(ctx, clusterID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Cluster deleted")
+} else {
+	fmt.Println("Deletion cancelled")
+}
+```
+
+#### Common Use Cases
+
+**1. Multi-Cluster Deployment Dashboard:**
+```go
+func displayClusterDashboard(client *nexmonyx.Client, ctx context.Context) error {
+	clusters, _, err := client.Clusters.ListClusters(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("\n=== Kubernetes Cluster Dashboard ===")
+
+	totalNodes := 0
+	totalPods := 0
+	onlineClusters := 0
+	offlineClusters := 0
+
+	for _, cluster := range clusters {
+		totalNodes += cluster.NodeCount
+		totalPods += cluster.PodCount
+
+		if cluster.Status == "online" {
+			onlineClusters++
+		} else if cluster.Status == "offline" {
+			offlineClusters++
+		}
+
+		fmt.Printf("\n[%s] %s\n", cluster.Status, cluster.Name)
+		fmt.Printf("  API: %s\n", cluster.APIServerURL)
+		fmt.Printf("  Resources: %d nodes, %d pods\n",
+			cluster.NodeCount, cluster.PodCount)
+
+		if cluster.LastConnected != nil {
+			uptime := time.Since(cluster.LastConnected.Time)
+			fmt.Printf("  Last Connected: %s ago\n", uptime.Round(time.Minute))
+		}
+
+		if cluster.ErrorMessage != "" {
+			fmt.Printf("  ⚠ Error: %s\n", cluster.ErrorMessage)
+		}
+	}
+
+	fmt.Printf("\n=== Summary ===\n")
+	fmt.Printf("Total Clusters: %d\n", len(clusters))
+	fmt.Printf("Online: %d, Offline: %d\n", onlineClusters, offlineClusters)
+	fmt.Printf("Total Nodes: %d\n", totalNodes)
+	fmt.Printf("Total Pods: %d\n", totalPods)
+	if totalNodes > 0 {
+		fmt.Printf("Average Pods per Node: %.1f\n",
+			float64(totalPods)/float64(totalNodes))
+	}
+
+	return nil
+}
+```
+
+**2. Cluster Health Monitoring:**
+```go
+func monitorClusterHealth(client *nexmonyx.Client, ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			clusters, _, err := client.Clusters.ListClusters(ctx, nil)
+			if err != nil {
+				log.Printf("Error fetching clusters: %v\n", err)
+				continue
+			}
+
+			for _, cluster := range clusters {
+				if cluster.Status != "online" {
+					alert := fmt.Sprintf(
+						"ALERT: Cluster %s is %s",
+						cluster.Name, cluster.Status)
+
+					if cluster.ErrorMessage != "" {
+						alert += fmt.Sprintf(" - Error: %s", cluster.ErrorMessage)
+					}
+
+					log.Println(alert)
+					// Send notification, page ops team, etc.
+				}
+
+				// Check if cluster hasn't been connected recently
+				if cluster.LastConnected != nil {
+					stale := time.Since(cluster.LastConnected.Time) > 15*time.Minute
+					if stale {
+						log.Printf("WARNING: Cluster %s hasn't connected in %s\n",
+							cluster.Name,
+							time.Since(cluster.LastConnected.Time).Round(time.Minute))
+					}
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+```
+
+**3. Cluster Provisioning Workflow:**
+```go
+func provisionNewCluster(
+	client *nexmonyx.Client,
+	ctx context.Context,
+	name string,
+	apiURL string,
+	token string,
+	caCert string,
+) (*nexmonyx.Cluster, error) {
+	// Step 1: Create cluster in monitoring system
+	fmt.Printf("Creating cluster: %s\n", name)
+	cluster, err := client.Clusters.CreateCluster(ctx, &nexmonyx.ClusterCreateRequest{
+		Name:         name,
+		APIServerURL: apiURL,
+		Token:        token,
+		CACert:       caCert,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cluster: %w", err)
+	}
+
+	fmt.Printf("Cluster created with ID: %d\n", cluster.ID)
+
+	// Step 2: Wait for initial health check
+	fmt.Println("Waiting for initial health check...")
+	maxAttempts := 12 // 1 minute with 5-second intervals
+	for i := 0; i < maxAttempts; i++ {
+		time.Sleep(5 * time.Second)
+
+		cluster, err = client.Clusters.GetCluster(ctx, cluster.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cluster status: %w", err)
+		}
+
+		fmt.Printf("Status: %s\n", cluster.Status)
+
+		if cluster.Status == "online" {
+			fmt.Println("✓ Cluster is online and responding")
+			break
+		} else if cluster.Status == "error" {
+			return nil, fmt.Errorf("cluster connection error: %s",
+				cluster.ErrorMessage)
+		}
+	}
+
+	// Step 3: Verify cluster is ready
+	if cluster.Status != "online" {
+		return nil, fmt.Errorf("cluster did not become online within timeout")
+	}
+
+	fmt.Printf("Cluster provisioned successfully\n")
+	fmt.Printf("  Nodes: %d\n", cluster.NodeCount)
+	fmt.Printf("  Pods: %d\n", cluster.PodCount)
+
+	return cluster, nil
+}
+```
+
+**4. Bulk Cluster Management:**
+```go
+func rotateClusterCredentials(
+	client *nexmonyx.Client,
+	ctx context.Context,
+	credentialMap map[uint]struct{ Token, CACert string },
+) error {
+	for clusterID, creds := range credentialMap {
+		cluster, err := client.Clusters.GetCluster(ctx, clusterID)
+		if err != nil {
+			log.Printf("Failed to get cluster %d: %v\n", clusterID, err)
+			continue
+		}
+
+		fmt.Printf("Rotating credentials for: %s\n", cluster.Name)
+
+		// Disable monitoring during rotation
+		isActive := false
+		_, err = client.Clusters.UpdateCluster(ctx, clusterID,
+			&nexmonyx.ClusterUpdateRequest{
+				IsActive: &isActive,
+			})
+		if err != nil {
+			log.Printf("Failed to disable monitoring: %v\n", err)
+			continue
+		}
+
+		// Update credentials
+		_, err = client.Clusters.UpdateCluster(ctx, clusterID,
+			&nexmonyx.ClusterUpdateRequest{
+				Token:  &creds.Token,
+				CACert: &creds.CACert,
+			})
+		if err != nil {
+			log.Printf("Failed to update credentials: %v\n", err)
+			continue
+		}
+
+		// Re-enable monitoring
+		isActive = true
+		updatedCluster, err := client.Clusters.UpdateCluster(ctx, clusterID,
+			&nexmonyx.ClusterUpdateRequest{
+				IsActive: &isActive,
+			})
+		if err != nil {
+			log.Printf("Failed to re-enable monitoring: %v\n", err)
+			continue
+		}
+
+		fmt.Printf("✓ Credentials rotated for: %s\n", updatedCluster.Name)
+	}
+
+	return nil
+}
+```
+
+**5. Cluster Migration Assistant:**
+```go
+func migrateCluster(
+	client *nexmonyx.Client,
+	ctx context.Context,
+	oldClusterID uint,
+	newAPIURL string,
+	newToken string,
+	newCACert string,
+) error {
+	// Get old cluster details
+	oldCluster, err := client.Clusters.GetCluster(ctx, oldClusterID)
+	if err != nil {
+		return fmt.Errorf("failed to get old cluster: %w", err)
+	}
+
+	fmt.Printf("Migrating cluster: %s\n", oldCluster.Name)
+	fmt.Printf("  Old API: %s\n", oldCluster.APIServerURL)
+	fmt.Printf("  New API: %s\n", newAPIURL)
+
+	// Create new cluster configuration
+	migrationName := oldCluster.Name + " (Migration)"
+	newCluster, err := client.Clusters.CreateCluster(ctx,
+		&nexmonyx.ClusterCreateRequest{
+			Name:         migrationName,
+			APIServerURL: newAPIURL,
+			Token:        newToken,
+			CACert:       newCACert,
+		})
+	if err != nil {
+		return fmt.Errorf("failed to create new cluster: %w", err)
+	}
+
+	fmt.Printf("New cluster created: ID %d\n", newCluster.ID)
+
+	// Wait for new cluster to be online
+	fmt.Println("Waiting for new cluster to be online...")
+	for i := 0; i < 24; i++ { // 2 minutes
+		time.Sleep(5 * time.Second)
+		newCluster, err = client.Clusters.GetCluster(ctx, newCluster.ID)
+		if err != nil {
+			continue
+		}
+		if newCluster.Status == "online" {
+			break
+		}
+	}
+
+	if newCluster.Status != "online" {
+		return fmt.Errorf("new cluster did not come online")
+	}
+
+	fmt.Println("New cluster is online")
+
+	// Disable old cluster
+	isActive := false
+	_, err = client.Clusters.UpdateCluster(ctx, oldClusterID,
+		&nexmonyx.ClusterUpdateRequest{
+			IsActive: &isActive,
+		})
+	if err != nil {
+		log.Printf("Warning: failed to disable old cluster: %v\n", err)
+	}
+
+	// Update new cluster name to match old one
+	finalName := oldCluster.Name
+	newCluster, err = client.Clusters.UpdateCluster(ctx, newCluster.ID,
+		&nexmonyx.ClusterUpdateRequest{
+			Name: &finalName,
+		})
+	if err != nil {
+		log.Printf("Warning: failed to update new cluster name: %v\n", err)
+	}
+
+	fmt.Printf("Migration complete!\n")
+	fmt.Printf("  Old Cluster ID: %d (disabled)\n", oldClusterID)
+	fmt.Printf("  New Cluster ID: %d (active)\n", newCluster.ID)
+	fmt.Println("You can safely delete the old cluster after verification")
+
+	return nil
+}
+```
+
+### Packages
+
+The Packages service provides organization package/tier management and limit enforcement capabilities. It allows organizations to check their current subscription tier, view available packages, upgrade tiers, and validate probe configurations against their package limits.
+
+#### Package Tiers
+
+Nexmonyx offers three standard package tiers:
+
+- **Standard (Starter)**: Entry-level monitoring
+  - Up to 5 probes
+  - 1 region
+  - 300-second minimum frequency
+  - 3 alert channels
+  - 1 status page
+  - Basic monitoring features
+
+- **Silver (Professional)**: Advanced monitoring for growing teams
+  - Up to 25 probes
+  - 3 regions
+  - 60-second minimum frequency
+  - 10 alert channels
+  - 3 status pages
+  - Multi-region support, Slack/PagerDuty integration
+
+- **Gold (Enterprise)**: Enterprise-grade monitoring
+  - Up to 100 probes
+  - 10 regions
+  - 30-second minimum frequency
+  - 50 alert channels
+  - 10 status pages
+  - Global coverage, priority support, custom integrations
+
+#### Getting Available Package Tiers
+
+```go
+// Get information about all available package tiers (public endpoint)
+tiers, err := client.Packages.GetAvailablePackageTiers(ctx)
+if err != nil {
+	log.Fatalf("Failed to get package tiers: %v", err)
+}
+
+// tiers is a map[string]interface{} containing tier information
+for tierName, tierInfo := range tiers {
+	fmt.Printf("Tier: %s\n", tierName)
+	// tierInfo contains: name, max_probes, max_regions, min_frequency,
+	// max_alert_channels, max_status_pages, monthly_price, features
+}
+```
+
+#### Checking Current Organization Package
+
+```go
+// Get current package information for your organization
+pkg, err := client.Packages.GetOrganizationPackage(ctx)
+if err != nil {
+	log.Fatalf("Failed to get organization package: %v", err)
+}
+
+fmt.Printf("Current Tier: %s\n", pkg.PackageTier)
+fmt.Printf("Max Probes: %d\n", pkg.MaxProbes)
+fmt.Printf("Max Regions: %d\n", pkg.MaxRegions)
+fmt.Printf("Min Frequency: %d seconds\n", pkg.MinFrequency)
+fmt.Printf("Max Alert Channels: %d\n", pkg.MaxAlertChannels)
+fmt.Printf("Max Status Pages: %d\n", pkg.MaxStatusPages)
+fmt.Printf("Subscription Status: %s\n", pkg.SubscriptionStatus)
+
+// Check if on trial
+if pkg.TrialEndsAt != nil {
+	fmt.Printf("Trial ends at: %s\n", pkg.TrialEndsAt.Format("2006-01-02"))
+}
+
+// Check allowed probe types
+fmt.Printf("Allowed probe types: %v\n", pkg.AllowedProbeTypes)
+
+// Check available features
+fmt.Printf("Features: %v\n", pkg.Features)
+```
+
+#### Upgrading Package Tier
+
+```go
+// Upgrade to a higher tier (requires payment method)
+paymentMethodID := "pm_1234567890"
+upgradeReq := &nexmonyx.PackageUpgradeRequest{
+	NewTier:         "silver",
+	PaymentMethodID: &paymentMethodID,
+}
+
+upgradedPkg, err := client.Packages.UpgradeOrganizationPackage(ctx, upgradeReq)
+if err != nil {
+	log.Fatalf("Failed to upgrade package: %v", err)
+}
+
+fmt.Printf("Successfully upgraded to %s tier\n", upgradedPkg.PackageTier)
+fmt.Printf("New max probes: %d\n", upgradedPkg.MaxProbes)
+fmt.Printf("New min frequency: %d seconds\n", upgradedPkg.MinFrequency)
+
+// Upgrade with billing email and metadata
+billingEmail := "billing@company.com"
+upgradeReq := &nexmonyx.PackageUpgradeRequest{
+	NewTier:         "gold",
+	PaymentMethodID: &paymentMethodID,
+	BillingEmail:    &billingEmail,
+	Metadata: map[string]interface{}{
+		"company": "Acme Corp",
+		"department": "IT Operations",
+	},
+}
+
+upgradedPkg, err := client.Packages.UpgradeOrganizationPackage(ctx, upgradeReq)
+```
+
+#### Validating Probe Configurations
+
+```go
+// Validate if a probe configuration is allowed under current package limits
+validationReq := &nexmonyx.ProbeConfigValidationRequest{
+	ProbeType: "HTTP",
+	Frequency: 60,
+	Regions:   []string{"us-east-1", "eu-west-1"},
+}
+
+result, err := client.Packages.ValidateProbeConfig(ctx, validationReq)
+if err != nil {
+	log.Fatalf("Failed to validate probe config: %v", err)
+}
+
+if result.Valid {
+	fmt.Println("Configuration is valid!")
+} else {
+	fmt.Println("Configuration violates package limits:")
+	for _, violation := range result.Violations {
+		fmt.Printf("  - %s\n", violation)
+	}
+
+	if result.UpgradeSuggestion != "" {
+		fmt.Printf("\nSuggestion: %s\n", result.UpgradeSuggestion)
+	}
+}
+
+// Check individual validations
+fmt.Printf("Probe type allowed: %v\n", result.ProbeTypeAllowed)
+fmt.Printf("Frequency allowed: %v\n", result.FrequencyAllowed)
+fmt.Printf("Regions allowed: %v\n", result.RegionsAllowed)
+fmt.Printf("Probe count allowed: %v\n", result.ProbeCountAllowed)
+
+// View current limits
+fmt.Printf("Current probe count: %d/%d\n", result.CurrentProbeCount, result.MaxProbes)
+fmt.Printf("Minimum frequency: %d seconds\n", result.MinFrequency)
+fmt.Printf("Maximum regions: %d\n", result.MaxRegions)
+
+// Validate with additional probes
+additionalProbes := 5
+validationReq := &nexmonyx.ProbeConfigValidationRequest{
+	ProbeType:        "TCP",
+	Frequency:        120,
+	Regions:          []string{"us-west-2"},
+	AdditionalProbes: &additionalProbes,
+}
+
+result, err := client.Packages.ValidateProbeConfig(ctx, validationReq)
+```
+
+#### Common Use Cases
+
+##### 1. Package Tier Comparison Tool
+
+```go
+// Build a tool to help users compare available package tiers
+func comparePackageTiers(client *nexmonyx.Client) error {
+	ctx := context.Background()
+
+	// Get all available tiers
+	tiers, err := client.Packages.GetAvailablePackageTiers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tiers: %w", err)
+	}
+
+	// Display comparison table
+	fmt.Println("Package Tier Comparison")
+	fmt.Println("=" * 80)
+
+	for tierName, tierInfo := range tiers {
+		info := tierInfo.(map[string]interface{})
+		fmt.Printf("\n%s:\n", info["name"])
+		fmt.Printf("  Max Probes: %v\n", info["max_probes"])
+		fmt.Printf("  Max Regions: %v\n", info["max_regions"])
+		fmt.Printf("  Min Frequency: %v seconds\n", info["min_frequency"])
+		fmt.Printf("  Alert Channels: %v\n", info["max_alert_channels"])
+		fmt.Printf("  Status Pages: %v\n", info["max_status_pages"])
+		fmt.Printf("  Monthly Price: $%v\n", info["monthly_price"])
+
+		if features, ok := info["features"].([]interface{}); ok {
+			fmt.Println("  Features:")
+			for _, feature := range features {
+				fmt.Printf("    - %v\n", feature)
+			}
+		}
+	}
+
+	return nil
+}
+```
+
+##### 2. Usage Limit Checker
+
+```go
+// Monitor organization's usage against package limits
+func checkUsageLimits(client *nexmonyx.Client) error {
+	ctx := context.Background()
+
+	// Get current package
+	pkg, err := client.Packages.GetOrganizationPackage(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get package: %w", err)
+	}
+
+	// Get current probe count (using Monitoring service)
+	probes, _, err := client.Monitoring.ListProbes(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to list probes: %w", err)
+	}
+
+	currentProbes := len(probes)
+	probeUsagePercent := (float64(currentProbes) / float64(pkg.MaxProbes)) * 100
+
+	fmt.Printf("Probe Usage: %d/%d (%.1f%%)\n", currentProbes, pkg.MaxProbes, probeUsagePercent)
+
+	// Warn if approaching limits
+	if probeUsagePercent >= 80 {
+		fmt.Println("⚠️  WARNING: Approaching probe limit!")
+		fmt.Println("Consider upgrading your package tier")
+	}
+
+	// Check regions
+	uniqueRegions := make(map[string]bool)
+	for _, probe := range probes {
+		uniqueRegions[probe.Region] = true
+	}
+	regionCount := len(uniqueRegions)
+
+	fmt.Printf("Region Usage: %d/%d\n", regionCount, pkg.MaxRegions)
+
+	if regionCount >= pkg.MaxRegions {
+		fmt.Println("⚠️  WARNING: Region limit reached!")
+	}
+
+	return nil
+}
+```
+
+##### 3. Pre-Creation Validation
+
+```go
+// Validate probe configuration before creating a new probe
+func createProbeWithValidation(client *nexmonyx.Client, probeReq *nexmonyx.ProbeRequest) error {
+	ctx := context.Background()
+
+	// First, validate the configuration
+	validationReq := &nexmonyx.ProbeConfigValidationRequest{
+		ProbeType: probeReq.Type,
+		Frequency: probeReq.Frequency,
+		Regions:   probeReq.Regions,
+	}
+
+	result, err := client.Packages.ValidateProbeConfig(ctx, validationReq)
+	if err != nil {
+		return fmt.Errorf("failed to validate: %w", err)
+	}
+
+	// Check if configuration is valid
+	if !result.Valid {
+		fmt.Println("❌ Configuration violates package limits:")
+		for _, violation := range result.Violations {
+			fmt.Printf("  - %s\n", violation)
+		}
+
+		if result.UpgradeSuggestion != "" {
+			fmt.Printf("\n💡 %s\n", result.UpgradeSuggestion)
+		}
+
+		return fmt.Errorf("invalid probe configuration")
+	}
+
+	// Configuration is valid, create the probe
+	probe, err := client.Monitoring.CreateProbe(ctx, probeReq)
+	if err != nil {
+		return fmt.Errorf("failed to create probe: %w", err)
+	}
+
+	fmt.Printf("✅ Probe created successfully: %s\n", probe.Name)
+	return nil
+}
+```
+
+##### 4. Upgrade Workflow Assistant
+
+```go
+// Help users upgrade their package based on their needs
+func suggestPackageUpgrade(client *nexmonyx.Client, desiredProbes int, desiredFrequency int) error {
+	ctx := context.Background()
+
+	// Get current package
+	currentPkg, err := client.Packages.GetOrganizationPackage(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get current package: %w", err)
+	}
+
+	// Get available tiers
+	tiers, err := client.Packages.GetAvailablePackageTiers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get tiers: %w", err)
+	}
+
+	fmt.Printf("Current tier: %s\n", currentPkg.PackageTier)
+	fmt.Printf("Desired: %d probes @ %d second frequency\n\n", desiredProbes, desiredFrequency)
+
+	// Find suitable tiers
+	var recommendations []string
+	for tierName, tierInfo := range tiers {
+		info := tierInfo.(map[string]interface{})
+		maxProbes := int(info["max_probes"].(float64))
+		minFreq := int(info["min_frequency"].(float64))
+
+		if maxProbes >= desiredProbes && minFreq <= desiredFrequency {
+			recommendations = append(recommendations, tierName)
+			fmt.Printf("✅ %s tier meets your requirements:\n", info["name"])
+			fmt.Printf("   Max Probes: %d (you need %d)\n", maxProbes, desiredProbes)
+			fmt.Printf("   Min Frequency: %d seconds (you need %d)\n", minFreq, desiredFrequency)
+			fmt.Printf("   Monthly Price: $%.2f\n\n", info["monthly_price"].(float64))
+		}
+	}
+
+	if len(recommendations) == 0 {
+		fmt.Println("❌ No standard tier meets your requirements")
+		fmt.Println("Consider contacting sales for a custom enterprise plan")
+	}
+
+	return nil
+}
+```
+
+##### 5. Subscription Health Monitor
+
+```go
+// Monitor subscription status and alert on important events
+func monitorSubscriptionHealth(client *nexmonyx.Client) error {
+	ctx := context.Background()
+
+	pkg, err := client.Packages.GetOrganizationPackage(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get package: %w", err)
+	}
+
+	fmt.Printf("Package: %s\n", pkg.PackageTier)
+	fmt.Printf("Status: %s\n", pkg.SubscriptionStatus)
+	fmt.Printf("Active: %v\n", pkg.Active)
+
+	// Check trial status
+	if pkg.TrialEndsAt != nil {
+		daysUntilExpiry := time.Until(pkg.TrialEndsAt.Time).Hours() / 24
+
+		if daysUntilExpiry <= 7 {
+			fmt.Printf("⚠️  TRIAL ENDING SOON: %.0f days remaining\n", daysUntilExpiry)
+			fmt.Println("Action required: Add payment method to continue service")
+		} else {
+			fmt.Printf("Trial ends in %.0f days\n", daysUntilExpiry)
+		}
+	}
+
+	// Check for cancellation
+	if pkg.CancelAtPeriodEnd {
+		daysUntilCancellation := time.Until(pkg.CurrentPeriodEnd.Time).Hours() / 24
+		fmt.Printf("⚠️  SUBSCRIPTION CANCELLING: %.0f days until service ends\n", daysUntilCancellation)
+		fmt.Println("Action required: Reactivate subscription to continue service")
+	}
+
+	// Check billing period
+	fmt.Printf("\nBilling Period:\n")
+	fmt.Printf("  Start: %s\n", pkg.CurrentPeriodStart.Format("2006-01-02"))
+	fmt.Printf("  End: %s\n", pkg.CurrentPeriodEnd.Format("2006-01-02"))
+
+	daysRemaining := time.Until(pkg.CurrentPeriodEnd.Time).Hours() / 24
+	fmt.Printf("  Days Remaining: %.0f\n", daysRemaining)
+
+	return nil
 }
 ```
 

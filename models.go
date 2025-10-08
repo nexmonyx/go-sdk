@@ -3187,6 +3187,97 @@ type AuditTimeRange struct {
 }
 
 // ============================================================================
+// Task Models
+// ============================================================================
+
+// Task represents a background task or scheduled job
+type Task struct {
+	ID               uint                   `json:"id"`
+	OrganizationID   uint                   `json:"organization_id"`
+	Name             string                 `json:"name"`
+	Type             string                 `json:"type"`             // report_generation, data_export, cleanup, notification, etc.
+	Status           string                 `json:"status"`           // pending, running, completed, failed, cancelled
+	Priority         string                 `json:"priority"`         // low, normal, high, critical
+	Parameters       map[string]interface{} `json:"parameters,omitempty"`
+	Result           map[string]interface{} `json:"result,omitempty"` // Result data for completed tasks
+	ErrorMessage     string                 `json:"error_message,omitempty"`
+	Progress         int                    `json:"progress"`          // 0-100 percentage
+	Schedule         string                 `json:"schedule,omitempty"` // Cron expression for recurring tasks
+	ScheduledAt      *CustomTime            `json:"scheduled_at,omitempty"`
+	StartedAt        *CustomTime            `json:"started_at,omitempty"`
+	CompletedAt      *CustomTime            `json:"completed_at,omitempty"`
+	ExecutionCount   int                    `json:"execution_count"`    // Number of times executed
+	LastExecutionID  *uint                  `json:"last_execution_id,omitempty"`
+	NextExecutionAt  *CustomTime            `json:"next_execution_at,omitempty"` // For recurring tasks
+	MaxRetries       int                    `json:"max_retries"`
+	CurrentRetry     int                    `json:"current_retry"`
+	TimeoutSeconds   int                    `json:"timeout_seconds,omitempty"`
+	CreatedBy        uint                   `json:"created_by,omitempty"`
+	CreatedAt        CustomTime             `json:"created_at"`
+	UpdatedAt        CustomTime             `json:"updated_at"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TaskConfiguration represents parameters for creating a new task
+type TaskConfiguration struct {
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"`
+	Priority       string                 `json:"priority,omitempty"`        // Default: normal
+	Parameters     map[string]interface{} `json:"parameters,omitempty"`
+	Schedule       string                 `json:"schedule,omitempty"`        // Cron expression
+	ScheduledAt    *CustomTime            `json:"scheduled_at,omitempty"`    // One-time scheduled task
+	MaxRetries     int                    `json:"max_retries,omitempty"`     // Default: 3
+	TimeoutSeconds int                    `json:"timeout_seconds,omitempty"` // Default: 300
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TaskExecution represents a single execution of a task
+type TaskExecution struct {
+	ID             uint                   `json:"id"`
+	TaskID         uint                   `json:"task_id"`
+	Status         string                 `json:"status"`        // running, completed, failed
+	Progress       int                    `json:"progress"`      // 0-100 percentage
+	Result         map[string]interface{} `json:"result,omitempty"`
+	ErrorMessage   string                 `json:"error_message,omitempty"`
+	StartedAt      CustomTime             `json:"started_at"`
+	CompletedAt    *CustomTime            `json:"completed_at,omitempty"`
+	DurationMs     int                    `json:"duration_ms,omitempty"`
+	RetryCount     int                    `json:"retry_count"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TaskStatistics represents aggregated statistics about task execution
+type TaskStatistics struct {
+	TotalTasks          int                  `json:"total_tasks"`
+	PendingTasks        int                  `json:"pending_tasks"`
+	RunningTasks        int                  `json:"running_tasks"`
+	CompletedTasks      int                  `json:"completed_tasks"`
+	FailedTasks         int                  `json:"failed_tasks"`
+	CancelledTasks      int                  `json:"cancelled_tasks"`
+	TasksByType         map[string]int       `json:"tasks_by_type"`
+	TasksByPriority     map[string]int       `json:"tasks_by_priority"`
+	AverageDurationMs   float64              `json:"average_duration_ms"`
+	SuccessRate         float64              `json:"success_rate"`          // Percentage
+	TotalExecutions     int                  `json:"total_executions"`
+	FailedExecutions    int                  `json:"failed_executions"`
+	AverageRetries      float64              `json:"average_retries"`
+	LongestRunningTask  *TaskSummary         `json:"longest_running_task,omitempty"`
+	MostRecentFailure   *TaskSummary         `json:"most_recent_failure,omitempty"`
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TaskSummary represents a simplified task summary for statistics
+type TaskSummary struct {
+	ID           uint       `json:"id"`
+	Name         string     `json:"name"`
+	Type         string     `json:"type"`
+	Status       string     `json:"status"`
+	DurationMs   int        `json:"duration_ms,omitempty"`
+	ErrorMessage string     `json:"error_message,omitempty"`
+	CreatedAt    CustomTime `json:"created_at"`
+}
+
+// ============================================================================
 // Notification Models
 // ============================================================================
 
@@ -3302,4 +3393,119 @@ type ChannelDeliveryInfo struct {
 	ErrorMessage   string      `json:"error_message,omitempty"`
 	ExternalID     string      `json:"external_id,omitempty"`
 	ProviderStatus string      `json:"provider_status,omitempty"`
+}
+
+// ============================================================================
+// Cluster Models
+// ============================================================================
+
+// Cluster represents a remote Kubernetes cluster for deployment and monitoring
+type Cluster struct {
+	ID            uint         `json:"id"`
+	Name          string       `json:"name"`                // Unique cluster name
+	APIServerURL  string       `json:"api_server_url"`      // Kubernetes API server URL
+	Token         string       `json:"token"`               // Service account token for authentication
+	CACert        string       `json:"ca_cert,omitempty"`   // CA certificate for secure connection
+	Status        string       `json:"status"`              // online, offline, error, unknown
+	LastChecked   *CustomTime  `json:"last_checked,omitempty"`        // Last health check time
+	LastConnected *CustomTime  `json:"last_connected,omitempty"`      // Last successful connection time
+	ErrorMessage  string       `json:"error_message,omitempty"` // Error details if connection failed
+	NodeCount     int          `json:"node_count"`          // Number of nodes in cluster
+	PodCount      int          `json:"pod_count"`           // Number of pods running
+	IsActive      bool         `json:"is_active"`           // Whether cluster monitoring is active
+	CreatedAt     CustomTime   `json:"created_at"`
+	UpdatedAt     CustomTime   `json:"updated_at"`
+}
+
+// ClusterCreateRequest represents a request to create a new cluster
+type ClusterCreateRequest struct {
+	Name         string `json:"name"`                   // Unique cluster name (required)
+	APIServerURL string `json:"api_server_url"`         // Kubernetes API server URL (required)
+	Token        string `json:"token"`                  // Service account token (required)
+	CACert       string `json:"ca_cert,omitempty"`      // CA certificate (optional)
+	IsActive     *bool  `json:"is_active,omitempty"`    // Enable/disable monitoring (default: true)
+}
+
+// ClusterUpdateRequest represents a request to update an existing cluster
+type ClusterUpdateRequest struct {
+	Name         *string `json:"name,omitempty"`          // Updated cluster name
+	APIServerURL *string `json:"api_server_url,omitempty"` // Updated API server URL
+	Token        *string `json:"token,omitempty"`         // Updated service account token
+	CACert       *string `json:"ca_cert,omitempty"`       // Updated CA certificate
+	IsActive     *bool   `json:"is_active,omitempty"`     // Enable/disable monitoring
+}
+
+// ClusterStatistics provides aggregate statistics across all monitored clusters
+type ClusterStatistics struct {
+	TotalClusters      int                  `json:"total_clusters"`       // Total number of clusters
+	OnlineClusters     int                  `json:"online_clusters"`      // Clusters currently online
+	OfflineClusters    int                  `json:"offline_clusters"`     // Clusters currently offline
+	ErrorClusters      int                  `json:"error_clusters"`       // Clusters with errors
+	TotalNodes         int                  `json:"total_nodes"`          // Total nodes across all clusters
+	TotalPods          int                  `json:"total_pods"`           // Total pods across all clusters
+	AverageNodeCount   float64              `json:"average_node_count"`   // Average nodes per cluster
+	AveragePodCount    float64              `json:"average_pod_count"`    // Average pods per cluster
+	ClustersByStatus   map[string]int       `json:"clusters_by_status"`   // Count grouped by status
+	LastCheckTime      CustomTime           `json:"last_check_time"`      // Most recent health check
+}
+
+// ============================================================================
+// Package/Tier Models
+// ============================================================================
+
+// OrganizationPackage represents an organization's subscription package and limits
+type OrganizationPackage struct {
+	ID                    uint64     `json:"id"`
+	OrganizationID        uint       `json:"organization_id"`
+	OrganizationUUID      string     `json:"organization_uuid"`
+	PackageTier           string     `json:"package_tier"`                // starter, professional, enterprise
+	MaxProbes             int        `json:"max_probes"`                  // Maximum number of probes allowed
+	MaxRegions            int        `json:"max_regions"`                 // Maximum number of regions for probes
+	MinFrequency          int        `json:"min_frequency"`               // Minimum probe check frequency (seconds)
+	ProbeFrequencySeconds int        `json:"probe_frequency_seconds"`     // Default probe frequency (seconds)
+	MaxAlertChannels      int        `json:"max_alert_channels"`          // Maximum alert notification channels
+	MaxStatusPages        int        `json:"max_status_pages"`            // Maximum public status pages
+	AllowedProbeTypes     []string   `json:"allowed_probe_types"`         // HTTP, ICMP, TCP, DNS, etc.
+	Features              []string   `json:"features"`                    // Enabled features for this package
+	SelectedRegions       []string   `json:"selected_regions,omitempty"`  // Regions selected for probes
+	Active                bool       `json:"active"`                      // Whether package is currently active
+	SubscriptionStatus    string     `json:"subscription_status"`         // active, canceled, past_due, etc.
+	CurrentPeriodStart    CustomTime `json:"current_period_start"`        // Billing period start
+	CurrentPeriodEnd      CustomTime `json:"current_period_end"`          // Billing period end
+	CancelAtPeriodEnd     bool       `json:"cancel_at_period_end"`        // Whether to cancel at period end
+	TrialEndsAt           *CustomTime `json:"trial_ends_at,omitempty"`    // Trial expiration date
+	CreatedAt             CustomTime `json:"created_at"`
+	UpdatedAt             CustomTime `json:"updated_at"`
+}
+
+// PackageUpgradeRequest represents a request to upgrade organization package tier
+type PackageUpgradeRequest struct {
+	NewTier         string                 `json:"new_tier"`                    // Target tier: starter, professional, enterprise
+	PaymentMethodID *string                `json:"payment_method_id,omitempty"` // Stripe payment method ID (optional)
+	BillingEmail    *string                `json:"billing_email,omitempty"`     // Billing contact email (optional)
+	Metadata        map[string]interface{} `json:"metadata,omitempty"`          // Additional upgrade metadata
+}
+
+// ProbeConfigValidationRequest represents a request to validate probe configuration against package limits
+type ProbeConfigValidationRequest struct {
+	ProbeType        string   `json:"probe_type"`                   // HTTP, ICMP, TCP, DNS, etc.
+	Frequency        int      `json:"frequency"`                    // Check frequency in seconds
+	Regions          []string `json:"regions"`                      // Regions for probe execution
+	AdditionalProbes *int     `json:"additional_probes,omitempty"`  // Number of new probes being created (optional)
+}
+
+// ProbeConfigValidationResult represents the result of probe configuration validation
+type ProbeConfigValidationResult struct {
+	Valid              bool     `json:"valid"`                           // Whether configuration is valid
+	ProbeTypeAllowed   bool     `json:"probe_type_allowed"`              // Whether probe type is allowed
+	FrequencyAllowed   bool     `json:"frequency_allowed"`               // Whether frequency is allowed
+	RegionsAllowed     bool     `json:"regions_allowed"`                 // Whether number of regions is allowed
+	ProbeCountAllowed  bool     `json:"probe_count_allowed"`             // Whether probe count is within limits
+	Violations         []string `json:"violations,omitempty"`            // List of limit violations
+	CurrentProbeCount  int      `json:"current_probe_count"`             // Current number of probes
+	MaxProbes          int      `json:"max_probes"`                      // Maximum probes allowed
+	MinFrequency       int      `json:"min_frequency"`                   // Minimum frequency allowed (seconds)
+	MaxRegions         int      `json:"max_regions"`                     // Maximum regions allowed
+	AllowedProbeTypes  []string `json:"allowed_probe_types,omitempty"`   // List of allowed probe types
+	UpgradeSuggestion  string   `json:"upgrade_suggestion,omitempty"`    // Suggested tier for meeting requirements
 }

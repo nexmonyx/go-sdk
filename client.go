@@ -75,6 +75,9 @@ type Client struct {
 	ServerGroups          *ServerGroupsService
 	Search                *SearchService
 	Audit                 *AuditService
+	Tasks                 *TasksService
+	Clusters              *ClustersService
+	Packages              *PackagesService
 	Notifications         *NotificationsService
 	WebSocket             *WebSocketServiceImpl
 }
@@ -270,6 +273,9 @@ func NewClient(config *Config) (*Client, error) {
 	client.ServerGroups = &ServerGroupsService{client: client}
 	client.Search = &SearchService{client: client}
 	client.Audit = &AuditService{client: client}
+	client.Tasks = &TasksService{client: client}
+	client.Clusters = &ClustersService{client: client}
+	client.Packages = &PackagesService{client: client}
 	client.Notifications = &NotificationsService{client: client}
 
 	// Note: WebSocket service requires separate initialization via NewWebSocketService()
