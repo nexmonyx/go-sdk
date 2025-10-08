@@ -51,6 +51,9 @@ const (
 	WSTypeRequestResponse = "request_response"
 	WSTypeUpdateProgress  = "update_progress"
 	WSTypeError           = "error"
+
+	// WSProtocolVersion is the WebSocket protocol version
+	WSProtocolVersion = "1.0"
 )
 
 // WSMessage represents a WebSocket message
@@ -58,15 +61,18 @@ type WSMessage struct {
 	Type      string          `json:"type"`
 	ID        string          `json:"id,omitempty"`
 	Timestamp int64           `json:"timestamp,omitempty"`
+	Priority  int             `json:"priority,omitempty"` // 0=normal, 1=high, 2=urgent
 	Payload   json.RawMessage `json:"payload,omitempty"`
 }
 
 // WSAuthPayload represents authentication payload
 type WSAuthPayload struct {
-	ServerUUID   string   `json:"server_uuid"`
-	ServerSecret string   `json:"server_secret"`
-	AgentVersion string   `json:"agent_version"`
-	Capabilities []string `json:"capabilities"`
+	ServerUUID      string   `json:"server_uuid"`
+	ServerSecret    string   `json:"server_secret"`
+	AgentVersion    string   `json:"agent_version"`
+	ProtocolVersion string   `json:"protocol_version"`         // WebSocket protocol version (e.g., "1.0")
+	Capabilities    []string `json:"capabilities"`
+	OrganizationID  int      `json:"organization_id,omitempty"` // Optional organization ID
 }
 
 // WSAuthResponsePayload represents authentication response
@@ -345,10 +351,12 @@ func (ws *WebSocketServiceImpl) buildWebSocketURL() string {
 // authenticate sends authentication message to the WebSocket server
 func (ws *WebSocketServiceImpl) authenticate() error {
 	authPayload := WSAuthPayload{
-		ServerUUID:   ws.client.config.Auth.ServerUUID,
-		ServerSecret: ws.client.config.Auth.ServerSecret,
-		AgentVersion: "sdk-" + Version,
-		Capabilities: []string{"commands", "responses"},
+		ServerUUID:      ws.client.config.Auth.ServerUUID,
+		ServerSecret:    ws.client.config.Auth.ServerSecret,
+		AgentVersion:    "sdk-" + Version,
+		ProtocolVersion: WSProtocolVersion, // "1.0"
+		Capabilities:    []string{"commands", "responses"},
+		// OrganizationID is omitted (0 value) - determined server-side
 	}
 
 	payloadBytes, err := json.Marshal(authPayload)

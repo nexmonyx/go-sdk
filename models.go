@@ -2,6 +2,7 @@ package nexmonyx
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -59,6 +60,15 @@ type BaseModel struct {
 	UUID      string      `json:"uuid"`
 	CreatedAt *CustomTime `json:"created_at,omitempty"`
 	UpdatedAt *CustomTime `json:"updated_at,omitempty"`
+}
+
+// ResponseMeta represents metadata in API responses (alias for PaginationMeta)
+type ResponseMeta = PaginationMeta
+
+// PaginationOptions represents common pagination parameters
+type PaginationOptions struct {
+	Page  int `json:"page,omitempty"`
+	Limit int `json:"limit,omitempty"`
 }
 
 // Organization represents an organization
@@ -1810,4 +1820,1486 @@ type AgentBinaryRequest struct {
 	Architecture string `json:"architecture"`
 	DownloadURL  string `json:"download_url"`
 	FileHash     string `json:"file_hash"`
+}
+
+// OrganizationUsageMetrics represents the current usage snapshot for billing purposes
+// This stores the most recent usage metrics for each organization
+type OrganizationUsageMetrics struct {
+	ID               uint64          `json:"id"`
+	OrganizationID   uint            `json:"organization_id"`
+	ActiveAgentCount int             `json:"active_agent_count"`
+	TotalAgentCount  int             `json:"total_agent_count"`
+	FeaturesEnabled  interface{}     `json:"features_enabled"` // JSON object
+	RetentionDays    int             `json:"retention_days"`
+	StorageUsedBytes int64           `json:"storage_used_bytes"`
+	StorageUsedGB    float64         `json:"storage_used_gb"`
+	CollectedAt      *CustomTime     `json:"collected_at"`
+	CreatedAt        *CustomTime     `json:"created_at"`
+	UpdatedAt        *CustomTime     `json:"updated_at"`
+}
+
+// UsageMetricsHistory stores historical usage metrics for billing and analytics
+// This is a TimescaleDB hypertable optimized for time-series data
+type UsageMetricsHistory struct {
+	ID               uint64      `json:"id"`
+	OrganizationID   uint        `json:"organization_id"`
+	ActiveAgentCount int         `json:"active_agent_count"`
+	TotalAgentCount  int         `json:"total_agent_count"`
+	FeaturesEnabled  interface{} `json:"features_enabled"` // JSON object
+	RetentionDays    int         `json:"retention_days"`
+	StorageUsedGB    float64     `json:"storage_used_gb"`
+	CollectedAt      *CustomTime `json:"collected_at"`
+	CreatedAt        *CustomTime `json:"created_at"`
+}
+
+// UsageSummary represents aggregated usage statistics over a time period
+type UsageSummary struct {
+	OrganizationID        uint            `json:"organization_id"`
+	StartDate             *CustomTime     `json:"start_date"`
+	EndDate               *CustomTime     `json:"end_date"`
+	AverageAgentCount     float64         `json:"average_agent_count"`
+	MaxAgentCount         int             `json:"max_agent_count"`
+	AverageStorageGB      float64         `json:"average_storage_gb"`
+	MaxStorageGB          float64         `json:"max_storage_gb"`
+	FeaturesEnabled       map[string]bool `json:"features_enabled"`
+	RetentionDays         int             `json:"retention_days"`
+	TotalDataPoints       int             `json:"total_data_points"`
+	BillingRecommendation string          `json:"billing_recommendation,omitempty"`
+}
+
+// OrganizationUsageOverview represents a summary of usage across all organizations (admin)
+type OrganizationUsageOverview struct {
+	TotalOrganizations int                          `json:"total_organizations"`
+	TotalActiveAgents  int                          `json:"total_active_agents"`
+	TotalStorageGB     float64                      `json:"total_storage_gb"`
+	Organizations      []OrganizationUsageMetrics   `json:"organizations"`
+}
+
+// ============================================================================
+// Tag Management
+// ============================================================================
+
+// Tag represents a tag in the system
+type Tag struct {
+	ID             uint       `json:"id"`
+	OrganizationID uint       `json:"organization_id"`
+	Namespace      string     `json:"namespace"`
+	Key            string     `json:"key"`
+	Value          string     `json:"value"`
+	Source         string     `json:"source"`
+	Description    string     `json:"description,omitempty"`
+	CreatedByID    *uint      `json:"created_by_id,omitempty"`
+	CreatedByEmail string     `json:"created_by_email,omitempty"`
+	CreatedAt      CustomTime `json:"created_at"`
+	UpdatedAt      CustomTime `json:"updated_at"`
+	ServerCount    int64      `json:"server_count"`
+}
+
+// TagCreateRequest represents the request structure for creating a tag
+type TagCreateRequest struct {
+	Namespace   string `json:"namespace"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	Description string `json:"description,omitempty"`
+}
+
+// TagAssignRequest represents the request structure for assigning tags to a server
+type TagAssignRequest struct {
+	TagIDs []uint `json:"tag_ids"`
+}
+
+// TagAssignmentResult represents the result of a tag assignment operation
+type TagAssignmentResult struct {
+	Assigned        int `json:"assigned"`
+	AlreadyAssigned int `json:"already_assigned"`
+	Total           int `json:"total"`
+}
+
+// ServerTag represents a tag assigned to a server
+type ServerTag struct {
+	ID              uint       `json:"id"`
+	TagID           uint       `json:"tag_id"`
+	Namespace       string     `json:"namespace"`
+	Key             string     `json:"key"`
+	Value           string     `json:"value"`
+	Source          string     `json:"source"`
+	Description     string     `json:"description,omitempty"`
+	AssignedAt      CustomTime `json:"assigned_at"`
+	AssignedByEmail string     `json:"assigned_by_email,omitempty"`
+	ConfidenceScore *float64   `json:"confidence_score,omitempty"`
+}
+
+// TagListOptions represents filtering and pagination options for listing tags
+type TagListOptions struct {
+	Namespace string // Filter by namespace
+	Source    string // Filter by source (automatic, manual, inherited)
+	Key       string // Filter by key pattern (partial match)
+	Page      int    // Page number (default: 1)
+	Limit     int    // Items per page (default: 50)
+}
+
+// ToQuery converts TagListOptions to a query parameter map
+func (o *TagListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+
+	if o.Namespace != "" {
+		query["namespace"] = o.Namespace
+	}
+	if o.Source != "" {
+		query["source"] = o.Source
+	}
+	if o.Key != "" {
+		query["key"] = o.Key
+	}
+	if o.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.Limit > 0 {
+		query["limit"] = fmt.Sprintf("%d", o.Limit)
+	}
+
+	return query
+}
+
+// TagNamespace represents a tag namespace definition
+type TagNamespace struct {
+	ID               uint       `json:"id"`
+	Namespace        string     `json:"namespace"`
+	ParentNamespace  string     `json:"parent_namespace,omitempty"`
+	Type             string     `json:"type"`
+	Description      string     `json:"description"`
+	KeyPattern       string     `json:"key_pattern,omitempty"`
+	ValuePattern     string     `json:"value_pattern,omitempty"`
+	AllowedValues    []string   `json:"allowed_values,omitempty"`
+	RequiresApproval bool       `json:"requires_approval"`
+	IsActive         bool       `json:"is_active"`
+	CreatedByID      *uint      `json:"created_by_id,omitempty"`
+	CreatedByEmail   string     `json:"created_by_email,omitempty"`
+	CreatedAt        CustomTime `json:"created_at"`
+	UpdatedAt        CustomTime `json:"updated_at"`
+}
+
+// TagNamespaceCreateRequest represents the request structure for creating a namespace
+type TagNamespaceCreateRequest struct {
+	Namespace        string   `json:"namespace"`
+	ParentNamespace  string   `json:"parent_namespace,omitempty"`
+	Type             string   `json:"type,omitempty"`
+	Description      string   `json:"description,omitempty"`
+	KeyPattern       string   `json:"key_pattern,omitempty"`
+	ValuePattern     string   `json:"value_pattern,omitempty"`
+	AllowedValues    []string `json:"allowed_values,omitempty"`
+	RequiresApproval bool     `json:"requires_approval,omitempty"`
+}
+
+// TagNamespacePermissionRequest represents the request structure for setting namespace permissions
+type TagNamespacePermissionRequest struct {
+	UserID     *uint  `json:"user_id,omitempty"`
+	RoleName   string `json:"role_name,omitempty"`
+	CanCreate  bool   `json:"can_create"`
+	CanRead    bool   `json:"can_read"`
+	CanUpdate  bool   `json:"can_update"`
+	CanDelete  bool   `json:"can_delete"`
+	CanApprove bool   `json:"can_approve"`
+}
+
+// TagNamespaceListOptions represents filtering options for listing namespaces
+type TagNamespaceListOptions struct {
+	Type      string // Filter by namespace type
+	Parent    string // Filter by parent namespace
+	Active    *bool  // Filter by active status (nil = all, true = active only, false = inactive only)
+	Search    string // Search in namespace name and description
+	Hierarchy bool   // Return hierarchical structure
+}
+
+// ToQuery converts TagNamespaceListOptions to a query parameter map
+func (o *TagNamespaceListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+
+	if o.Type != "" {
+		query["type"] = o.Type
+	}
+	if o.Parent != "" {
+		query["parent"] = o.Parent
+	}
+	if o.Active != nil {
+		if *o.Active {
+			query["active"] = "true"
+		} else {
+			query["active"] = "false"
+		}
+	}
+	if o.Search != "" {
+		query["search"] = o.Search
+	}
+	if o.Hierarchy {
+		query["hierarchy"] = "true"
+	}
+
+	return query
+}
+
+// ============================================================================
+// Tag Inheritance Models
+// ============================================================================
+
+// Type aliases for inheritance enums
+type InheritanceSource string
+type InheritanceTarget string
+
+// TagInheritanceRule represents an inheritance rule for automatic tag propagation
+type TagInheritanceRule struct {
+	ID             uint              `json:"id"`
+	OrganizationID uint              `json:"organization_id"`
+	Name           string            `json:"name"`
+	Description    string            `json:"description,omitempty"`
+	SourceType     InheritanceSource `json:"source_type"`
+	TargetType     InheritanceTarget `json:"target_type"`
+	Namespace      string            `json:"namespace,omitempty"`
+	KeyPattern     string            `json:"key_pattern,omitempty"`
+	ValuePattern   string            `json:"value_pattern,omitempty"`
+	Conditions     string            `json:"conditions,omitempty"`
+	Enabled        bool              `json:"enabled"`
+	Priority       int               `json:"priority"`
+	CreatedBy      *UserInfo         `json:"created_by,omitempty"`
+	LastRunAt      *string           `json:"last_run_at,omitempty"`
+	LastRunStatus  string            `json:"last_run_status,omitempty"`
+	ProcessedCount int               `json:"processed_count"`
+	CreatedAt      CustomTime        `json:"created_at"`
+	UpdatedAt      CustomTime        `json:"updated_at"`
+}
+
+// TagInheritanceRuleCreateRequest represents a request to create an inheritance rule
+type TagInheritanceRuleCreateRequest struct {
+	Name         string            `json:"name"`
+	Description  string            `json:"description,omitempty"`
+	SourceType   InheritanceSource `json:"source_type"`
+	TargetType   InheritanceTarget `json:"target_type"`
+	Namespace    string            `json:"namespace,omitempty"`
+	KeyPattern   string            `json:"key_pattern,omitempty"`
+	ValuePattern string            `json:"value_pattern,omitempty"`
+	Conditions   string            `json:"conditions,omitempty"`
+	Enabled      bool              `json:"enabled"`
+	Priority     int               `json:"priority"`
+}
+
+// OrganizationTag represents a tag set at the organization level
+type OrganizationTag struct {
+	ID             uint       `json:"id"`
+	OrganizationID uint       `json:"organization_id"`
+	Tag            TagInfo    `json:"tag"`
+	InheritToAll   bool       `json:"inherit_to_all"`
+	InheritRules   string     `json:"inherit_rules,omitempty"`
+	CreatedBy      *UserInfo  `json:"created_by,omitempty"`
+	CreatedAt      CustomTime `json:"created_at"`
+	UpdatedAt      CustomTime `json:"updated_at"`
+}
+
+// OrganizationTagRequest represents a request to set an organization tag
+type OrganizationTagRequest struct {
+	TagID        uint   `json:"tag_id"`
+	InheritToAll bool   `json:"inherit_to_all"`
+	InheritRules string `json:"inherit_rules,omitempty"`
+}
+
+// ServerParentRelationship represents a parent-child relationship between servers
+type ServerParentRelationship struct {
+	ID             uint       `json:"id"`
+	OrganizationID uint       `json:"organization_id"`
+	ParentServer   ServerInfo `json:"parent_server"`
+	ChildServer    ServerInfo `json:"child_server"`
+	RelationType   string     `json:"relation_type"`
+	InheritTags    bool       `json:"inherit_tags"`
+	CreatedBy      *UserInfo  `json:"created_by,omitempty"`
+	CreatedAt      CustomTime `json:"created_at"`
+	UpdatedAt      CustomTime `json:"updated_at"`
+}
+
+// ServerRelationshipRequest represents a request to create a server relationship
+type ServerRelationshipRequest struct {
+	ParentServerID string `json:"parent_server_id"`
+	ChildServerID  string `json:"child_server_id"`
+	RelationType   string `json:"relation_type"`
+	InheritTags    bool   `json:"inherit_tags"`
+}
+
+// TagInfo represents basic tag information
+type TagInfo struct {
+	ID          uint   `json:"id"`
+	Namespace   string `json:"namespace"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	Description string `json:"description,omitempty"`
+}
+
+// UserInfo represents basic user information
+type UserInfo struct {
+	ID    uint   `json:"id"`
+	Email string `json:"email"`
+}
+
+// ServerInfo represents basic server information
+type ServerInfo struct {
+	ID         uint   `json:"id"`
+	ServerUUID string `json:"server_uuid"`
+	Name       string `json:"name"`
+}
+
+// OrganizationTagListOptions provides filtering options for organization tags
+type OrganizationTagListOptions struct {
+	InheritOnly bool
+}
+
+func (o *OrganizationTagListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.InheritOnly {
+		query["inherit_only"] = "true"
+	}
+	return query
+}
+
+// ServerRelationshipListOptions provides filtering options for server relationships
+type ServerRelationshipListOptions struct {
+	ServerID     string
+	RelationType string
+	InheritOnly  bool
+}
+
+func (o *ServerRelationshipListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.ServerID != "" {
+		query["server_id"] = o.ServerID
+	}
+	if o.RelationType != "" {
+		query["relation_type"] = o.RelationType
+	}
+	if o.InheritOnly {
+		query["inherit_only"] = "true"
+	}
+	return query
+}
+
+// ============================================================================
+// Tag History Models
+// ============================================================================
+
+// TagHistoryResponse represents a single tag history entry
+type TagHistoryResponse struct {
+	ID            string                `json:"id"`
+	Action        string                `json:"action"`
+	Tag           TagHistoryTag         `json:"tag"`
+	PreviousValue *string               `json:"previous_value,omitempty"`
+	Timestamp     string                `json:"timestamp"`
+	User          *TagHistoryUser       `json:"user,omitempty"`
+	Metadata      TagHistoryMetadataRes `json:"metadata"`
+}
+
+// TagHistoryTag represents tag information in history response
+type TagHistoryTag struct {
+	ID        uint    `json:"id,omitempty"`
+	Key       string  `json:"key"`
+	Value     string  `json:"value"`
+	Namespace *string `json:"namespace,omitempty"`
+}
+
+// TagHistoryUser represents user information in history response
+type TagHistoryUser struct {
+	ID    uint   `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// TagHistoryMetadataRes represents metadata in history response
+type TagHistoryMetadataRes struct {
+	Source     string   `json:"source"`
+	Reason     *string  `json:"reason,omitempty"`
+	Confidence *float64 `json:"confidence,omitempty"`
+}
+
+// TagHistorySummary represents aggregated statistics for tag history
+type TagHistorySummary struct {
+	TotalChanges       int                 `json:"total_changes"`
+	ChangesByAction    map[string]int      `json:"changes_by_action"`
+	ChangesByNamespace map[string]int      `json:"changes_by_namespace"`
+	MostActiveUsers    []ActiveUser        `json:"most_active_users"`
+	RecentActivity     RecentActivityStats `json:"recent_activity"`
+}
+
+// ActiveUser represents a user with their change count
+type ActiveUser struct {
+	UserID      uint   `json:"user_id"`
+	Name        string `json:"name"`
+	ChangeCount int    `json:"change_count"`
+}
+
+// RecentActivityStats represents recent activity statistics
+type RecentActivityStats struct {
+	Last24h int `json:"last_24h"`
+	Last7d  int `json:"last_7d"`
+	Last30d int `json:"last_30d"`
+}
+
+// TagHistoryQueryParams represents query parameters for filtering tag history
+type TagHistoryQueryParams struct {
+	Action    string `json:"action,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Source    string `json:"source,omitempty"`
+	TagID     uint   `json:"tag_id,omitempty"`
+	StartDate string `json:"start_date,omitempty"`
+	EndDate   string `json:"end_date,omitempty"`
+	Page      int    `json:"page,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
+}
+
+func (o *TagHistoryQueryParams) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.Action != "" {
+		query["action"] = o.Action
+	}
+	if o.Namespace != "" {
+		query["namespace"] = o.Namespace
+	}
+	if o.Source != "" {
+		query["source"] = o.Source
+	}
+	if o.TagID > 0 {
+		query["tag_id"] = fmt.Sprintf("%d", o.TagID)
+	}
+	if o.StartDate != "" {
+		query["start_date"] = o.StartDate
+	}
+	if o.EndDate != "" {
+		query["end_date"] = o.EndDate
+	}
+	if o.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.Limit > 0 {
+		query["limit"] = fmt.Sprintf("%d", o.Limit)
+	}
+	return query
+}
+
+// ============================================================================
+// Bulk Tag Operation Models
+// ============================================================================
+
+// BulkTagCreateRequest represents a request to create multiple tags
+type BulkTagCreateRequest struct {
+	Tags []BulkTagCreateItem `json:"tags"`
+}
+
+// BulkTagCreateItem represents a single tag in bulk create
+type BulkTagCreateItem struct {
+	Namespace   string `json:"namespace"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	Description string `json:"description,omitempty"`
+}
+
+// BulkTagCreateResult represents the result of bulk tag creation
+type BulkTagCreateResult struct {
+	Created      []Tag    `json:"created"`
+	Skipped      []string `json:"skipped"`
+	CreatedCount int      `json:"created_count"`
+	SkippedCount int      `json:"skipped_count"`
+}
+
+// BulkTagAssignRequest represents a request to assign tags to multiple servers
+type BulkTagAssignRequest struct {
+	ServerIDs []string `json:"server_ids"`
+	TagIDs    []uint   `json:"tag_ids"`
+}
+
+// BulkTagAssignResult represents the result of bulk tag assignment
+type BulkTagAssignResult struct {
+	Assigned int `json:"assigned"`
+	Skipped  int `json:"skipped"`
+	Total    int `json:"total"`
+}
+
+// BulkGroupAssignRequest represents a request to assign servers to multiple groups
+type BulkGroupAssignRequest struct {
+	ServerIDs []string `json:"server_ids"`
+	GroupIDs  []uint   `json:"group_ids"`
+}
+
+// BulkGroupAssignResult represents the result of bulk group assignment
+type BulkGroupAssignResult struct {
+	Assigned int `json:"assigned"`
+	Skipped  int `json:"skipped"`
+	Total    int `json:"total"`
+}
+
+// ============================================================================
+// Tag Detection Rule Models
+// ============================================================================
+
+// TagDetectionRule represents a rule for automatic tag assignment
+type TagDetectionRule struct {
+	ID             uint            `json:"id"`
+	OrganizationID uint            `json:"organization_id"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	Namespace      string          `json:"namespace"`
+	TagKey         string          `json:"tag_key"`
+	TagValue       string          `json:"tag_value"`
+	Conditions     json.RawMessage `json:"conditions"`
+	Priority       int             `json:"priority"`
+	Confidence     float64         `json:"confidence"`
+	Enabled        bool            `json:"enabled"`
+	CreatedByID    *uint           `json:"created_by_id,omitempty"`
+	CreatedByEmail string          `json:"created_by_email,omitempty"`
+	CreatedAt      string          `json:"created_at"`
+	UpdatedAt      string          `json:"updated_at"`
+}
+
+// TagDetectionRuleListOptions provides filtering options for listing tag detection rules
+type TagDetectionRuleListOptions struct {
+	Enabled   *bool
+	Namespace string
+	Page      int
+	Limit     int
+}
+
+func (o *TagDetectionRuleListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.Enabled != nil {
+		if *o.Enabled {
+			query["enabled"] = "true"
+		} else {
+			query["enabled"] = "false"
+		}
+	}
+	if o.Namespace != "" {
+		query["namespace"] = o.Namespace
+	}
+	if o.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.Limit > 0 {
+		query["limit"] = fmt.Sprintf("%d", o.Limit)
+	}
+	return query
+}
+
+// DefaultRulesCreateResult represents the result of creating default rules
+type DefaultRulesCreateResult struct {
+	CreatedCount int `json:"created_count"`
+}
+
+// EvaluateRulesRequest represents a request to evaluate tag detection rules
+type EvaluateRulesRequest struct {
+	ServerIDs  []string `json:"server_ids,omitempty"`
+	AllServers bool     `json:"all_servers,omitempty"`
+}
+
+// EvaluateRulesResult represents the result of rule evaluation
+type EvaluateRulesResult struct {
+	ProcessingCount int `json:"processing_count"`
+}
+
+// ============================================================================
+// Analytics Models
+// ============================================================================
+
+// AI Analytics Models
+
+// AICapabilities represents available AI analytics features
+type AICapabilities struct {
+	AnomalyDetection    bool     `json:"anomaly_detection"`
+	PredictiveAnalytics bool     `json:"predictive_analytics"`
+	RootCauseAnalysis   bool     `json:"root_cause_analysis"`
+	CapacityPlanning    bool     `json:"capacity_planning"`
+	AvailableModels     []string `json:"available_models"`
+	Status              string   `json:"status"` // "operational", "degraded", "unavailable"
+}
+
+// AIAnalysisRequest represents a request for AI-powered metric analysis
+type AIAnalysisRequest struct {
+	ServerUUIDs  []string               `json:"server_uuids,omitempty"`
+	MetricTypes  []string               `json:"metric_types,omitempty"` // ["cpu", "memory", "disk", "network"]
+	TimeRange    TimeRange              `json:"time_range"`
+	AnalysisType string                 `json:"analysis_type"` // "anomaly", "prediction", "root_cause", "capacity"
+	Context      map[string]interface{} `json:"context,omitempty"`
+}
+
+// AIAnalysisResult represents the result of AI-powered analysis
+type AIAnalysisResult struct {
+	AnalysisID  string                 `json:"analysis_id"`
+	Timestamp   CustomTime             `json:"timestamp"`
+	Insights    []AIInsight            `json:"insights"`
+	Anomalies   []AIAnomaly            `json:"anomalies,omitempty"`
+	Predictions []AIPrediction         `json:"predictions,omitempty"`
+	Confidence  float64                `json:"confidence"` // 0.0 to 1.0
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AIInsight represents an AI-generated insight
+type AIInsight struct {
+	Type        string   `json:"type"` // "recommendation", "warning", "info"
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Severity    string   `json:"severity"` // "low", "medium", "high", "critical"
+	Confidence  float64  `json:"confidence"`
+	Actions     []string `json:"actions,omitempty"`
+}
+
+// AIAnomaly represents a detected anomaly
+type AIAnomaly struct {
+	MetricType    string     `json:"metric_type"`
+	ServerUUID    string     `json:"server_uuid"`
+	DetectedAt    CustomTime `json:"detected_at"`
+	Severity      string     `json:"severity"`
+	ExpectedValue float64    `json:"expected_value"`
+	ActualValue   float64    `json:"actual_value"`
+	Deviation     float64    `json:"deviation"`
+	Description   string     `json:"description"`
+}
+
+// AIPrediction represents a prediction for future metrics
+type AIPrediction struct {
+	MetricType  string     `json:"metric_type"`
+	ServerUUID  string     `json:"server_uuid,omitempty"`
+	PredictedAt CustomTime `json:"predicted_at"`
+	Value       float64    `json:"value"`
+	Confidence  float64    `json:"confidence"`
+	UpperBound  float64    `json:"upper_bound,omitempty"`
+	LowerBound  float64    `json:"lower_bound,omitempty"`
+}
+
+// AIServiceStatus represents the health status of AI services
+type AIServiceStatus struct {
+	Status          string     `json:"status"` // "operational", "degraded", "unavailable"
+	LastCheck       CustomTime `json:"last_check"`
+	ModelsAvailable int        `json:"models_available"`
+	QueueLength     int        `json:"queue_length"`
+	AverageLatency  float64    `json:"average_latency_ms"`
+	Uptime          float64    `json:"uptime_percentage"`
+}
+
+// Hardware Analytics Models
+
+// HardwareTrends represents historical hardware trends for a server
+type HardwareTrends struct {
+	ServerUUID   string                 `json:"server_uuid"`
+	StartTime    CustomTime             `json:"start_time"`
+	EndTime      CustomTime             `json:"end_time"`
+	CPUTrend     MetricTrendData        `json:"cpu_trend,omitempty"`
+	MemoryTrend  MetricTrendData        `json:"memory_trend,omitempty"`
+	DiskTrend    MetricTrendData        `json:"disk_trend,omitempty"`
+	NetworkTrend MetricTrendData        `json:"network_trend,omitempty"`
+	Summary      map[string]interface{} `json:"summary,omitempty"`
+}
+
+// MetricTrendData represents trend data for a specific metric
+type MetricTrendData struct {
+	Average    float64      `json:"average"`
+	Minimum    float64      `json:"minimum"`
+	Maximum    float64      `json:"maximum"`
+	TrendLine  []TrendPoint `json:"trend_line"`
+	Growth     float64      `json:"growth_percentage"`
+	Volatility float64      `json:"volatility"`
+}
+
+// TrendPoint represents a single point in a trend line
+type TrendPoint struct {
+	Timestamp CustomTime `json:"timestamp"`
+	Value     float64    `json:"value"`
+}
+
+// HardwareHealth represents current hardware health score and diagnostics
+type HardwareHealth struct {
+	ServerUUID      string             `json:"server_uuid"`
+	OverallScore    int                `json:"overall_score"` // 0-100
+	LastCheck       CustomTime         `json:"last_check"`
+	ComponentScores ComponentHealthMap `json:"component_scores"`
+	Issues          []HealthIssue      `json:"issues,omitempty"`
+	Recommendations []string           `json:"recommendations,omitempty"`
+}
+
+// ComponentHealthMap represents health scores for individual components
+type ComponentHealthMap struct {
+	CPU     int `json:"cpu"`
+	Memory  int `json:"memory"`
+	Disk    int `json:"disk"`
+	Network int `json:"network"`
+}
+
+// HealthIssue represents a detected health issue
+type HealthIssue struct {
+	Component   string `json:"component"`
+	Severity    string `json:"severity"` // "info", "warning", "critical"
+	Description string `json:"description"`
+	Impact      string `json:"impact,omitempty"`
+}
+
+// HardwarePrediction represents predictive analytics for hardware failures
+type HardwarePrediction struct {
+	ServerUUID           string                `json:"server_uuid"`
+	PredictionHorizon    int                   `json:"prediction_horizon_days"`
+	FailureProbability   float64               `json:"failure_probability"`
+	ComponentPredictions []ComponentPrediction `json:"component_predictions"`
+	RecommendedActions   []string              `json:"recommended_actions"`
+	ConfidenceLevel      float64               `json:"confidence_level"`
+}
+
+// ComponentPrediction represents failure prediction for a specific component
+type ComponentPrediction struct {
+	Component          string     `json:"component"`
+	FailureProbability float64    `json:"failure_probability"`
+	EstimatedFailure   CustomTime `json:"estimated_failure,omitempty"`
+	WarningLevel       string     `json:"warning_level"` // "none", "low", "medium", "high"
+}
+
+// Fleet Analytics Models
+
+// FleetOverview represents organization-wide fleet statistics
+type FleetOverview struct {
+	TotalServers        int                 `json:"total_servers"`
+	ActiveServers       int                 `json:"active_servers"`
+	InactiveServers     int                 `json:"inactive_servers"`
+	HealthDistribution  HealthDistribution  `json:"health_distribution"`
+	ResourceUtilization ResourceUtilization `json:"resource_utilization"`
+	TopIssues           []FleetIssue        `json:"top_issues,omitempty"`
+	LastUpdated         CustomTime          `json:"last_updated"`
+}
+
+// HealthDistribution represents distribution of server health scores
+type HealthDistribution struct {
+	Healthy  int `json:"healthy"`  // Score >= 80
+	Warning  int `json:"warning"`  // Score 50-79
+	Critical int `json:"critical"` // Score < 50
+	Unknown  int `json:"unknown"`  // No data
+}
+
+// ResourceUtilization represents aggregate resource utilization
+type ResourceUtilization struct {
+	AverageCPU    float64 `json:"average_cpu"`
+	AverageMemory float64 `json:"average_memory"`
+	AverageDisk   float64 `json:"average_disk"`
+	TotalStorage  float64 `json:"total_storage_gb"`
+}
+
+// FleetIssue represents a common issue across the fleet
+type FleetIssue struct {
+	Type            string `json:"type"`
+	Description     string `json:"description"`
+	Severity        string `json:"severity"`
+	AffectedServers int    `json:"affected_servers"`
+}
+
+// OrganizationDashboard represents comprehensive dashboard data
+type OrganizationDashboard struct {
+	FleetOverview            FleetOverview     `json:"fleet_overview"`
+	RecentAlerts             []DashboardAlert  `json:"recent_alerts"`
+	TrendingMetrics          []TrendingMetric  `json:"trending_metrics"`
+	CapacityForecasts        []CapacityForecast `json:"capacity_forecasts,omitempty"`
+	TopPerformingServers     []ServerSummary   `json:"top_performing_servers,omitempty"`
+	BottomPerformingServers  []ServerSummary   `json:"bottom_performing_servers,omitempty"`
+	LastUpdated              CustomTime        `json:"last_updated"`
+}
+
+// DashboardAlert represents an alert summary for the dashboard
+type DashboardAlert struct {
+	AlertID    uint       `json:"alert_id"`
+	Severity   string     `json:"severity"`
+	Title      string     `json:"title"`
+	ServerUUID string     `json:"server_uuid,omitempty"`
+	ServerName string     `json:"server_name,omitempty"`
+	Timestamp  CustomTime `json:"timestamp"`
+}
+
+// TrendingMetric represents a metric with trend information
+type TrendingMetric struct {
+	MetricType string  `json:"metric_type"`
+	Value      float64 `json:"value"`
+	Change     float64 `json:"change_percentage"`
+	Trend      string  `json:"trend"` // "up", "down", "stable"
+}
+
+// CapacityForecast represents capacity planning forecast
+type CapacityForecast struct {
+	ResourceType         string     `json:"resource_type"` // "cpu", "memory", "storage"
+	CurrentUtilization   float64    `json:"current_utilization"`
+	ForecastedDate       CustomTime `json:"forecasted_exhaustion_date,omitempty"`
+	DaysUntilExhaustion  int        `json:"days_until_exhaustion"`
+	Recommendation       string     `json:"recommendation"`
+}
+
+// ServerSummary represents a summary of server performance
+type ServerSummary struct {
+	UUID        string  `json:"uuid"`
+	Hostname    string  `json:"hostname"`
+	HealthScore int     `json:"health_score"`
+	CPUUsage    float64 `json:"cpu_usage"`
+	MemoryUsage float64 `json:"memory_usage"`
+}
+
+// Advanced Analytics Models
+
+// CorrelationAnalysisRequest represents a request for correlation analysis
+type CorrelationAnalysisRequest struct {
+	ServerUUIDs []string  `json:"server_uuids,omitempty"`
+	MetricTypes []string  `json:"metric_types"` // Metrics to correlate
+	TimeRange   TimeRange `json:"time_range"`
+	Method      string    `json:"method,omitempty"` // "pearson", "spearman", "kendall"
+}
+
+// CorrelationResult represents the result of correlation analysis
+type CorrelationResult struct {
+	Correlations     []MetricCorrelation `json:"correlations"`
+	Matrix           [][]float64         `json:"matrix,omitempty"` // Correlation matrix
+	MetricLabels     []string            `json:"metric_labels"`
+	SignificantPairs []CorrelationPair   `json:"significant_pairs,omitempty"`
+	AnalyzedAt       CustomTime          `json:"analyzed_at"`
+}
+
+// MetricCorrelation represents correlation between two metrics
+type MetricCorrelation struct {
+	Metric1     string  `json:"metric1"`
+	Metric2     string  `json:"metric2"`
+	Coefficient float64 `json:"coefficient"` // -1.0 to 1.0
+	Strength    string  `json:"strength"`    // "weak", "moderate", "strong"
+	PValue      float64 `json:"p_value,omitempty"`
+}
+
+// CorrelationPair represents a significant correlation pair
+type CorrelationPair struct {
+	Metrics      []string `json:"metrics"`
+	Relationship string   `json:"relationship"` // "positive", "negative"
+	Insight      string   `json:"insight,omitempty"`
+}
+
+// DependencyGraph represents infrastructure dependency relationships
+type DependencyGraph struct {
+	Nodes         []DependencyNode `json:"nodes"`
+	Edges         []DependencyEdge `json:"edges"`
+	CriticalPaths [][]string       `json:"critical_paths,omitempty"`
+	GeneratedAt   CustomTime       `json:"generated_at"`
+}
+
+// DependencyNode represents a node in the dependency graph
+type DependencyNode struct {
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"` // "server", "service", "database", "load_balancer"
+	Name     string                 `json:"name"`
+	Status   string                 `json:"status"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// DependencyEdge represents an edge between nodes
+type DependencyEdge struct {
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Type   string `json:"type"`          // "depends_on", "provides_to", "connected_to"
+	Weight int    `json:"weight,omitempty"` // Importance/traffic weight
+}
+
+// ============================================================================
+// Machine Learning Models
+// ============================================================================
+
+// TagSuggestion represents an ML-generated tag suggestion for a server
+type TagSuggestion struct {
+	ID           uint                   `json:"id"`
+	ServerID     uint                   `json:"server_id"`
+	ServerUUID   string                 `json:"server_uuid"`
+	PredictionID string                 `json:"prediction_id"`
+	TagKey       string                 `json:"tag_key"`
+	TagValue     string                 `json:"tag_value"`
+	Namespace    string                 `json:"namespace,omitempty"`
+	Confidence   float64                `json:"confidence"`    // 0.0 to 1.0
+	Reason       string                 `json:"reason"`        // Explanation for suggestion
+	Applied      bool                   `json:"applied"`       // Whether suggestion was applied
+	Rejected     bool                   `json:"rejected"`      // Whether suggestion was rejected
+	Feedback     string                 `json:"feedback,omitempty"` // User feedback if rejected
+	CreatedAt    CustomTime             `json:"created_at"`
+	UpdatedAt    CustomTime             `json:"updated_at"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"` // Additional context
+}
+
+// TagPrediction represents an ML prediction for tag assignment
+type TagPrediction struct {
+	TagKey     string                 `json:"tag_key"`
+	TagValue   string                 `json:"tag_value"`
+	Confidence float64                `json:"confidence"`
+	Reasoning  string                 `json:"reasoning"`
+	Features   map[string]interface{} `json:"features,omitempty"` // Features used for prediction
+}
+
+// GroupSuggestion represents an ML-generated server grouping suggestion
+type GroupSuggestion struct {
+	ID              uint       `json:"id"`
+	OrganizationID  uint       `json:"organization_id"`
+	GroupName       string     `json:"group_name"`
+	Description     string     `json:"description"`
+	ServerIDs       []uint     `json:"server_ids"`
+	ServerUUIDs     []string   `json:"server_uuids"`
+	Confidence      float64    `json:"confidence"`      // 0.0 to 1.0
+	Reason          string     `json:"reason"`          // Why these servers should be grouped
+	Criteria        []string   `json:"criteria"`        // Criteria used (location, tags, specs, etc.)
+	Accepted        bool       `json:"accepted"`        // Whether suggestion was accepted
+	Rejected        bool       `json:"rejected"`        // Whether suggestion was rejected
+	CreatedGroupID  *uint      `json:"created_group_id,omitempty"` // ID of created group if accepted
+	CreatedAt       CustomTime `json:"created_at"`
+	UpdatedAt       CustomTime `json:"updated_at"`
+	EstimatedBenefit string    `json:"estimated_benefit,omitempty"` // Estimated benefits of grouping
+}
+
+// MLModel represents a machine learning model configuration and status
+type MLModel struct {
+	ID              uint       `json:"id"`
+	Name            string     `json:"name"`
+	ModelType       string     `json:"model_type"`       // "tag_prediction", "group_suggestion", etc.
+	Version         string     `json:"version"`
+	Status          string     `json:"status"`           // "active", "inactive", "training", "deprecated"
+	Enabled         bool       `json:"enabled"`
+	Accuracy        float64    `json:"accuracy,omitempty"` // Model accuracy (0.0 to 1.0)
+	Precision       float64    `json:"precision,omitempty"`
+	Recall          float64    `json:"recall,omitempty"`
+	F1Score         float64    `json:"f1_score,omitempty"`
+	TrainedAt       *CustomTime `json:"trained_at,omitempty"`
+	TrainingDataSize int        `json:"training_data_size,omitempty"`
+	CreatedAt       CustomTime `json:"created_at"`
+	UpdatedAt       CustomTime `json:"updated_at"`
+	Description     string     `json:"description,omitempty"`
+	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ModelPerformance represents detailed performance metrics for an ML model
+type ModelPerformance struct {
+	ModelID          uint                   `json:"model_id,omitempty"`
+	ModelType        string                 `json:"model_type,omitempty"`
+	Accuracy         float64                `json:"accuracy"`
+	Precision        float64                `json:"precision"`
+	Recall           float64                `json:"recall"`
+	F1Score          float64                `json:"f1_score"`
+	ConfusionMatrix  map[string]int         `json:"confusion_matrix,omitempty"`
+	PredictionsCount int                    `json:"predictions_count,omitempty"`
+	CorrectCount     int                    `json:"correct_count,omitempty"`
+	IncorrectCount   int                    `json:"incorrect_count,omitempty"`
+	AverageConfidence float64               `json:"average_confidence,omitempty"`
+	EvaluatedAt      *CustomTime            `json:"evaluated_at,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TrainingJob represents a machine learning model training job
+type TrainingJob struct {
+	ID              uint       `json:"id"`
+	ModelID         uint       `json:"model_id"`
+	ModelType       string     `json:"model_type"`
+	Status          string     `json:"status"`         // "pending", "running", "completed", "failed"
+	Progress        int        `json:"progress"`       // 0-100
+	TrainingDataSize int       `json:"training_data_size,omitempty"`
+	ValidationDataSize int     `json:"validation_data_size,omitempty"`
+	StartedAt       *CustomTime `json:"started_at,omitempty"`
+	CompletedAt     *CustomTime `json:"completed_at,omitempty"`
+	Duration        int        `json:"duration,omitempty"`  // Duration in seconds
+	ErrorMessage    string     `json:"error_message,omitempty"`
+	Metrics         *ModelPerformance `json:"metrics,omitempty"` // Performance metrics after training
+	CreatedAt       CustomTime `json:"created_at"`
+	UpdatedAt       CustomTime `json:"updated_at"`
+	Parameters      map[string]interface{} `json:"parameters,omitempty"` // Training parameters
+	Logs            []string   `json:"logs,omitempty"` // Training logs
+}
+
+// TrainingJobStatus represents the current status of a training job
+type TrainingJobStatus struct {
+	JobID       uint       `json:"job_id"`
+	Status      string     `json:"status"`
+	Progress    int        `json:"progress"`
+	Message     string     `json:"message,omitempty"`
+	UpdatedAt   CustomTime `json:"updated_at"`
+}
+
+// ============================================================================
+// Virtual Machine Models
+// ============================================================================
+
+// VirtualMachine represents a virtual machine instance
+type VirtualMachine struct {
+	ID             uint       `json:"id"`
+	OrganizationID uint       `json:"organization_id"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description,omitempty"`
+	Status         string     `json:"status"` // "running", "stopped", "paused", "error"
+
+	// Resource specifications
+	CPUCores   int    `json:"cpu_cores"`
+	MemoryMB   int    `json:"memory_mb"`
+	StorageGB  int    `json:"storage_gb"`
+
+	// Network configuration
+	IPAddress      string   `json:"ip_address,omitempty"`
+	MACAddress     string   `json:"mac_address,omitempty"`
+
+	// Host information
+	HostServerID   *uint  `json:"host_server_id,omitempty"`
+	HostServerUUID string `json:"host_server_uuid,omitempty"`
+
+	// Operating system
+	OSType    string `json:"os_type,omitempty"`    // "linux", "windows", "other"
+	OSVersion string `json:"os_version,omitempty"`
+
+	// Lifecycle timestamps
+	CreatedAt   CustomTime  `json:"created_at"`
+	UpdatedAt   CustomTime  `json:"updated_at"`
+	StartedAt   *CustomTime `json:"started_at,omitempty"`
+	StoppedAt   *CustomTime `json:"stopped_at,omitempty"`
+
+	// Metadata
+	Tags     []string               `json:"tags,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// VMConfiguration represents virtual machine configuration for creation/updates
+type VMConfiguration struct {
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+
+	// Required resources
+	CPUCores   int `json:"cpu_cores"`
+	MemoryMB   int `json:"memory_mb"`
+	StorageGB  int `json:"storage_gb"`
+
+	// Optional configuration
+	OSType         string   `json:"os_type,omitempty"`
+	OSVersion      string   `json:"os_version,omitempty"`
+	HostServerID   *uint    `json:"host_server_id,omitempty"`
+	HostServerUUID string   `json:"host_server_uuid,omitempty"`
+
+	// Network settings
+	NetworkConfig map[string]interface{} `json:"network_config,omitempty"`
+
+	// Additional settings
+	Tags     []string               `json:"tags,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// VMStatus represents the current status of a virtual machine
+type VMStatus struct {
+	ID        uint       `json:"id"`
+	VMID      uint       `json:"vm_id"`
+	Status    string     `json:"status"`    // "running", "stopped", "paused", "error"
+	Health    string     `json:"health"`    // "healthy", "degraded", "unhealthy"
+
+	// Resource usage
+	CPUUsagePercent    float64 `json:"cpu_usage_percent,omitempty"`
+	MemoryUsageMB      int     `json:"memory_usage_mb,omitempty"`
+	MemoryUsagePercent float64 `json:"memory_usage_percent,omitempty"`
+	DiskUsageGB        int     `json:"disk_usage_gb,omitempty"`
+	DiskUsagePercent   float64 `json:"disk_usage_percent,omitempty"`
+
+	// Network statistics
+	NetworkInMBps  float64 `json:"network_in_mbps,omitempty"`
+	NetworkOutMBps float64 `json:"network_out_mbps,omitempty"`
+
+	// Status details
+	Message   string     `json:"message,omitempty"`
+	UpdatedAt CustomTime `json:"updated_at"`
+}
+
+// VMOperation represents an asynchronous virtual machine operation
+type VMOperation struct {
+	ID           uint       `json:"id"`
+	VMID         uint       `json:"vm_id"`
+	OperationType string    `json:"operation_type"` // "start", "stop", "restart", "delete", "create"
+	Status       string     `json:"status"`         // "pending", "in_progress", "completed", "failed"
+	Progress     int        `json:"progress"`       // 0-100
+
+	// Operation details
+	RequestedBy string     `json:"requested_by,omitempty"`
+	Message     string     `json:"message,omitempty"`
+	ErrorDetails string    `json:"error_details,omitempty"`
+
+	// Timestamps
+	CreatedAt   CustomTime  `json:"created_at"`
+	StartedAt   *CustomTime `json:"started_at,omitempty"`
+	CompletedAt *CustomTime `json:"completed_at,omitempty"`
+
+	// Result
+	Result map[string]interface{} `json:"result,omitempty"`
+}
+
+// Report represents a generated report
+type Report struct {
+	ID             uint                   `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	ReportType     string                 `json:"report_type"` // "usage", "performance", "compliance", "billing"
+	Status         string                 `json:"status"`      // "pending", "generating", "completed", "failed"
+	Format         string                 `json:"format"`      // "pdf", "csv", "json", "html"
+	FileURL        string                 `json:"file_url,omitempty"`
+	FilePath       string                 `json:"file_path,omitempty"`
+	FileSize       int64                  `json:"file_size,omitempty"`
+	Configuration  *ReportConfiguration   `json:"configuration,omitempty"`
+	CreatedBy      uint                   `json:"created_by,omitempty"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	StartedAt      *CustomTime            `json:"started_at,omitempty"`
+	CompletedAt    *CustomTime            `json:"completed_at,omitempty"`
+	ExpiresAt      *CustomTime            `json:"expires_at,omitempty"`
+	ErrorMessage   string                 `json:"error_message,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ReportConfiguration defines report generation parameters
+type ReportConfiguration struct {
+	ReportType   string                 `json:"report_type"` // "usage", "performance", "compliance", "billing"
+	Format       string                 `json:"format"`      // "pdf", "csv", "json", "html"
+	Name         string                 `json:"name,omitempty"`
+	Description  string                 `json:"description,omitempty"`
+	TimeRange    *ReportTimeRange       `json:"time_range,omitempty"`
+	Filters      *ReportFilter          `json:"filters,omitempty"`
+	Parameters   map[string]interface{} `json:"parameters,omitempty"`
+	IncludeSections []string            `json:"include_sections,omitempty"`
+	Delivery     *ReportDeliveryOptions `json:"delivery,omitempty"`
+}
+
+// ReportTimeRange defines the time period for report data
+type ReportTimeRange struct {
+	StartDate string `json:"start_date"` // ISO 8601 format
+	EndDate   string `json:"end_date"`   // ISO 8601 format
+	Preset    string `json:"preset,omitempty"` // "last_7_days", "last_30_days", "last_month", "last_quarter", "ytd"
+}
+
+// ReportFilter defines filtering criteria for report data
+type ReportFilter struct {
+	ServerIDs      []uint   `json:"server_ids,omitempty"`
+	ServerUUIDs    []string `json:"server_uuids,omitempty"`
+	ServerTags     []string `json:"server_tags,omitempty"`
+	Locations      []string `json:"locations,omitempty"`
+	Environments   []string `json:"environments,omitempty"`
+	MetricTypes    []string `json:"metric_types,omitempty"`
+	AlertTypes     []string `json:"alert_types,omitempty"`
+	Severity       []string `json:"severity,omitempty"`
+	IncludeInactive bool    `json:"include_inactive,omitempty"`
+}
+
+// ReportDeliveryOptions defines how reports should be delivered
+type ReportDeliveryOptions struct {
+	EmailRecipients []string `json:"email_recipients,omitempty"`
+	EmailSubject    string   `json:"email_subject,omitempty"`
+	EmailBody       string   `json:"email_body,omitempty"`
+	WebhookURL      string   `json:"webhook_url,omitempty"`
+	AutoDelete      bool     `json:"auto_delete,omitempty"`
+	RetentionDays   int      `json:"retention_days,omitempty"`
+}
+
+// ReportSchedule represents a scheduled report
+type ReportSchedule struct {
+	ID             uint                   `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	Configuration  *ReportConfiguration   `json:"configuration"`
+	Schedule       string                 `json:"schedule"` // Cron expression
+	Enabled        bool                   `json:"enabled"`
+	NextRunAt      *CustomTime            `json:"next_run_at,omitempty"`
+	LastRunAt      *CustomTime            `json:"last_run_at,omitempty"`
+	LastReportID   *uint                  `json:"last_report_id,omitempty"`
+	CreatedBy      uint                   `json:"created_by,omitempty"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	UpdatedAt      CustomTime             `json:"updated_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ReportStatus represents the current status of a report generation process
+type ReportStatus struct {
+	ReportID   uint    `json:"report_id"`
+	Status     string  `json:"status"` // "pending", "generating", "completed", "failed"
+	Progress   int     `json:"progress"` // 0-100
+	Message    string  `json:"message,omitempty"`
+	Error      string  `json:"error,omitempty"`
+	EstimatedCompletionTime *CustomTime `json:"estimated_completion_time,omitempty"`
+}
+
+// ServerGroup represents a logical group of servers
+type ServerGroup struct {
+	ID             uint                   `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	ServerCount    int                    `json:"server_count"`
+	Tags           []string               `json:"tags,omitempty"`
+	CreatedBy      uint                   `json:"created_by,omitempty"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	UpdatedAt      CustomTime             `json:"updated_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// ServerGroupMembership represents a server's membership in a group
+type ServerGroupMembership struct {
+	GroupID      uint       `json:"group_id"`
+	GroupName    string     `json:"group_name,omitempty"`
+	ServerID     uint       `json:"server_id"`
+	ServerUUID   string     `json:"server_uuid"`
+	ServerName   string     `json:"server_name,omitempty"`
+	ServerStatus string     `json:"server_status,omitempty"`
+	AddedAt      CustomTime `json:"added_at"`
+	AddedBy      uint       `json:"added_by,omitempty"`
+}
+
+// SearchResult represents a server search result with relevance scoring
+type SearchResult struct {
+	ServerID       uint                   `json:"server_id"`
+	ServerUUID     string                 `json:"server_uuid"`
+	ServerName     string                 `json:"server_name"`
+	Hostname       string                 `json:"hostname,omitempty"`
+	OrganizationID uint                   `json:"organization_id"`
+	Location       string                 `json:"location,omitempty"`
+	Environment    string                 `json:"environment,omitempty"`
+	Classification string                 `json:"classification,omitempty"`
+	Status         string                 `json:"status"`
+	IPAddresses    []string               `json:"ip_addresses,omitempty"`
+	Tags           []string               `json:"tags,omitempty"`
+	RelevanceScore float64                `json:"relevance_score"`
+	MatchedFields  []string               `json:"matched_fields,omitempty"`
+	LastSeenAt     *CustomTime            `json:"last_seen_at,omitempty"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TagSearchResult represents a tag search result with usage information
+type TagSearchResult struct {
+	TagID          uint                   `json:"tag_id"`
+	TagName        string                 `json:"tag_name"`
+	TagType        string                 `json:"tag_type"`        // "manual", "auto", "system"
+	Scope          string                 `json:"scope"`           // "organization", "user", "server"
+	Description    string                 `json:"description,omitempty"`
+	Color          string                 `json:"color,omitempty"`
+	UsageCount     int                    `json:"usage_count"`     // Number of resources using this tag
+	ServerCount    int                    `json:"server_count"`    // Number of servers with this tag
+	RelevanceScore float64                `json:"relevance_score"`
+	MatchedFields  []string               `json:"matched_fields,omitempty"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	UpdatedAt      CustomTime             `json:"updated_at"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TagStatistics represents comprehensive statistics about tag usage
+type TagStatistics struct {
+	TotalTags       int                    `json:"total_tags"`
+	ManualTags      int                    `json:"manual_tags"`
+	AutoTags        int                    `json:"auto_tags"`
+	SystemTags      int                    `json:"system_tags"`
+	TagsByScope     map[string]int         `json:"tags_by_scope"`     // Breakdown by scope
+	MostUsedTags    []TagUsageStats        `json:"most_used_tags"`    // Top 10 most used tags
+	RecentlyCreated []TagSearchResult      `json:"recently_created"`  // Recently created tags
+	UnusedTags      int                    `json:"unused_tags"`       // Tags with no usage
+	AveragePerServer float64               `json:"average_per_server"`
+	Metadata        map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// TagUsageStats represents usage statistics for a specific tag
+type TagUsageStats struct {
+	TagID       uint       `json:"tag_id"`
+	TagName     string     `json:"tag_name"`
+	TagType     string     `json:"tag_type"`
+	UsageCount  int        `json:"usage_count"`
+	ServerCount int        `json:"server_count"`
+	LastUsedAt  CustomTime `json:"last_used_at"`
+}
+
+// ============================================================================
+// Audit Models
+// ============================================================================
+
+// AuditLog represents a single audit log entry tracking system activity
+type AuditLog struct {
+	ID               uint                   `json:"id"`
+	OrganizationID   uint                   `json:"organization_id"`
+	UserID           *uint                  `json:"user_id,omitempty"`
+	UserEmail        string                 `json:"user_email,omitempty"`
+	UserName         string                 `json:"user_name,omitempty"`
+	Action           string                 `json:"action"`           // create, update, delete, login, logout, etc.
+	ResourceType     string                 `json:"resource_type"`    // server, user, organization, alert, etc.
+	ResourceID       string                 `json:"resource_id,omitempty"`
+	ResourceName     string                 `json:"resource_name,omitempty"`
+	Description      string                 `json:"description"`
+	IPAddress        string                 `json:"ip_address,omitempty"`
+	UserAgent        string                 `json:"user_agent,omitempty"`
+	Severity         string                 `json:"severity"`         // info, warning, critical
+	Status           string                 `json:"status"`           // success, failure, pending
+	Changes          map[string]interface{} `json:"changes,omitempty"`          // Before/after values
+	RequestID        string                 `json:"request_id,omitempty"`
+	SessionID        string                 `json:"session_id,omitempty"`
+	Location         string                 `json:"location,omitempty"`         // Geographic location
+	DeviceType       string                 `json:"device_type,omitempty"`      // desktop, mobile, tablet
+	ErrorMessage     string                 `json:"error_message,omitempty"`
+	DurationMs       int                    `json:"duration_ms,omitempty"`      // Operation duration
+	ComplianceFlags  []string               `json:"compliance_flags,omitempty"` // GDPR, HIPAA, SOC2, etc.
+	CreatedAt        CustomTime             `json:"created_at"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AuditStatistics represents comprehensive audit activity statistics
+type AuditStatistics struct {
+	TotalLogs           int                    `json:"total_logs"`
+	TotalUsers          int                    `json:"total_users"`            // Unique users with activity
+	TotalActions        int                    `json:"total_actions"`          // Distinct action types
+	ActionBreakdown     map[string]int         `json:"action_breakdown"`       // Count by action type
+	ResourceBreakdown   map[string]int         `json:"resource_breakdown"`     // Count by resource type
+	SeverityBreakdown   map[string]int         `json:"severity_breakdown"`     // Count by severity
+	StatusBreakdown     map[string]int         `json:"status_breakdown"`       // Count by status
+	TopUsers            []AuditUserActivity    `json:"top_users"`              // Most active users
+	TopActions          []AuditActionCount     `json:"top_actions"`            // Most common actions
+	TopResources        []AuditResourceCount   `json:"top_resources"`          // Most accessed resources
+	FailedAttempts      int                    `json:"failed_attempts"`        // Failed operations
+	CriticalEvents      int                    `json:"critical_events"`        // Critical severity events
+	ComplianceBreakdown map[string]int         `json:"compliance_breakdown"`   // Count by compliance flag
+	AverageDurationMs   float64                `json:"average_duration_ms"`    // Average operation duration
+	TimeRange           AuditTimeRange         `json:"time_range"`             // Statistics time range
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AuditUserActivity represents audit activity for a specific user
+type AuditUserActivity struct {
+	UserID          uint       `json:"user_id"`
+	UserEmail       string     `json:"user_email"`
+	UserName        string     `json:"user_name,omitempty"`
+	ActionCount     int        `json:"action_count"`
+	FailedAttempts  int        `json:"failed_attempts"`
+	LastActivity    CustomTime `json:"last_activity"`
+	TopActions      []string   `json:"top_actions,omitempty"`
+}
+
+// AuditActionCount represents count of a specific action type
+type AuditActionCount struct {
+	Action      string `json:"action"`
+	Count       int    `json:"count"`
+	SuccessRate float64 `json:"success_rate"` // Percentage of successful operations
+}
+
+// AuditResourceCount represents access count for a specific resource
+type AuditResourceCount struct {
+	ResourceType string `json:"resource_type"`
+	ResourceID   string `json:"resource_id,omitempty"`
+	ResourceName string `json:"resource_name,omitempty"`
+	AccessCount  int    `json:"access_count"`
+}
+
+// AuditTimeRange represents the time range for audit statistics
+type AuditTimeRange struct {
+	StartDate  CustomTime `json:"start_date"`
+	EndDate    CustomTime `json:"end_date"`
+	DurationMs int64      `json:"duration_ms"` // Range duration in milliseconds
+}
+
+// ============================================================================
+// Notification Models
+// ============================================================================
+
+// NotificationRequest represents a request to send a notification
+type NotificationRequest struct {
+	OrganizationID uint                   `json:"organization_id"`
+	ChannelIDs     []uint                 `json:"channel_ids,omitempty"`
+	ChannelTypes   []string               `json:"channel_types,omitempty"`
+	Subject        string                 `json:"subject"`
+	Content        string                 `json:"content"`
+	ContentType    string                 `json:"content_type,omitempty"` // "text" or "html"
+	Recipients     []string               `json:"recipients,omitempty"`
+	Priority       NotificationPriority   `json:"priority,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	AlertID        *uint                  `json:"alert_id,omitempty"`
+	ProbeID        *uint                  `json:"probe_id,omitempty"`
+	ScheduledAt    *CustomTime            `json:"scheduled_at,omitempty"`
+	ExpiresAt      *CustomTime            `json:"expires_at,omitempty"`
+	MaxRetries     *int                   `json:"max_retries,omitempty"`
+	RetryDelay     *int                   `json:"retry_delay_minutes,omitempty"`
+}
+
+// BatchNotificationRequest represents a request to send multiple notifications
+type BatchNotificationRequest struct {
+	Notifications []NotificationRequest `json:"notifications"`
+}
+
+// NotificationPriority represents the priority level of a notification
+type NotificationPriority string
+
+const (
+	NotificationPriorityLow      NotificationPriority = "low"
+	NotificationPriorityNormal   NotificationPriority = "normal"
+	NotificationPriorityHigh     NotificationPriority = "high"
+	NotificationPriorityCritical NotificationPriority = "critical"
+)
+
+// String returns the string representation of NotificationPriority
+func (np NotificationPriority) String() string {
+	return string(np)
+}
+
+// NotificationResponse represents the response to a notification request
+type NotificationResponse struct {
+	ID             uint              `json:"id"`
+	OrganizationID uint              `json:"organization_id"`
+	Status         string            `json:"status"`
+	ChannelsUsed   []ChannelUsageInfo `json:"channels_used"`
+	CreatedAt      CustomTime        `json:"created_at"`
+	ScheduledAt    *CustomTime       `json:"scheduled_at,omitempty"`
+	SentAt         *CustomTime       `json:"sent_at,omitempty"`
+	Message        string            `json:"message,omitempty"`
+}
+
+// BatchNotificationResponse represents the response to a batch notification request
+type BatchNotificationResponse struct {
+	TotalRequested int                    `json:"total_requested"`
+	TotalAccepted  int                    `json:"total_accepted"`
+	TotalRejected  int                    `json:"total_rejected"`
+	Results        []NotificationResponse `json:"results"`
+	Errors         []string               `json:"errors,omitempty"`
+}
+
+// ChannelUsageInfo provides information about how a channel was used for a notification
+type ChannelUsageInfo struct {
+	ChannelID   uint   `json:"channel_id"`
+	ChannelName string `json:"channel_name"`
+	ChannelType string `json:"channel_type"`
+	Status      string `json:"status"`
+	Recipient   string `json:"recipient"`
+	Error       string `json:"error,omitempty"`
+}
+
+// NotificationStatusRequest represents a request to get notification status
+type NotificationStatusRequest struct {
+	NotificationIDs []uint `json:"notification_ids"`
+}
+
+// NotificationStatusResponse represents the response to a notification status request
+type NotificationStatusResponse struct {
+	Notifications []NotificationStatusInfo `json:"notifications"`
+}
+
+// NotificationStatusInfo provides detailed status information for a notification
+type NotificationStatusInfo struct {
+	ID              uint                   `json:"id"`
+	OrganizationID  uint                   `json:"organization_id"`
+	Status          string                 `json:"status"`
+	Subject         string                 `json:"subject"`
+	CreatedAt       CustomTime             `json:"created_at"`
+	ScheduledAt     *CustomTime            `json:"scheduled_at,omitempty"`
+	SentAt          *CustomTime            `json:"sent_at,omitempty"`
+	DeliveredAt     *CustomTime            `json:"delivered_at,omitempty"`
+	FailedAt        *CustomTime            `json:"failed_at,omitempty"`
+	RetryCount      int                    `json:"retry_count"`
+	NextRetryAt     *CustomTime            `json:"next_retry_at,omitempty"`
+	ErrorMessage    string                 `json:"error_message,omitempty"`
+	ChannelDelivery []ChannelDeliveryInfo  `json:"channel_delivery"`
+}
+
+// ChannelDeliveryInfo provides delivery information for a specific channel
+type ChannelDeliveryInfo struct {
+	ChannelID      uint        `json:"channel_id"`
+	ChannelName    string      `json:"channel_name"`
+	ChannelType    string      `json:"channel_type"`
+	Status         string      `json:"status"`
+	Recipient      string      `json:"recipient"`
+	SentAt         *CustomTime `json:"sent_at,omitempty"`
+	DeliveredAt    *CustomTime `json:"delivered_at,omitempty"`
+	FailedAt       *CustomTime `json:"failed_at,omitempty"`
+	RetryCount     int         `json:"retry_count"`
+	NextRetryAt    *CustomTime `json:"next_retry_at,omitempty"`
+	ErrorMessage   string      `json:"error_message,omitempty"`
+	ExternalID     string      `json:"external_id,omitempty"`
+	ProviderStatus string      `json:"provider_status,omitempty"`
 }

@@ -34,6 +34,7 @@ type Client struct {
 	Metrics               *MetricsService
 	Monitoring            *MonitoringService
 	Billing               *BillingService
+	BillingUsage          *BillingUsageService
 	Settings              *SettingsService
 	Alerts                *AlertsService
 	ProbeAlerts           *ProbeAlertsService
@@ -66,6 +67,15 @@ type Client struct {
 	DiskIO                *DiskIOService
 	SmartHealth           *SmartHealthService
 	Filesystem            *FilesystemService
+	Tags                  *TagsService
+	Analytics             *AnalyticsService
+	ML                    *MLService
+	VMs                   *VMsService
+	Reporting             *ReportingService
+	ServerGroups          *ServerGroupsService
+	Search                *SearchService
+	Audit                 *AuditService
+	Notifications         *NotificationsService
 	WebSocket             *WebSocketServiceImpl
 }
 
@@ -219,6 +229,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Metrics = &MetricsService{client: client}
 	client.Monitoring = &MonitoringService{client: client}
 	client.Billing = &BillingService{client: client}
+	client.BillingUsage = &BillingUsageService{client: client}
 	client.Settings = &SettingsService{client: client}
 	client.Alerts = &AlertsService{client: client}
 	client.ProbeAlerts = &ProbeAlertsService{client: client}
@@ -251,7 +262,16 @@ func NewClient(config *Config) (*Client, error) {
 	client.DiskIO = &DiskIOService{client: client}
 	client.SmartHealth = &SmartHealthService{client: client}
 	client.Filesystem = &FilesystemService{client: client}
-	
+	client.Tags = &TagsService{client: client}
+	client.Analytics = &AnalyticsService{client: client}
+	client.ML = &MLService{client: client}
+	client.VMs = &VMsService{client: client}
+	client.Reporting = &ReportingService{client: client}
+	client.ServerGroups = &ServerGroupsService{client: client}
+	client.Search = &SearchService{client: client}
+	client.Audit = &AuditService{client: client}
+	client.Notifications = &NotificationsService{client: client}
+
 	// Note: WebSocket service requires separate initialization via NewWebSocketService()
 	// to ensure proper server credentials validation and connection management
 	client.WebSocket = nil
@@ -584,6 +604,7 @@ type UsersService struct{ client *Client }
 type MetricsService struct{ client *Client }
 type MonitoringService struct{ client *Client }
 type BillingService struct{ client *Client }
+type BillingUsageService struct{ client *Client }
 type SettingsService struct{ client *Client }
 type AlertsService struct{ client *Client }
 type AdminService struct{ client *Client }

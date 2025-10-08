@@ -194,3 +194,9 @@ func IsServerError(err error) bool {
 	_, ok = err.(*ServiceUnavailableError)
 	return ok
 }
+
+// Common error variables
+var (
+	// ErrUnexpectedResponse is returned when the API returns an unexpected response format
+	ErrUnexpectedResponse = fmt.Errorf("unexpected response format from API")
+)

@@ -172,10 +172,19 @@ The SDK is organized into service clients for different API domains:
 |---------|-------------|----------------|-------------------|
 | **Organizations** | Organization management and membership | JWT, API Key | List, Create, Invite, Members |
 | **Servers** | Server registration, monitoring, and management | JWT, Server Credentials | List, Register, Metrics, Credentials |
+| **Tags** | Tag management, namespaces, inheritance, and automation | JWT | CRUD, Namespaces, History, Bulk Ops, Rules |
+| **Analytics** | AI insights, hardware predictions, fleet analytics, correlations | JWT | AI Analysis, Hardware Health, Fleet Overview, Dependencies |
+| **ML** | Machine learning tag/group suggestions, model management, training | JWT | Tag Suggestions, Group Suggestions, Models, Training Jobs |
+| **VMs** | Virtual machine lifecycle and resource management | JWT | Create, List, Control (Start/Stop/Restart), Delete |
+| **Reporting** | Report generation and scheduling | JWT | Generate, List, Download, Schedule, Manage Schedules |
+| **ServerGroups** | Server grouping and organization | JWT | Create, List, Add Servers, Get Members |
+| **Search** | Comprehensive search across servers, tags, and resources | JWT | Search Servers, Search Tags, Tag Statistics |
+| **Audit** | Audit log tracking and compliance reporting | JWT | List Logs, Export, Statistics, User History |
 | **Users** | User profile and preference management | JWT | Profile, Preferences, Avatar |
 | **Metrics** | Metrics submission and querying | Server Credentials, JWT | Submit, Query, History |
 | **Monitoring** | Probes, regions, and monitoring infrastructure | JWT, Monitoring Key | Probes, Results, Regions |
 | **Billing** | Subscription and billing management | JWT | Plans, Checkout, Usage |
+| **BillingUsage** | Organization usage metrics for billing | JWT, API Key | Current Usage, History, Summary, Admin Overview |
 | **Settings** | Platform configuration and settings | JWT, Public | Categories, Update, Cache |
 | **Alerts** | Alert rules and notification channels | JWT | Rules, Contacts, Silences |
 | **StatusPages** | Public status page management | JWT, Public | Create, Publish, History |
@@ -200,6 +209,7 @@ When working with the Nexmonyx SDK, use this decision tree to select the appropr
    ├── User Management → Users service
    ├── Organization Management → Organizations service
    ├── Server Management → Servers service
+   ├── Server Organization/Tagging → Tags service
    ├── Monitoring/Alerting → Monitoring, Alerts services
    ├── Billing/Subscriptions → Billing service
    ├── System Information → System service
@@ -214,8 +224,9 @@ When working with the Nexmonyx SDK, use this decision tree to select the appropr
 
 3. What is your use case?
    ├── Building an Agent → Servers, Metrics, AgentDownload
-   ├── Building a Dashboard → Users, Organizations, Servers, Monitoring
-   ├── Managing Infrastructure → VMs, Servers, Organizations
+   ├── Building a Dashboard → Users, Organizations, Servers, Monitoring, Tags
+   ├── Managing Infrastructure → VMs, Servers, Organizations, Tags
+   ├── Organizing Servers → Tags (namespaces, inheritance, bulk operations)
    ├── Handling Notifications → Alerts, EmailQueue
    ├── Public Website → Public, StatusPages, Distros
    └── Administrative Tool → Admin, Settings, Jobs
@@ -639,6 +650,1410 @@ diskMetrics, err := client.Servers.GetDiskMetrics(ctx, "server-uuid", timeRange)
 zfsMetrics, err := client.Servers.GetZFSMetrics(ctx, "server-uuid", timeRange)
 ```
 
+### Tags
+
+The Tags service provides comprehensive tag management for organizing servers, including namespaces, inheritance, history tracking, bulk operations, and automated detection rules.
+
+```go
+// Basic Tag Management
+// --------------------
+
+// Create a tag
+tag, err := client.Tags.Create(ctx, &nexmonyx.TagCreateRequest{
+    Namespace: "env",
+    Key:       "environment",
+    Value:     "production",
+    Color:     "#28a745",
+})
+
+// List tags with filtering
+tags, meta, err := client.Tags.List(ctx, &nexmonyx.TagListOptions{
+    Namespace: "env",
+    Source:    "manual",      // "manual", "inherited", "auto_detected"
+    Page:      1,
+    Limit:     50,
+})
+
+// Get tags for a specific server
+serverTags, err := client.Tags.GetServerTags(ctx, "server-uuid-123")
+
+// Assign tags to a server
+err = client.Tags.AssignTagsToServer(ctx, "server-uuid-123", &nexmonyx.ServerTagsAssignRequest{
+    TagIDs: []uint{1, 2, 3},
+})
+
+// Remove a tag from a server
+err = client.Tags.RemoveTagFromServer(ctx, "server-uuid-123", 1)
+
+
+// Namespace Management
+// --------------------
+
+// Create hierarchical namespace
+namespace, err := client.Tags.CreateNamespace(ctx, &nexmonyx.TagNamespaceCreateRequest{
+    Name:        "infrastructure",
+    ParentID:    nil,  // Top-level namespace
+    Description: "Infrastructure organization tags",
+    Icon:        "🏗️",
+    Color:       "#007bff",
+    IsSystem:    false,
+})
+
+// Create child namespace
+childNamespace, err := client.Tags.CreateNamespace(ctx, &nexmonyx.TagNamespaceCreateRequest{
+    Name:        "kubernetes",
+    ParentID:    &namespace.ID,  // Child of infrastructure
+    Description: "Kubernetes cluster tags",
+    Icon:        "☸️",
+    Color:       "#326ce5",
+})
+
+// List all namespaces
+namespaces, err := client.Tags.ListNamespaces(ctx)
+
+// Set namespace permissions
+err = client.Tags.SetNamespacePermissions(ctx, namespace.ID, &nexmonyx.TagNamespacePermissionRequest{
+    CanCreate: true,
+    CanRead:   true,
+    CanUpdate: false,
+    CanDelete: false,
+    CanApprove: false,
+})
+
+
+// Tag Inheritance
+// ----------------
+
+// Create inheritance rule
+rule, err := client.Tags.CreateInheritanceRule(ctx, &nexmonyx.TagInheritanceRuleCreateRequest{
+    SourceType:   "organization",  // "organization", "tag", "server_group"
+    SourceID:     "org-uuid",
+    TargetType:   "server",        // "server", "vm"
+    Conditions:   json.RawMessage(`{"environment": "production"}`),
+    Priority:     10,
+    IsActive:     true,
+})
+
+// Set organization-level tags (inherited by all servers)
+orgTag, err := client.Tags.SetOrganizationTag(ctx, &nexmonyx.OrganizationTagRequest{
+    Namespace: "compliance",
+    Key:       "data_classification",
+    Value:     "confidential",
+    AppliesTo: "all_servers",  // "all_servers", "specific_environments"
+})
+
+// List organization tags
+orgTags, err := client.Tags.ListOrganizationTags(ctx, &nexmonyx.OrganizationTagListOptions{
+    Namespace: "compliance",
+    Page:      1,
+    Limit:     50,
+})
+
+// Remove organization tag
+err = client.Tags.RemoveOrganizationTag(ctx, orgTag.ID)
+
+// Create server parent-child relationship for inheritance
+relationship, err := client.Tags.CreateServerRelationship(ctx, &nexmonyx.ServerRelationshipRequest{
+    ParentServerID:   "parent-uuid-100",
+    ChildServerID:    "child-uuid-200",
+    RelationshipType: "vm_host",  // "vm_host", "container_host", "cluster_member"
+})
+
+// List server relationships
+relationships, err := client.Tags.ListServerRelationships(ctx, &nexmonyx.ServerRelationshipListOptions{
+    ServerID:         "parent-uuid-100",
+    RelationshipType: "vm_host",
+})
+
+// Delete relationship
+err = client.Tags.DeleteServerRelationship(ctx, relationship.ID)
+
+
+// Tag History and Audit
+// ----------------------
+
+// Get tag change history for a server
+history, err := client.Tags.GetTagHistory(ctx, "server-uuid-123", &nexmonyx.TagHistoryOptions{
+    StartDate: time.Now().AddDate(0, -1, 0),  // Last month
+    EndDate:   time.Now(),
+    Action:    "assigned",  // "assigned", "removed", "modified"
+    Page:      1,
+    Limit:     50,
+})
+
+// Process history entries
+for _, entry := range history {
+    fmt.Printf("Action: %s, User: %s, Time: %s\n",
+        entry.Action, entry.UserEmail, entry.Timestamp)
+    fmt.Printf("  Tag: %s:%s = %s\n",
+        entry.Tag.Namespace, entry.Tag.Key, entry.Tag.Value)
+}
+
+// Get tag usage summary
+summary, err := client.Tags.GetTagHistorySummary(ctx, &nexmonyx.TagHistorySummaryRequest{
+    StartDate: time.Now().AddDate(0, -1, 0),
+    EndDate:   time.Now(),
+    GroupBy:   "namespace",  // "namespace", "key", "user"
+})
+
+
+// Bulk Operations
+// ----------------
+
+// Bulk create multiple tags
+results, err := client.Tags.BulkCreateTags(ctx, &nexmonyx.BulkTagCreateRequest{
+    Tags: []nexmonyx.TagCreateRequest{
+        {Namespace: "env", Key: "environment", Value: "production"},
+        {Namespace: "env", Key: "environment", Value: "staging"},
+        {Namespace: "team", Key: "owner", Value: "backend"},
+        {Namespace: "team", Key: "owner", Value: "frontend"},
+    },
+})
+
+// Bulk assign tags to multiple servers
+err = client.Tags.BulkAssignTags(ctx, &nexmonyx.BulkTagAssignRequest{
+    ServerIDs: []string{"server-1", "server-2", "server-3"},
+    TagIDs:    []uint{1, 2, 3},
+})
+
+// Assign servers to groups based on tag criteria
+groupResults, err := client.Tags.AssignTagsToGroups(ctx, &nexmonyx.TagGroupAssignmentRequest{
+    Groups: []nexmonyx.TagGroupCriteria{
+        {
+            Name:      "Production Web Servers",
+            Criteria:  json.RawMessage(`{"environment": "production", "role": "web"}`),
+            TagsToAdd: []uint{10, 11},
+        },
+        {
+            Name:      "Development Databases",
+            Criteria:  json.RawMessage(`{"environment": "dev", "role": "database"}`),
+            TagsToAdd: []uint{20, 21},
+        },
+    },
+})
+
+
+// Tag Detection Rules
+// --------------------
+
+// List tag detection rules
+rules, totalRules, err := client.Tags.ListTagDetectionRules(ctx, &nexmonyx.TagDetectionRuleListOptions{
+    Enabled:   &enabled,  // Filter by enabled status
+    Namespace: "auto",
+    Page:      1,
+    Limit:     50,
+})
+
+// Create default detection rules
+result, err := client.Tags.CreateDefaultRules(ctx)
+fmt.Printf("Created %d rules\n", result.RulesCreated)
+
+// Evaluate rules for automatic tagging
+evalResult, err := client.Tags.EvaluateRules(ctx, &nexmonyx.EvaluateRulesRequest{
+    ServerIDs:      []string{"server-1", "server-2"},
+    RuleIDs:        []uint{1, 2, 3},  // Optional: specific rules to evaluate
+    AutoApply:      true,              // Automatically apply high-confidence matches
+    MinConfidence:  0.8,               // Minimum confidence threshold
+})
+
+// Process evaluation results
+for _, match := range evalResult.Matches {
+    fmt.Printf("Server: %s, Rule: %s, Confidence: %.2f\n",
+        match.ServerID, match.RuleName, match.Confidence)
+    if match.Applied {
+        fmt.Printf("  ✓ Tag automatically applied: %s:%s = %s\n",
+            match.Namespace, match.TagKey, match.TagValue)
+    }
+}
+
+
+// Error Handling
+// --------------
+
+tags, meta, err := client.Tags.List(ctx, &nexmonyx.TagListOptions{
+    Namespace: "env",
+})
+if err != nil {
+    switch {
+    case errors.Is(err, nexmonyx.ErrUnauthorized):
+        // Handle authentication error
+        log.Fatal("Authentication required")
+    case errors.Is(err, nexmonyx.ErrNotFound):
+        // No tags found
+        log.Println("No tags found in namespace 'env'")
+    case errors.Is(err, nexmonyx.ErrRateLimitExceeded):
+        // Rate limited
+        log.Println("Rate limit exceeded, retry after:", err.RetryAfter)
+    default:
+        log.Printf("Error listing tags: %v", err)
+    }
+}
+
+
+// Pagination
+// ----------
+
+// Iterate through all tags with pagination
+page := 1
+limit := 50
+for {
+    tags, meta, err := client.Tags.List(ctx, &nexmonyx.TagListOptions{
+        Page:  page,
+        Limit: limit,
+    })
+    if err != nil {
+        return err
+    }
+
+    // Process tags
+    for _, tag := range tags {
+        fmt.Printf("Tag: %s:%s = %s (Source: %s)\n",
+            tag.Namespace, tag.Key, tag.Value, tag.Source)
+    }
+
+    // Check if there are more pages
+    if meta == nil || page >= meta.TotalPages {
+        break
+    }
+    page++
+}
+```
+
+### Analytics
+
+The Analytics service provides AI-powered insights, hardware predictions, fleet statistics, and advanced correlation analysis using the `/v2/analytics` endpoints.
+
+```go
+// AI Analytics
+// ------------
+
+// Get available AI capabilities
+capabilities, err := client.Analytics.GetCapabilities(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Anomaly Detection: %v\n", capabilities.AnomalyDetection)
+fmt.Printf("Predictive Analytics: %v\n", capabilities.PredictiveAnalytics)
+
+// Analyze metrics using AI
+analysisReq := &nexmonyx.AIAnalysisRequest{
+    ServerUUIDs:  []string{"server-uuid-123"},
+    MetricTypes:  []string{"cpu", "memory", "disk"},
+    AnalysisType: "anomaly",  // "anomaly", "prediction", "root_cause", "capacity"
+    TimeRange: nexmonyx.TimeRange{
+        Start: time.Now().Add(-24 * time.Hour).Format(time.RFC3339),
+        End:   time.Now().Format(time.RFC3339),
+    },
+}
+
+result, err := client.Analytics.AnalyzeMetrics(ctx, analysisReq)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Process AI insights
+for _, insight := range result.Insights {
+    fmt.Printf("[%s] %s: %s (Confidence: %.2f)\n",
+        insight.Severity, insight.Title, insight.Description, insight.Confidence)
+}
+
+// Check AI service status
+status, err := client.Analytics.GetServiceStatus(ctx)
+fmt.Printf("AI Service Status: %s (Uptime: %.2f%%)\n", status.Status, status.Uptime)
+
+
+// Hardware Analytics
+// ------------------
+
+// Get hardware trends for a server
+trends, err := client.Analytics.GetHardwareTrends(
+    ctx,
+    "server-uuid-123",
+    time.Now().Add(-7*24*time.Hour).Format(time.RFC3339),  // Last 7 days
+    time.Now().Format(time.RFC3339),
+    "cpu,memory",  // Optional: specific metrics
+)
+
+fmt.Printf("CPU Average: %.2f%%, Growth: %.2f%%\n",
+    trends.CPUTrend.Average, trends.CPUTrend.Growth)
+
+// Get current hardware health score
+health, err := client.Analytics.GetHardwareHealth(ctx, "server-uuid-123")
+fmt.Printf("Overall Health Score: %d/100\n", health.OverallScore)
+fmt.Printf("CPU Health: %d, Memory Health: %d\n",
+    health.ComponentScores.CPU, health.ComponentScores.Memory)
+
+// Review health issues
+for _, issue := range health.Issues {
+    fmt.Printf("[%s] %s: %s\n", issue.Severity, issue.Component, issue.Description)
+}
+
+// Get hardware failure predictions
+predictions, err := client.Analytics.GetHardwarePredictions(ctx, "server-uuid-123", 30)
+fmt.Printf("Failure Probability (30 days): %.2f%%\n", predictions.FailureProbability*100)
+
+for _, component := range predictions.ComponentPredictions {
+    if component.WarningLevel != "none" {
+        fmt.Printf("⚠️  %s: %.2f%% failure risk (%s)\n",
+            component.Component,
+            component.FailureProbability*100,
+            component.WarningLevel)
+    }
+}
+
+
+// Fleet Analytics
+// ----------------
+
+// Get organization-wide fleet overview
+overview, err := client.Analytics.GetFleetOverview(ctx)
+fmt.Printf("Total Servers: %d (Active: %d, Inactive: %d)\n",
+    overview.TotalServers, overview.ActiveServers, overview.InactiveServers)
+fmt.Printf("Health Distribution - Healthy: %d, Warning: %d, Critical: %d\n",
+    overview.HealthDistribution.Healthy,
+    overview.HealthDistribution.Warning,
+    overview.HealthDistribution.Critical)
+
+// Get comprehensive dashboard data
+dashboard, err := client.Analytics.GetOrganizationDashboard(ctx)
+
+// Review recent alerts
+fmt.Println("\nRecent Alerts:")
+for _, alert := range dashboard.RecentAlerts {
+    fmt.Printf("[%s] %s - %s\n", alert.Severity, alert.Title, alert.ServerName)
+}
+
+// Review trending metrics
+fmt.Println("\nTrending Metrics:")
+for _, metric := range dashboard.TrendingMetrics {
+    trendSymbol := "→"
+    if metric.Trend == "up" {
+        trendSymbol = "↑"
+    } else if metric.Trend == "down" {
+        trendSymbol = "↓"
+    }
+    fmt.Printf("%s %s: %.2f (%s %.2f%%)\n",
+        trendSymbol, metric.MetricType, metric.Value, trendSymbol, metric.Change)
+}
+
+// Check capacity forecasts
+for _, forecast := range dashboard.CapacityForecasts {
+    fmt.Printf("⚠️  %s: %d days until exhaustion (%.2f%% used)\n",
+        forecast.ResourceType,
+        forecast.DaysUntilExhaustion,
+        forecast.CurrentUtilization)
+}
+
+
+// Advanced Analytics
+// ------------------
+
+// Analyze metric correlations
+correlationReq := &nexmonyx.CorrelationAnalysisRequest{
+    MetricTypes: []string{"cpu", "memory", "disk", "network"},
+    TimeRange: nexmonyx.TimeRange{
+        Start: time.Now().Add(-7*24*time.Hour).Format(time.RFC3339),
+        End:   time.Now().Format(time.RFC3339),
+    },
+    Method: "pearson",  // "pearson", "spearman", "kendall"
+}
+
+correlations, err := client.Analytics.AnalyzeCorrelations(ctx, correlationReq)
+
+fmt.Println("\nMetric Correlations:")
+for _, corr := range correlations.Correlations {
+    if math.Abs(corr.Coefficient) > 0.5 {  // Show significant correlations
+        fmt.Printf("%s ↔ %s: %.3f (%s)\n",
+            corr.Metric1, corr.Metric2, corr.Coefficient, corr.Strength)
+    }
+}
+
+// Build infrastructure dependency graph
+graph, err := client.Analytics.BuildDependencyGraph(ctx)
+
+fmt.Printf("\nInfrastructure Dependency Graph:\n")
+fmt.Printf("  Nodes: %d, Edges: %d\n", len(graph.Nodes), len(graph.Edges))
+
+// Identify critical infrastructure
+for _, path := range graph.CriticalPaths {
+    fmt.Printf("  Critical Path: %s\n", strings.Join(path, " → "))
+}
+
+// Analyze dependencies
+for _, edge := range graph.Edges {
+    fmt.Printf("  %s %s %s\n", edge.From, edge.Type, edge.To)
+}
+```
+
+### ML (Machine Learning)
+
+The ML service provides AI-powered tag suggestions, server grouping recommendations, model management, and training job orchestration using `/v1/ml` and `/v1/groups/suggestions` endpoints.
+
+```go
+// Tag Suggestions
+// ---------------
+
+// Get ML-generated tag suggestions for a server
+suggestions, err := client.ML.GetTagSuggestions(ctx, "server-uuid-123")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Review suggestions
+for _, suggestion := range suggestions {
+    fmt.Printf("[%.0f%% confidence] %s=%s: %s\n",
+        suggestion.Confidence*100,
+        suggestion.TagKey,
+        suggestion.TagValue,
+        suggestion.Reason)
+}
+
+// Apply a specific tag suggestion
+tagsApplied, err := client.ML.ApplyTagSuggestion(ctx, "server-uuid-123", "prediction-id-001")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Applied %d tags\n", tagsApplied)
+
+// Reject a suggestion with feedback
+err = client.ML.RejectTagSuggestion(ctx, "server-uuid-123", "prediction-id-002", "Server role is incorrect")
+if err != nil {
+    log.Fatal(err)
+}
+
+
+// Group Suggestions
+// -----------------
+
+// Get ML-generated server grouping suggestions
+groupSuggestions, meta, err := client.ML.GetGroupSuggestions(ctx, &nexmonyx.PaginationOptions{
+    Page:  1,
+    Limit: 10,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Review grouping suggestions
+for _, suggestion := range groupSuggestions {
+    fmt.Printf("\nGroup: %s (%.0f%% confidence)\n", suggestion.GroupName, suggestion.Confidence*100)
+    fmt.Printf("Servers: %v\n", suggestion.ServerUUIDs)
+    fmt.Printf("Reason: %s\n", suggestion.Reason)
+    fmt.Printf("Criteria: %v\n", suggestion.Criteria)
+    fmt.Printf("Benefit: %s\n", suggestion.EstimatedBenefit)
+}
+
+// Accept a group suggestion (creates the group)
+acceptedGroup, err := client.ML.AcceptGroupSuggestion(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Created group ID: %d\n", *acceptedGroup.CreatedGroupID)
+
+// Reject a group suggestion
+err = client.ML.RejectGroupSuggestion(ctx, 2)
+if err != nil {
+    log.Fatal(err)
+}
+
+
+// Model Management
+// ----------------
+
+// List available ML models
+models, meta, err := client.ML.ListModels(ctx, &nexmonyx.PaginationOptions{
+    Page:  1,
+    Limit: 20,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// View model details
+for _, model := range models {
+    fmt.Printf("\n%s (v%s) - %s\n", model.Name, model.Version, model.Status)
+    fmt.Printf("  Type: %s\n", model.ModelType)
+    fmt.Printf("  Enabled: %v\n", model.Enabled)
+    if model.Accuracy > 0 {
+        fmt.Printf("  Accuracy: %.2f%%\n", model.Accuracy*100)
+        fmt.Printf("  F1 Score: %.2f\n", model.F1Score)
+    }
+}
+
+// Get detailed model performance
+performance, err := client.ML.GetModelPerformance(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Accuracy: %.2f%%\n", performance.Accuracy*100)
+fmt.Printf("Predictions: %d (Correct: %d, Incorrect: %d)\n",
+    performance.PredictionsCount,
+    performance.CorrectCount,
+    performance.IncorrectCount)
+
+// Toggle model enabled/disabled state
+updatedModel, err := client.ML.ToggleModel(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Model %s is now %s\n", updatedModel.Name,
+    map[bool]string{true: "enabled", false: "disabled"}[updatedModel.Enabled])
+
+
+// Model Training
+// --------------
+
+// Train a specific model type
+job, err := client.ML.TrainModel(ctx, "tag_prediction", map[string]interface{}{
+    "epochs":          100,
+    "batch_size":      32,
+    "learning_rate":   0.001,
+    "validation_split": 0.2,
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Training job %d started: %s\n", job.ID, job.Status)
+
+// Trigger batch training for all models
+jobs, err := client.ML.TriggerModelTraining(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Started %d training jobs\n", len(jobs))
+
+// Monitor training jobs
+trainingJobs, meta, err := client.ML.GetTrainingJobs(ctx,
+    &nexmonyx.PaginationOptions{Page: 1, Limit: 10},
+    "running") // Filter by status: pending, running, completed, failed
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, job := range trainingJobs {
+    fmt.Printf("Job %d: %s (%d%% complete)\n", job.ID, job.ModelType, job.Progress)
+    if job.Status == "failed" {
+        fmt.Printf("  Error: %s\n", job.ErrorMessage)
+    }
+    if job.Duration > 0 {
+        fmt.Printf("  Duration: %d seconds\n", job.Duration)
+    }
+}
+
+// Get aggregated performance across all models
+aggregatedPerf, err := client.ML.GetAggregatedModelPerformance(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Overall ML System Performance:\n")
+fmt.Printf("  Accuracy: %.2f%%\n", aggregatedPerf.Accuracy*100)
+fmt.Printf("  Total Predictions: %d\n", aggregatedPerf.PredictionsCount)
+fmt.Printf("  Average Confidence: %.2f%%\n", aggregatedPerf.AverageConfidence*100)
+```
+
+### VMs (Virtual Machines)
+
+The VMs service provides virtual machine lifecycle management including creation, resource control, and monitoring using `/api/v1/vms` and `/api/v2/organizations/{orgId}/virtual-machines` endpoints.
+
+```go
+// VM Lifecycle Management
+// -----------------------
+
+// List all virtual machines
+vms, meta, err := client.VMs.List(ctx, &nexmonyx.PaginationOptions{
+    Page:  1,
+    Limit: 20,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Display VM information
+for _, vm := range vms {
+    fmt.Printf("\n%s (ID: %d) - %s\n", vm.Name, vm.ID, vm.Status)
+    fmt.Printf("  Resources: %d CPU, %d MB RAM, %d GB Storage\n",
+        vm.CPUCores, vm.MemoryMB, vm.StorageGB)
+    fmt.Printf("  OS: %s %s\n", vm.OSType, vm.OSVersion)
+    if vm.IPAddress != "" {
+        fmt.Printf("  IP: %s\n", vm.IPAddress)
+    }
+}
+
+
+// Create Virtual Machine
+// ----------------------
+
+config := &nexmonyx.VMConfiguration{
+    Name:        "web-server-02",
+    Description: "Development web server",
+
+    // Resource allocation
+    CPUCores:  4,
+    MemoryMB:  8192,
+    StorageGB: 100,
+
+    // Operating system
+    OSType:    "linux",
+    OSVersion: "Ubuntu 22.04",
+
+    // Optional: specify host server
+    HostServerUUID: "server-uuid-123",
+
+    // Tags and metadata
+    Tags: []string{"environment:development", "role:webserver"},
+    Metadata: map[string]interface{}{
+        "project": "acme-app",
+        "owner":   "devops-team",
+    },
+}
+
+newVM, err := client.VMs.Create(ctx, config)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Created VM: %s (ID: %d)\n", newVM.Name, newVM.ID)
+
+
+// Get VM Details
+// --------------
+
+vm, err := client.VMs.Get(ctx, 1)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("VM: %s\n", vm.Name)
+fmt.Printf("Status: %s\n", vm.Status)
+fmt.Printf("Resources:\n")
+fmt.Printf("  CPU: %d cores\n", vm.CPUCores)
+fmt.Printf("  Memory: %d MB\n", vm.MemoryMB)
+fmt.Printf("  Storage: %d GB\n", vm.StorageGB)
+
+if vm.IPAddress != "" {
+    fmt.Printf("Network:\n")
+    fmt.Printf("  IP: %s\n", vm.IPAddress)
+    fmt.Printf("  MAC: %s\n", vm.MACAddress)
+}
+
+
+// VM Control Operations
+// ---------------------
+
+orgID := uint(10)
+vmID := uint(1)
+
+// Start a stopped VM
+startOp, err := client.VMs.Start(ctx, orgID, vmID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Starting VM: %s (Progress: %d%%)\n", startOp.Message, startOp.Progress)
+
+// Stop a running VM (graceful shutdown)
+stopOp, err := client.VMs.Stop(ctx, orgID, vmID, false)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Stopping VM gracefully: %s\n", stopOp.Message)
+
+// Force stop (immediate)
+forceStopOp, err := client.VMs.Stop(ctx, orgID, vmID, true)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Force stopping VM: %s\n", forceStopOp.Message)
+
+// Restart VM (graceful)
+restartOp, err := client.VMs.Restart(ctx, orgID, vmID, false)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Restarting VM: %s (Operation ID: %d)\n", restartOp.Message, restartOp.ID)
+
+// Monitor operation progress
+fmt.Printf("Operation Status: %s\n", restartOp.Status)
+fmt.Printf("Progress: %d%%\n", restartOp.Progress)
+
+
+// Delete Virtual Machine
+// -----------------------
+
+err = client.VMs.Delete(ctx, orgID, vmID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("VM deleted successfully")
+
+
+// VM Operation Status
+// -------------------
+
+// VMOperation objects returned from control operations provide:
+// - OperationType: "start", "stop", "restart", "delete", "create"
+// - Status: "pending", "in_progress", "completed", "failed"
+// - Progress: 0-100 percentage
+// - Timestamps: CreatedAt, StartedAt, CompletedAt
+// - Error details if operation failed
+
+if startOp.Status == "failed" {
+    fmt.Printf("Operation failed: %s\n", startOp.ErrorDetails)
+} else {
+    fmt.Printf("Operation %s: %d%% complete\n", startOp.Status, startOp.Progress)
+}
+```
+
+### Reporting
+
+The Reporting service provides comprehensive report generation and scheduling capabilities for usage, performance, compliance, and billing data.
+
+#### Generate Reports
+
+```go
+// Generate a usage report for the last 30 days
+config := &nexmonyx.ReportConfiguration{
+    ReportType: "usage",
+    Format:     "pdf",
+    Name:       "Monthly Usage Report",
+    Description: "Usage summary for December 2024",
+    TimeRange: &nexmonyx.ReportTimeRange{
+        StartDate: "2024-12-01T00:00:00Z",
+        EndDate:   "2024-12-31T23:59:59Z",
+    },
+    Filters: &nexmonyx.ReportFilter{
+        Locations:    []string{"us-east-1", "us-west-2"},
+        Environments: []string{"production"},
+        IncludeInactive: false,
+    },
+    Delivery: &nexmonyx.ReportDeliveryOptions{
+        EmailRecipients: []string{"admin@example.com"},
+        EmailSubject:    "Monthly Usage Report",
+        RetentionDays:   30,
+    },
+}
+
+report, err := client.Reporting.GenerateReport(ctx, config)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Report %d: %s (Status: %s)\n",
+    report.ID, report.Name, report.Status)
+
+// Generate performance report with specific servers
+perfConfig := &nexmonyx.ReportConfiguration{
+    ReportType: "performance",
+    Format:     "csv",
+    Name:       "Server Performance Analysis",
+    TimeRange: &nexmonyx.ReportTimeRange{
+        Preset: "last_7_days",
+    },
+    Filters: &nexmonyx.ReportFilter{
+        ServerUUIDs: []string{"uuid-1", "uuid-2", "uuid-3"},
+        MetricTypes: []string{"cpu", "memory", "disk_io"},
+    },
+    IncludeSections: []string{"summary", "trends", "anomalies"},
+}
+
+perfReport, err := client.Reporting.GenerateReport(ctx, perfConfig)
+```
+
+#### List and Retrieve Reports
+
+```go
+// List all completed reports
+reports, meta, err := client.Reporting.ListReports(ctx,
+    &nexmonyx.PaginationOptions{Page: 1, Limit: 20},
+    "completed")
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Found %d completed reports\n", meta.TotalItems)
+for _, report := range reports {
+    fmt.Printf("- %s (%s) - %s [%d bytes]\n",
+        report.Name, report.Format, report.Status, report.FileSize)
+    if report.CompletedAt != nil {
+        fmt.Printf("  Completed: %s\n", report.CompletedAt.Time)
+    }
+}
+
+// Get specific report details
+report, err := client.Reporting.GetReport(ctx, 123)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Report: %s\n", report.Name)
+fmt.Printf("Type: %s, Format: %s\n", report.ReportType, report.Format)
+fmt.Printf("Status: %s\n", report.Status)
+
+if report.Status == "failed" {
+    fmt.Printf("Error: %s\n", report.ErrorMessage)
+}
+```
+
+#### Download Reports
+
+```go
+// Download completed report
+reportID := uint(123)
+
+// Check if report is ready
+report, err := client.Reporting.GetReport(ctx, reportID)
+if err != nil {
+    log.Fatal(err)
+}
+
+if report.Status != "completed" {
+    fmt.Printf("Report not ready yet (Status: %s)\n", report.Status)
+    return
+}
+
+// Download the file
+content, err := client.Reporting.DownloadReport(ctx, reportID)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Save to file
+filename := fmt.Sprintf("report_%d.%s", reportID, report.Format)
+err = os.WriteFile(filename, content, 0644)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Report saved to %s (%d bytes)\n", filename, len(content))
+```
+
+#### Schedule Recurring Reports
+
+```go
+// Schedule weekly usage report
+schedule := &nexmonyx.ReportSchedule{
+    Name:        "Weekly Usage Report",
+    Description: "Automated weekly usage summary",
+    Configuration: &nexmonyx.ReportConfiguration{
+        ReportType: "usage",
+        Format:     "pdf",
+        TimeRange: &nexmonyx.ReportTimeRange{
+            Preset: "last_7_days",
+        },
+        Delivery: &nexmonyx.ReportDeliveryOptions{
+            EmailRecipients: []string{"team@example.com"},
+            EmailSubject:    "Weekly Usage Report",
+            AutoDelete:      true,
+            RetentionDays:   14,
+        },
+    },
+    Schedule: "0 9 * * MON", // Every Monday at 9 AM
+    Enabled:  true,
+}
+
+created, err := client.Reporting.ScheduleReport(ctx, schedule)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Scheduled report %d: %s\n", created.ID, created.Name)
+if created.NextRunAt != nil {
+    fmt.Printf("Next run: %s\n", created.NextRunAt.Time)
+}
+
+// Schedule daily performance report with custom cron
+dailySchedule := &nexmonyx.ReportSchedule{
+    Name:        "Daily Performance Summary",
+    Description: "Performance metrics for all production servers",
+    Configuration: &nexmonyx.ReportConfiguration{
+        ReportType: "performance",
+        Format:     "csv",
+        Filters: &nexmonyx.ReportFilter{
+            Environments: []string{"production"},
+            MetricTypes:  []string{"cpu", "memory", "network"},
+        },
+        Delivery: &nexmonyx.ReportDeliveryOptions{
+            WebhookURL: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+        },
+    },
+    Schedule: "0 6 * * *", // Every day at 6 AM
+    Enabled:  true,
+}
+
+daily, err := client.Reporting.ScheduleReport(ctx, dailySchedule)
+```
+
+#### Manage Schedules
+
+```go
+// List all enabled schedules
+enabled := true
+schedules, meta, err := client.Reporting.ListSchedules(ctx,
+    &nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+    &enabled)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Active schedules: %d\n", meta.TotalItems)
+for _, sched := range schedules {
+    fmt.Printf("- %s (%s)\n", sched.Name, sched.Schedule)
+    if sched.LastRunAt != nil {
+        fmt.Printf("  Last run: %s\n", sched.LastRunAt.Time)
+    }
+    if sched.NextRunAt != nil {
+        fmt.Printf("  Next run: %s\n", sched.NextRunAt.Time)
+    }
+    if sched.LastReportID != nil {
+        fmt.Printf("  Last report: %d\n", *sched.LastReportID)
+    }
+}
+
+// List all schedules (enabled and disabled)
+allSchedules, _, err := client.Reporting.ListSchedules(ctx, nil, nil)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Total schedules: %d\n", len(allSchedules))
+
+// Delete a schedule
+scheduleID := uint(456)
+err = client.Reporting.DeleteSchedule(ctx, scheduleID)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Schedule %d deleted\n", scheduleID)
+```
+
+#### Report Types and Formats
+
+**Supported Report Types:**
+- `usage` - Server usage metrics, resource consumption
+- `performance` - CPU, memory, disk I/O, network performance
+- `compliance` - Security compliance, audit logs
+- `billing` - Cost analysis, usage-based billing
+
+**Supported Formats:**
+- `pdf` - Professional PDF documents
+- `csv` - Comma-separated values for spreadsheets
+- `json` - Structured JSON data
+- `html` - HTML documents for web display
+
+**Common Cron Expressions:**
+- `0 0 * * *` - Daily at midnight
+- `0 9 * * MON` - Every Monday at 9 AM
+- `0 0 1 * *` - First day of every month at midnight
+- `0 */6 * * *` - Every 6 hours
+- `0 0 * * 0` - Every Sunday at midnight
+
+### Server Groups
+
+Server Groups enable logical organization of servers for batch operations, monitoring, and access control.
+
+#### Create and List Groups
+
+```go
+// Create a server group
+group, err := client.ServerGroups.CreateGroup(ctx,
+	"Production Servers",
+	"All production environment servers",
+	[]string{"production", "critical"})
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Created group %d: %s\n", group.ID, group.Name)
+fmt.Printf("Server count: %d\n", group.ServerCount)
+
+// Create group for specific environment
+devGroup, err := client.ServerGroups.CreateGroup(ctx,
+	"Development Servers",
+	"Development and testing environment",
+	[]string{"development", "non-production"})
+
+// List all groups
+groups, meta, err := client.ServerGroups.ListGroups(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	"",  // No name filter
+	nil) // No tag filter
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Total groups: %d\n", meta.TotalItems)
+for _, group := range groups {
+	fmt.Printf("- %s (%d servers)\n", group.Name, group.ServerCount)
+	if len(group.Tags) > 0 {
+		fmt.Printf("  Tags: %v\n", group.Tags)
+	}
+}
+
+// List groups with name filter
+prodGroups, _, err := client.ServerGroups.ListGroups(ctx,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 20},
+	"prod", // Filter by name containing "prod"
+	nil)
+
+// List groups by tags
+criticalGroups, _, err := client.ServerGroups.ListGroups(ctx,
+	nil,
+	"",
+	[]string{"critical", "production"}) // Filter by tags
+```
+
+#### Add Servers to Groups
+
+```go
+// Add servers by UUIDs
+groupID := uint(1)
+serverUUIDs := []string{
+	"server-uuid-1",
+	"server-uuid-2",
+	"server-uuid-3",
+	"server-uuid-4",
+}
+
+count, err := client.ServerGroups.AddServersToGroup(ctx,
+	groupID,
+	nil,        // No server IDs
+	serverUUIDs)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Added %d servers to group\n", count)
+
+// Add servers by IDs
+serverIDs := []uint{101, 102, 103}
+count, err = client.ServerGroups.AddServersToGroup(ctx,
+	groupID,
+	serverIDs,
+	nil) // No UUIDs
+
+// Add servers using both IDs and UUIDs
+count, err = client.ServerGroups.AddServersToGroup(ctx,
+	groupID,
+	[]uint{104, 105},
+	[]string{"uuid-6", "uuid-7"})
+```
+
+#### Get Group Members
+
+```go
+// Get all servers in a group
+groupID := uint(1)
+members, meta, err := client.ServerGroups.GetGroupServers(ctx,
+	groupID,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	"",  // No status filter
+	nil) // No tag filter
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Group has %d servers:\n", meta.TotalItems)
+for _, member := range members {
+	fmt.Printf("- %s (%s) - Status: %s\n",
+		member.ServerName,
+		member.ServerUUID,
+		member.ServerStatus)
+	fmt.Printf("  Added: %s\n", member.AddedAt.Time)
+}
+
+// Get only online servers in group
+onlineMembers, _, err := client.ServerGroups.GetGroupServers(ctx,
+	groupID,
+	nil,
+	"online", // Filter by status
+	nil)
+
+fmt.Printf("Online servers: %d\n", len(onlineMembers))
+
+// Get servers by tags within group
+taggedMembers, _, err := client.ServerGroups.GetGroupServers(ctx,
+	groupID,
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	"",                               // No status filter
+	[]string{"database", "primary"}) // Filter by tags
+
+// Pagination through large groups
+page := 1
+limit := 50
+for {
+	members, meta, err := client.ServerGroups.GetGroupServers(ctx,
+		groupID,
+		&nexmonyx.PaginationOptions{Page: page, Limit: limit},
+		"", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, member := range members {
+		fmt.Printf("Server: %s\n", member.ServerName)
+	}
+
+	if page >= meta.TotalPages {
+		break
+	}
+	page++
+}
+```
+
+#### Common Use Cases
+
+**Batch Operations by Group:**
+```go
+// Get all servers in production group
+groupID := uint(1)
+members, _, err := client.ServerGroups.GetGroupServers(ctx, groupID, nil, "", nil)
+if err != nil {
+	log.Fatal(err)
+}
+
+// Perform operation on each server
+for _, member := range members {
+	// Example: Get metrics for each server
+	metrics, err := client.Metrics.GetLatest(ctx, member.ServerUUID)
+	if err != nil {
+		log.Printf("Error getting metrics for %s: %v\n", member.ServerName, err)
+		continue
+	}
+	// Process metrics...
+}
+```
+
+**Monitoring Setup:**
+```go
+// Create monitoring groups by role
+roles := []string{"web-servers", "database-servers", "cache-servers"}
+for _, role := range roles {
+	group, err := client.ServerGroups.CreateGroup(ctx,
+		fmt.Sprintf("Production %s", role),
+		fmt.Sprintf("All production %s", role),
+		[]string{"production", role})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Created group: %s (ID: %d)\n", group.Name, group.ID)
+}
+```
+
+**Access Control by Group:**
+```go
+// List all groups to show available server collections
+groups, _, err := client.ServerGroups.ListGroups(ctx, nil, "", nil)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println("Available Server Groups:")
+for _, group := range groups {
+	fmt.Printf("- %s: %d servers", group.Name, group.ServerCount)
+	if len(group.Tags) > 0 {
+		fmt.Printf(" [%s]", strings.Join(group.Tags, ", "))
+	}
+	fmt.Println()
+}
+```
+
+### Search
+
+The Search service provides comprehensive search capabilities across servers, tags, and other resources with advanced filtering, relevance scoring, and statistics.
+
+#### Search Servers
+
+```go
+// Basic server search
+results, meta, err := client.Search.SearchServers(ctx,
+	"web",                                   // Search query
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 20},
+	nil)                                     // No filters
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Found %d servers:\n", meta.TotalItems)
+for _, result := range results {
+	fmt.Printf("- %s (%s) - Score: %.2f\n",
+		result.ServerName,
+		result.ServerUUID,
+		result.RelevanceScore)
+	fmt.Printf("  Matched fields: %s\n", strings.Join(result.MatchedFields, ", "))
+	if len(result.Tags) > 0 {
+		fmt.Printf("  Tags: %s\n", strings.Join(result.Tags, ", "))
+	}
+}
+
+// Advanced server search with filters
+results, meta, err := client.Search.SearchServers(ctx,
+	"database",
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	map[string]interface{}{
+		"location":       "us-east-1",
+		"environment":    "production",
+		"status":         "online",
+		"classification": "critical",
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Search by IP address or UUID
+results, meta, err := client.Search.SearchServers(ctx,
+	"10.0.1.10",  // Searches across name, hostname, IP addresses, UUID
+	nil,
+	nil)
+```
+
+#### Search Tags
+
+```go
+// Basic tag search
+tags, meta, err := client.Search.SearchTags(ctx,
+	"prod",                                  // Search query
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 50},
+	nil)                                     // No filters
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Found %d tags:\n", meta.TotalItems)
+for _, tag := range tags {
+	fmt.Printf("- %s (%s) - Score: %.2f\n",
+		tag.TagName,
+		tag.TagType,
+		tag.RelevanceScore)
+	fmt.Printf("  Usage: %d resources, %d servers\n",
+		tag.UsageCount,
+		tag.ServerCount)
+	if tag.Description != "" {
+		fmt.Printf("  Description: %s\n", tag.Description)
+	}
+}
+
+// Filter tags by type and scope
+tags, meta, err := client.Search.SearchTags(ctx,
+	"system",
+	nil,
+	map[string]interface{}{
+		"tag_type": "auto",           // manual, auto, system
+		"scope":    "server",         // organization, user, server
+	})
+if err != nil {
+	log.Fatal(err)
+}
+
+// Find unused tags (usage_count = 0)
+tags, meta, err := client.Search.SearchTags(ctx,
+	"",  // Empty query to get all
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	nil)
+
+unusedTags := []nexmonyx.TagSearchResult{}
+for _, tag := range tags {
+	if tag.UsageCount == 0 {
+		unusedTags = append(unusedTags, tag)
+	}
+}
+fmt.Printf("Found %d unused tags\n", len(unusedTags))
+```
+
+#### Tag Statistics
+
+```go
+// Get comprehensive tag usage statistics
+stats, err := client.Search.GetTagStatistics(ctx, "", "")
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Printf("Tag Statistics:\n")
+fmt.Printf("Total Tags: %d\n", stats.TotalTags)
+fmt.Printf("- Manual: %d\n", stats.ManualTags)
+fmt.Printf("- Auto: %d\n", stats.AutoTags)
+fmt.Printf("- System: %d\n", stats.SystemTags)
+fmt.Printf("Average tags per server: %.2f\n", stats.AveragePerServer)
+fmt.Printf("Unused tags: %d\n", stats.UnusedTags)
+
+// Tags by scope
+fmt.Println("\nTags by Scope:")
+for scope, count := range stats.TagsByScope {
+	fmt.Printf("- %s: %d tags\n", scope, count)
+}
+
+// Most used tags
+fmt.Println("\nMost Used Tags:")
+for i, tag := range stats.MostUsedTags {
+	fmt.Printf("%d. %s (%s) - %d uses across %d servers\n",
+		i+1,
+		tag.TagName,
+		tag.TagType,
+		tag.UsageCount,
+		tag.ServerCount)
+}
+
+// Recently created tags
+fmt.Println("\nRecently Created Tags:")
+for _, tag := range stats.RecentlyCreated {
+	fmt.Printf("- %s (created %s)\n",
+		tag.TagName,
+		tag.CreatedAt.Format("2006-01-02 15:04:05"))
+}
+
+// Filter statistics by tag type and scope
+stats, err := client.Search.GetTagStatistics(ctx, "manual", "organization")
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Printf("Organization-level manual tags: %d\n", stats.TotalTags)
+```
+
+#### Common Search Use Cases
+
+```go
+// Find all production servers in a specific location
+prodServers, _, err := client.Search.SearchServers(ctx,
+	"",  // Empty query to get all
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	map[string]interface{}{
+		"environment": "production",
+		"location":    "us-west-2",
+		"status":      "online",
+	})
+
+// Find servers with specific tags
+webServers, _, err := client.Search.SearchServers(ctx,
+	"web",  // Searches in tags field
+	nil,
+	map[string]interface{}{
+		"environment": "production",
+	})
+
+// Identify underutilized tags
+stats, err := client.Search.GetTagStatistics(ctx, "", "")
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println("Tags with low usage:")
+for _, tag := range stats.MostUsedTags {
+	if tag.ServerCount < 5 {
+		fmt.Printf("- %s: only %d servers\n", tag.TagName, tag.ServerCount)
+	}
+}
+
+// Find duplicate or similar tag names
+allTags, _, err := client.Search.SearchTags(ctx,
+	"prod",  // Will find "prod", "production", "prod-critical", etc.
+	&nexmonyx.PaginationOptions{Page: 1, Limit: 100},
+	nil)
+
+tagNames := make(map[string]int)
+for _, tag := range allTags {
+	tagNames[tag.TagName]++
+}
+```
+
 ### Users
 
 ```go
@@ -1019,6 +2434,117 @@ cancelReq := &nexmonyx.SubscriptionCancelRequest{
 
 err = client.Billing.CancelSubscription(ctx, "org-uuid", cancelReq)
 ```
+
+### BillingUsage
+
+The BillingUsage service provides organization usage metrics for billing and analytics purposes. It supports both self-service endpoints (for users to view their own organization's usage) and admin endpoints (for platform administrators to view all organizations).
+
+#### Self-Service Usage Endpoints (JWT Token)
+
+```go
+// Get current usage metrics for your organization
+currentUsage, err := client.BillingUsage.GetMyCurrentUsage(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Active Agents: %d\n", currentUsage.ActiveAgentCount)
+fmt.Printf("Storage Used: %.2f GB\n", currentUsage.StorageUsedGB)
+fmt.Printf("Retention Days: %d\n", currentUsage.RetentionDays)
+
+// Get usage history over a time period
+startDate := time.Now().AddDate(0, 0, -30) // 30 days ago
+endDate := time.Now()
+history, err := client.BillingUsage.GetMyUsageHistory(ctx, startDate, endDate, "daily")
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, record := range history {
+    fmt.Printf("Date: %v, Agents: %d, Storage: %.2f GB\n",
+        record.CollectedAt, record.ActiveAgentCount, record.StorageUsedGB)
+}
+
+// Get aggregated usage summary
+summary, err := client.BillingUsage.GetMyUsageSummary(ctx, startDate, endDate)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Average Agents: %.1f\n", summary.AverageAgentCount)
+fmt.Printf("Max Agents: %d\n", summary.MaxAgentCount)
+fmt.Printf("Average Storage: %.2f GB\n", summary.AverageStorageGB)
+fmt.Printf("Max Storage: %.2f GB\n", summary.MaxStorageGB)
+if summary.BillingRecommendation != "" {
+    fmt.Printf("Recommendation: %s\n", summary.BillingRecommendation)
+}
+```
+
+#### Admin Usage Endpoints (Admin JWT Token or API Key)
+
+```go
+// Get current usage for a specific organization
+orgID := uint(100)
+orgUsage, err := client.BillingUsage.GetOrgCurrentUsage(ctx, orgID)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Org %d: %d agents, %.2f GB storage\n",
+    orgUsage.OrganizationID, orgUsage.ActiveAgentCount, orgUsage.StorageUsedGB)
+
+// Get usage history for a specific organization
+startDate := time.Now().AddDate(0, -3, 0) // 3 months ago
+endDate := time.Now()
+orgHistory, err := client.BillingUsage.GetOrgUsageHistory(ctx, orgID, startDate, endDate, "monthly")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Get usage summary for a specific organization
+orgSummary, err := client.BillingUsage.GetOrgUsageSummary(ctx, orgID, startDate, endDate)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Get usage overview for all organizations (paginated)
+opts := &nexmonyx.ListOptions{
+    Page:  1,
+    Limit: 50,
+}
+
+overview, meta, err := client.BillingUsage.GetAllUsageOverview(ctx, opts)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("Total Organizations: %d\n", overview.TotalOrganizations)
+fmt.Printf("Total Active Agents: %d\n", overview.TotalActiveAgents)
+fmt.Printf("Total Storage: %.2f GB\n", overview.TotalStorageGB)
+
+for _, org := range overview.Organizations {
+    fmt.Printf("  Org %d: %d agents, %.2f GB\n",
+        org.OrganizationID, org.ActiveAgentCount, org.StorageUsedGB)
+}
+
+fmt.Printf("Page %d of %d (Total: %d organizations)\n",
+    meta.Page, meta.TotalPages, meta.TotalItems)
+```
+
+#### Usage Intervals
+
+The `GetMyUsageHistory` and `GetOrgUsageHistory` methods support three aggregation intervals:
+
+- `"hourly"` - Hourly usage data points
+- `"daily"` - Daily aggregated usage (default)
+- `"monthly"` - Monthly aggregated usage
+
+#### Authentication Requirements
+
+- **Self-Service Endpoints**: Require JWT token authentication (user must be authenticated)
+- **Admin Endpoints**: Require either:
+  - Admin JWT token (user with admin privileges)
+  - API Key authentication with admin scope
 
 ### Settings
 
