@@ -11,7 +11,7 @@ import (
 func (s *ProbesService) Create(ctx context.Context, req *ProbeCreateRequest) (*MonitoringProbe, error) {
 	// Convert ProbeCreateRequest to map to match API expectations
 	config := make(map[string]interface{})
-	
+
 	// Based on probe type, set appropriate config fields
 	switch req.Type {
 	case "icmp":
@@ -34,37 +34,37 @@ func (s *ProbesService) Create(ctx context.Context, req *ProbeCreateRequest) (*M
 			config["url"] = req.Target
 		}
 	}
-	
+
 	// Add any additional config from the request
 	if req.Configuration != nil {
 		for k, v := range req.Configuration {
 			config[k] = v
 		}
 	}
-	
+
 	// Create the request body matching API expectations
 	body := map[string]interface{}{
-		"name":        req.Name,
-		"type":        req.Type,
-		"frequency":   req.Interval, // API expects "frequency", SDK has "interval"
-		"regions":     []string{req.RegionCode}, // Convert single region to array
-		"enabled":     req.Enabled,
-		"config":      config,
+		"name":      req.Name,
+		"type":      req.Type,
+		"frequency": req.Interval,             // API expects "frequency", SDK has "interval"
+		"regions":   []string{req.RegionCode}, // Convert single region to array
+		"enabled":   req.Enabled,
+		"config":    config,
 	}
-	
+
 	// Add description if provided
 	if req.Name != "" {
 		body["description"] = req.Name // Use name as description if not provided
 	}
-	
+
 	var result struct {
-		Status  string           `json:"status"`
-		Data    struct {
+		Status string `json:"status"`
+		Data   struct {
 			Probe MonitoringProbe `json:"probe"`
 		} `json:"data"`
 		Message string `json:"message"`
 	}
-	
+
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
 		Path:   "/v1/probes",
@@ -74,7 +74,7 @@ func (s *ProbesService) Create(ctx context.Context, req *ProbeCreateRequest) (*M
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &result.Data.Probe, nil
 }
 
@@ -91,7 +91,7 @@ func (s *ProbesService) Get(ctx context.Context, uuid string) (*MonitoringProbe,
 // Update updates a probe
 func (s *ProbesService) Update(ctx context.Context, uuid string, req *ProbeUpdateRequest) (*MonitoringProbe, error) {
 	probe := &MonitoringProbe{}
-	
+
 	if req.Name != nil {
 		probe.Name = *req.Name
 	}
@@ -104,7 +104,7 @@ func (s *ProbesService) Update(ctx context.Context, uuid string, req *ProbeUpdat
 	if req.Configuration != nil {
 		probe.Config = req.Configuration
 	}
-	
+
 	return s.client.Monitoring.UpdateProbe(ctx, uuid, probe)
 }
 
@@ -119,7 +119,7 @@ func (s *ProbesService) GetHealth(ctx context.Context, uuid string) (*ProbeHealt
 		Status string       `json:"status"`
 		Data   *ProbeHealth `json:"data"`
 	}
-	
+
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
 		Path:   fmt.Sprintf("/v1/probes/%s/health", uuid),
@@ -128,7 +128,7 @@ func (s *ProbesService) GetHealth(ctx context.Context, uuid string) (*ProbeHealt
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result.Data, nil
 }
 
@@ -140,10 +140,10 @@ func (s *ProbesService) ListResults(ctx context.Context, uuid string, opts *Prob
 // GetAvailableRegions returns available monitoring regions
 func (s *ProbesService) GetAvailableRegions(ctx context.Context) ([]*MonitoringRegion, error) {
 	var result struct {
-		Status string               `json:"status"`
+		Status string              `json:"status"`
 		Data   []*MonitoringRegion `json:"data"`
 	}
-	
+
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
 		Path:   "/v1/monitoring/regions",
@@ -152,7 +152,7 @@ func (s *ProbesService) GetAvailableRegions(ctx context.Context) ([]*MonitoringR
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result.Data, nil
 }
 
@@ -166,7 +166,7 @@ func (s *ProbesService) GetAvailableProbeTypes(ctx context.Context) ([]string, e
 func (s *ProbesService) CreateSimpleProbe(ctx context.Context, name, probeType, target string, regions []string) (*MonitoringProbe, error) {
 	// Convert to API format
 	config := make(map[string]interface{})
-	
+
 	// Based on probe type, set appropriate config fields
 	switch probeType {
 	case "icmp":
@@ -179,7 +179,7 @@ func (s *ProbesService) CreateSimpleProbe(ctx context.Context, name, probeType, 
 	case "heartbeat":
 		config["url"] = target
 	}
-	
+
 	// Create the request body matching API expectations
 	body := map[string]interface{}{
 		"name":        name,
@@ -190,15 +190,15 @@ func (s *ProbesService) CreateSimpleProbe(ctx context.Context, name, probeType, 
 		"enabled":     true,
 		"config":      config,
 	}
-	
+
 	var result struct {
-		Status  string           `json:"status"`
-		Data    struct {
+		Status string `json:"status"`
+		Data   struct {
 			Probe MonitoringProbe `json:"probe"`
 		} `json:"data"`
 		Message string `json:"message"`
 	}
-	
+
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
 		Path:   "/v1/probes",
@@ -208,7 +208,7 @@ func (s *ProbesService) CreateSimpleProbe(ctx context.Context, name, probeType, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &result.Data.Probe, nil
 }
 
@@ -240,10 +240,14 @@ type RegionHealthStatus struct {
 // ========================================
 // CONTROLLER-SPECIFIC METHODS
 // ========================================
-// These methods are used by probe-controller for orchestration
+// These methods are used by probe-controller for orchestration.
+// They require monitoring key authentication and are designed for
+// internal controller-to-API communication.
 
 // ListByOrganization retrieves all probes for a specific organization
-// This method is used by probe-controller to load probe assignments on startup
+// This method is used by probe-controller to load probe assignments on startup.
+// It requires monitoring key authentication and is typically called once during
+// controller initialization to populate the probe scheduler.
 func (s *ProbesService) ListByOrganization(ctx context.Context, organizationID uint) ([]*MonitoringProbe, error) {
 	var result struct {
 		Status string             `json:"status"`
@@ -257,21 +261,28 @@ func (s *ProbesService) ListByOrganization(ctx context.Context, organizationID u
 		Result: &result,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list probes for organization %d: %w", organizationID, err)
 	}
 
 	return result.Data, nil
 }
 
 // GetByUUID retrieves a specific probe by its UUID
-// This method is used by probe-controller to fetch probe details
+// This method is used by probe-controller to fetch probe details.
+// It's a convenience wrapper around the standard Get method for consistency
+// with other controller-specific methods.
 func (s *ProbesService) GetByUUID(ctx context.Context, probeUUID string) (*MonitoringProbe, error) {
-	// Reuse the existing Get method which calls the monitoring service
-	return s.Get(ctx, probeUUID)
+	probe, err := s.Get(ctx, probeUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get probe %s: %w", probeUUID, err)
+	}
+	return probe, nil
 }
 
 // GetRegionalResults retrieves recent regional execution results for a probe
-// This method is used by consensus engine to calculate global status
+// This method is used by consensus engine to calculate global status.
+// It returns the latest execution result from each monitoring region for the
+// specified probe, which the consensus engine uses to determine overall probe health.
 func (s *ProbesService) GetRegionalResults(ctx context.Context, probeUUID string) ([]RegionalResult, error) {
 	var result struct {
 		Status string           `json:"status"`
@@ -284,15 +295,28 @@ func (s *ProbesService) GetRegionalResults(ctx context.Context, probeUUID string
 		Result: &result,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get regional results for probe %s: %w", probeUUID, err)
 	}
 
 	return result.Data, nil
 }
 
 // UpdateControllerStatus updates the probe status from controller
-// This method is used by probe-controller to update probe execution status
+// This method is used by probe-controller to update probe execution status.
+// Valid status values are: "up", "down", "degraded", "unknown"
+// This should be called after the consensus engine calculates the global status.
 func (s *ProbesService) UpdateControllerStatus(ctx context.Context, probeUUID string, status string) error {
+	// Validate status
+	validStatuses := map[string]bool{
+		"up":       true,
+		"down":     true,
+		"degraded": true,
+		"unknown":  true,
+	}
+	if !validStatuses[status] {
+		return fmt.Errorf("invalid status '%s' for probe %s: must be one of: up, down, degraded, unknown", status, probeUUID)
+	}
+
 	body := map[string]interface{}{
 		"status": status,
 	}
@@ -308,28 +332,41 @@ func (s *ProbesService) UpdateControllerStatus(ctx context.Context, probeUUID st
 		Body:   body,
 		Result: &result,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to update status to '%s' for probe %s: %w", status, probeUUID, err)
+	}
 
-	return err
+	return nil
 }
 
 // GetProbeConfig retrieves probe configuration including consensus type
 // This method is used by consensus engine to determine consensus algorithm
+//
+// UUID Handling: MonitoringProbe uses GormModel which only has an ID field.
+// The probeUUID parameter is used to set ProbeConfiguration.ProbeUUID since
+// the MonitoringProbe struct doesn't contain a UUID field.
+//
+// Default Consensus: If the probe's config doesn't specify a consensus_type,
+// this method defaults to "majority" consensus. Valid consensus types are:
+// - "majority": Probe is UP if more than 50% of regions report UP
+// - "all": Probe is UP only if ALL regions report UP
+// - "any": Probe is UP if ANY region reports UP
 func (s *ProbesService) GetProbeConfig(ctx context.Context, probeUUID string) (*ProbeConfiguration, error) {
 	probe, err := s.GetByUUID(ctx, probeUUID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get config for probe %s: %w", probeUUID, err)
 	}
 
 	// Convert MonitoringProbe to ProbeConfiguration
 	config := &ProbeConfiguration{
-		ProbeUUID:     probeUUID, // Use the provided UUID parameter
+		ProbeUUID:     probeUUID, // Use the provided UUID parameter (see UUID Handling above)
 		Name:          probe.Name,
 		Type:          probe.Type,
 		Target:        probe.Target,
 		Interval:      probe.Interval,
 		Timeout:       probe.Timeout,
 		Regions:       probe.Regions,
-		ConsensusType: "majority", // Default consensus type
+		ConsensusType: "majority", // Default consensus type (see Default Consensus above)
 	}
 
 	// Extract consensus type from probe config if present
@@ -343,8 +380,18 @@ func (s *ProbesService) GetProbeConfig(ctx context.Context, probeUUID string) (*
 }
 
 // RecordConsensusResult stores a consensus calculation result
-// This method is used by consensus engine to persist global status
+// This method is used by consensus engine to persist global status.
+// It records the complete consensus calculation including regional results,
+// statistics, and whether an alert should be triggered. This creates a historical
+// record for reporting and debugging consensus decisions.
 func (s *ProbesService) RecordConsensusResult(ctx context.Context, result *ConsensusResultRequest) error {
+	if result == nil {
+		return fmt.Errorf("consensus result cannot be nil")
+	}
+	if result.ProbeUUID == "" {
+		return fmt.Errorf("probe UUID is required in consensus result")
+	}
+
 	var resp struct {
 		Status  string `json:"status"`
 		Message string `json:"message"`
@@ -356,8 +403,11 @@ func (s *ProbesService) RecordConsensusResult(ctx context.Context, result *Conse
 		Body:   result,
 		Result: &resp,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to record consensus result for probe %s: %w", result.ProbeUUID, err)
+	}
 
-	return err
+	return nil
 }
 
 // ========================================
