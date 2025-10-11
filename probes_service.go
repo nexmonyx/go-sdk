@@ -236,3 +236,170 @@ type RegionHealthStatus struct {
 	Availability24h float64 `json:"availability_24h"`
 	AverageResponse int     `json:"average_response_ms"`
 }
+
+// ========================================
+// CONTROLLER-SPECIFIC METHODS
+// ========================================
+// These methods are used by probe-controller for orchestration
+
+// ListByOrganization retrieves all probes for a specific organization
+// This method is used by probe-controller to load probe assignments on startup
+func (s *ProbesService) ListByOrganization(ctx context.Context, organizationID uint) ([]*MonitoringProbe, error) {
+	var result struct {
+		Status string             `json:"status"`
+		Data   []*MonitoringProbe `json:"data"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/controllers/probes/list",
+		Query:  map[string]string{"org_id": fmt.Sprintf("%d", organizationID)},
+		Result: &result,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Data, nil
+}
+
+// GetByUUID retrieves a specific probe by its UUID
+// This method is used by probe-controller to fetch probe details
+func (s *ProbesService) GetByUUID(ctx context.Context, probeUUID string) (*MonitoringProbe, error) {
+	// Reuse the existing Get method which calls the monitoring service
+	return s.Get(ctx, probeUUID)
+}
+
+// GetRegionalResults retrieves recent regional execution results for a probe
+// This method is used by consensus engine to calculate global status
+func (s *ProbesService) GetRegionalResults(ctx context.Context, probeUUID string) ([]RegionalResult, error) {
+	var result struct {
+		Status string           `json:"status"`
+		Data   []RegionalResult `json:"data"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/controllers/probes/%s/regional-results", probeUUID),
+		Result: &result,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Data, nil
+}
+
+// UpdateControllerStatus updates the probe status from controller
+// This method is used by probe-controller to update probe execution status
+func (s *ProbesService) UpdateControllerStatus(ctx context.Context, probeUUID string, status string) error {
+	body := map[string]interface{}{
+		"status": status,
+	}
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/controllers/probes/%s/status", probeUUID),
+		Body:   body,
+		Result: &result,
+	})
+
+	return err
+}
+
+// GetProbeConfig retrieves probe configuration including consensus type
+// This method is used by consensus engine to determine consensus algorithm
+func (s *ProbesService) GetProbeConfig(ctx context.Context, probeUUID string) (*ProbeConfiguration, error) {
+	probe, err := s.GetByUUID(ctx, probeUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert MonitoringProbe to ProbeConfiguration
+	config := &ProbeConfiguration{
+		ProbeUUID:     probeUUID, // Use the provided UUID parameter
+		Name:          probe.Name,
+		Type:          probe.Type,
+		Target:        probe.Target,
+		Interval:      probe.Interval,
+		Timeout:       probe.Timeout,
+		Regions:       probe.Regions,
+		ConsensusType: "majority", // Default consensus type
+	}
+
+	// Extract consensus type from probe config if present
+	if probe.Config != nil {
+		if consensusType, ok := probe.Config["consensus_type"].(string); ok {
+			config.ConsensusType = consensusType
+		}
+	}
+
+	return config, nil
+}
+
+// RecordConsensusResult stores a consensus calculation result
+// This method is used by consensus engine to persist global status
+func (s *ProbesService) RecordConsensusResult(ctx context.Context, result *ConsensusResultRequest) error {
+	var resp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/controllers/probes/consensus-results",
+		Body:   result,
+		Result: &resp,
+	})
+
+	return err
+}
+
+// ========================================
+// CONTROLLER-SPECIFIC TYPES
+// ========================================
+
+// RegionalResult represents the status from a single monitoring region
+type RegionalResult struct {
+	Region       string  `json:"region"`
+	Status       string  `json:"status"`
+	ResponseTime int     `json:"response_time"`
+	ErrorMessage *string `json:"error_message,omitempty"`
+	CheckedAt    string  `json:"checked_at"`
+}
+
+// ProbeConfiguration represents probe configuration for controller use
+type ProbeConfiguration struct {
+	ProbeUUID     string   `json:"probe_uuid"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	Target        string   `json:"target"`
+	Interval      int      `json:"interval"`
+	Timeout       int      `json:"timeout"`
+	Regions       []string `json:"regions"`
+	ConsensusType string   `json:"consensus_type"` // "majority", "all", "any"
+}
+
+// ConsensusResultRequest represents a consensus result to be recorded
+type ConsensusResultRequest struct {
+	ProbeUUID           string           `json:"probe_uuid"`
+	OrganizationID      uint             `json:"organization_id"`
+	ConsensusType       string           `json:"consensus_type"`
+	GlobalStatus        string           `json:"global_status"`
+	RegionResults       []RegionalResult `json:"region_results"`
+	TotalRegions        int              `json:"total_regions"`
+	UpRegions           int              `json:"up_regions"`
+	DownRegions         int              `json:"down_regions"`
+	DegradedRegions     int              `json:"degraded_regions"`
+	UnknownRegions      int              `json:"unknown_regions"`
+	ShouldAlert         bool             `json:"should_alert"`
+	AverageResponseTime int              `json:"average_response_time"`
+	MinResponseTime     int              `json:"min_response_time"`
+	MaxResponseTime     int              `json:"max_response_time"`
+	UptimePercentage    float64          `json:"uptime_percentage"`
+}

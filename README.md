@@ -3995,6 +3995,89 @@ err = client.Monitoring.ToggleProbe(ctx, probe.UUID, true) // enable
 err = client.Monitoring.ToggleProbe(ctx, probe.UUID, false) // disable
 ```
 
+### Probe Controller Methods
+
+**Controller-specific methods for probe orchestration** - Used by probe-controller for managing probe execution across regions and consensus calculation.
+
+```go
+// List all probes for an organization (used by controller on startup)
+probes, err := client.Probes.ListByOrganization(ctx, organizationID)
+if err != nil {
+    log.Fatalf("Failed to load probes: %v", err)
+}
+
+log.Printf("Loaded %d probes for organization %d", len(probes), organizationID)
+
+// Get probe by UUID
+probe, err := client.Probes.GetByUUID(ctx, "probe-uuid")
+if err != nil {
+    log.Fatalf("Failed to get probe: %v", err)
+}
+
+// Get regional execution results (for consensus calculation)
+regionalResults, err := client.Probes.GetRegionalResults(ctx, "probe-uuid")
+if err != nil {
+    log.Fatalf("Failed to get regional results: %v", err)
+}
+
+// Process results for consensus
+for _, result := range regionalResults {
+    log.Printf("Region %s: %s (%dms)", result.Region, result.Status, result.ResponseTime)
+}
+
+// Update probe status from controller
+err = client.Probes.UpdateControllerStatus(ctx, "probe-uuid", "up")
+if err != nil {
+    log.Fatalf("Failed to update status: %v", err)
+}
+
+// Get probe configuration including consensus type
+config, err := client.Probes.GetProbeConfig(ctx, "probe-uuid")
+if err != nil {
+    log.Fatalf("Failed to get config: %v", err)
+}
+
+log.Printf("Probe uses %s consensus across %d regions",
+    config.ConsensusType, len(config.Regions))
+
+// Record consensus result
+consensusResult := &nexmonyx.ConsensusResultRequest{
+    ProbeUUID:           "probe-uuid",
+    OrganizationID:      organizationID,
+    ConsensusType:       "majority",
+    GlobalStatus:        "up",
+    RegionResults:       regionalResults,
+    TotalRegions:        3,
+    UpRegions:           2,
+    DownRegions:         1,
+    DegradedRegions:     0,
+    UnknownRegions:      0,
+    ShouldAlert:         false,
+    AverageResponseTime: 250,
+    MinResponseTime:     180,
+    MaxResponseTime:     350,
+    UptimePercentage:    66.67,
+}
+
+err = client.Probes.RecordConsensusResult(ctx, consensusResult)
+if err != nil {
+    log.Fatalf("Failed to record consensus: %v", err)
+}
+```
+
+**Consensus Types:**
+- `majority` - >50% of regions must agree (default)
+- `all` - 100% of regions must agree (strictest)
+- `any` - Any region failure triggers alert (most sensitive)
+
+**Controller Usage Pattern:**
+1. Load probes on startup with `ListByOrganization()`
+2. Schedule probes in scheduler engine
+3. Fetch regional results with `GetRegionalResults()`
+4. Calculate consensus using consensus engine
+5. Record result with `RecordConsensusResult()`
+6. Update probe status with `UpdateControllerStatus()`
+
 ### Alerts
 
 ```go
