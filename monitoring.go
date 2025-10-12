@@ -195,6 +195,7 @@ func (s *MonitoringService) TestProbe(ctx context.Context, probeID string) (*Pro
 // MonitoringProbe represents a monitoring probe configuration
 type MonitoringProbe struct {
 	GormModel
+	ProbeUUID      string                 `json:"probe_uuid"`
 	Name           string                 `json:"name"`
 	Description    string                 `json:"description,omitempty"`
 	Type           string                 `json:"type"` // http, https, tcp, icmp, dns
