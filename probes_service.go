@@ -410,6 +410,59 @@ func (s *ProbesService) RecordConsensusResult(ctx context.Context, result *Conse
 	return nil
 }
 
+// GetActiveProbes retrieves all active (enabled) probes for an organization
+// This method is used by probe-controller to get probes that should be actively monitored.
+// It filters for enabled=true and deleted_at IS NULL, returning only probes that
+// should be executing according to their configured schedules.
+//
+// This is a convenience method that filters the results of ListByOrganization to
+// return only probes that are currently active and should be scheduled for execution.
+func (s *ProbesService) GetActiveProbes(ctx context.Context, organizationID uint) ([]*MonitoringProbe, error) {
+	// Get all probes for the organization
+	allProbes, err := s.ListByOrganization(ctx, organizationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list probes for organization %d: %w", organizationID, err)
+	}
+
+	// Filter for active (enabled) probes only
+	activeProbes := make([]*MonitoringProbe, 0, len(allProbes))
+	for _, probe := range allProbes {
+		if probe.Enabled {
+			activeProbes = append(activeProbes, probe)
+		}
+	}
+
+	return activeProbes, nil
+}
+
+// SubmitResult submits a single probe execution result
+// This is a convenience wrapper around Monitoring.SubmitResults for submitting a
+// single probe result. For bulk submissions, use client.Monitoring.SubmitResults directly.
+//
+// Example usage:
+//
+//	result := &nexmonyx.ProbeExecutionResult{
+//	    ProbeID:      probe.ID,
+//	    ProbeUUID:    probe.ProbeUUID,
+//	    ExecutedAt:   time.Now(),
+//	    Region:       "us-east-1",
+//	    Status:       "success",
+//	    ResponseTime: 150,
+//	    StatusCode:   200,
+//	}
+//	err := client.Probes.SubmitResult(ctx, result)
+func (s *ProbesService) SubmitResult(ctx context.Context, result *ProbeExecutionResult) error {
+	if result == nil {
+		return fmt.Errorf("probe result cannot be nil")
+	}
+	if result.ProbeUUID == "" {
+		return fmt.Errorf("probe UUID is required in result")
+	}
+
+	// Use the Monitoring service's SubmitResults method for a single result
+	return s.client.Monitoring.SubmitResults(ctx, []ProbeExecutionResult{*result})
+}
+
 // ========================================
 // CONTROLLER-SPECIFIC TYPES
 // ========================================

@@ -4001,12 +4001,18 @@ err = client.Monitoring.ToggleProbe(ctx, probe.UUID, false) // disable
 
 ```go
 // List all probes for an organization (used by controller on startup)
-probes, err := client.Probes.ListByOrganization(ctx, organizationID)
+allProbes, err := client.Probes.ListByOrganization(ctx, organizationID)
 if err != nil {
     log.Fatalf("Failed to load probes: %v", err)
 }
+log.Printf("Found %d probes for organization %d", len(allProbes), organizationID)
 
-log.Printf("Loaded %d probes for organization %d", len(probes), organizationID)
+// Get only active (enabled) probes for scheduling
+activeProbes, err := client.Probes.GetActiveProbes(ctx, organizationID)
+if err != nil {
+    log.Fatalf("Failed to load active probes: %v", err)
+}
+log.Printf("Scheduling %d active probes", len(activeProbes))
 
 // Get probe by UUID
 probe, err := client.Probes.GetByUUID(ctx, "probe-uuid")
@@ -4025,6 +4031,24 @@ for _, result := range regionalResults {
     log.Printf("Region %s: %s (%dms)", result.Region, result.Status, result.ResponseTime)
 }
 
+// Submit a single probe execution result (convenience wrapper)
+result := &nexmonyx.ProbeExecutionResult{
+    ProbeID:      probe.ID,
+    ProbeUUID:    probe.ProbeUUID,
+    ExecutedAt:   time.Now(),
+    Region:       "us-east-1",
+    Status:       "success",
+    ResponseTime: 150,
+    StatusCode:   200,
+}
+err = client.Probes.SubmitResult(ctx, result)
+if err != nil {
+    log.Fatalf("Failed to submit result: %v", err)
+}
+
+// For bulk submissions, use Monitoring.SubmitResults instead:
+// err = client.Monitoring.SubmitResults(ctx, []nexmonyx.ProbeExecutionResult{result1, result2, ...})
+
 // Update probe status from controller
 err = client.Probes.UpdateControllerStatus(ctx, "probe-uuid", "up")
 if err != nil {
@@ -4036,7 +4060,6 @@ config, err := client.Probes.GetProbeConfig(ctx, "probe-uuid")
 if err != nil {
     log.Fatalf("Failed to get config: %v", err)
 }
-
 log.Printf("Probe uses %s consensus across %d regions",
     config.ConsensusType, len(config.Regions))
 
@@ -4065,18 +4088,29 @@ if err != nil {
 }
 ```
 
+**Available Controller Methods:**
+- `ListByOrganization()` - Get all probes for an organization
+- `GetActiveProbes()` - Get only enabled probes for scheduling
+- `GetByUUID()` - Get a specific probe by UUID
+- `GetRegionalResults()` - Fetch regional execution results for consensus
+- `SubmitResult()` - Submit a single probe execution result
+- `UpdateControllerStatus()` - Update probe status (up/down/degraded/unknown)
+- `GetProbeConfig()` - Get probe configuration including consensus type
+- `RecordConsensusResult()` - Store consensus calculation result
+
 **Consensus Types:**
 - `majority` - >50% of regions must agree (default)
 - `all` - 100% of regions must agree (strictest)
 - `any` - Any region failure triggers alert (most sensitive)
 
 **Controller Usage Pattern:**
-1. Load probes on startup with `ListByOrganization()`
+1. Load active probes on startup with `GetActiveProbes()`
 2. Schedule probes in scheduler engine
-3. Fetch regional results with `GetRegionalResults()`
-4. Calculate consensus using consensus engine
-5. Record result with `RecordConsensusResult()`
-6. Update probe status with `UpdateControllerStatus()`
+3. Submit execution results with `SubmitResult()`
+4. Fetch regional results with `GetRegionalResults()`
+5. Calculate consensus using consensus engine
+6. Record result with `RecordConsensusResult()`
+7. Update probe status with `UpdateControllerStatus()`
 
 ### Alerts
 

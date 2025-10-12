@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2025-10-12
+
+### Added
+- **Probe Controller Enhancement**: Added convenience methods for probe-controller orchestration
+  - `GetActiveProbes()` method to retrieve only enabled probes for scheduling
+  - `SubmitResult()` convenience wrapper for submitting single probe execution results
+  - Comprehensive unit tests in `probes_service_controller_test.go`
+  - 8 test scenarios covering enabled/disabled filtering, validation, and error handling
+
+### Enhanced
+- **Documentation**: Updated README.md Probe Controller Methods section with:
+  - Complete list of 8 available controller methods
+  - Usage examples for new `GetActiveProbes()` and `SubmitResult()` methods
+  - Enhanced controller usage pattern with 7-step workflow
+  - Clarified bulk submission pattern via `Monitoring.SubmitResults()`
+
+### Fixed
+- **Code Quality**: All existing probe controller methods were already implemented
+  - `ListByOrganization()`, `GetByUUID()`, `GetRegionalResults()` (lines 247-302)
+  - `UpdateControllerStatus()`, `GetProbeConfig()`, `RecordConsensusResult()` (lines 308-411)
+  - Task 1.1 from probe-controller completion plan effectively 67% complete on arrival
+
+### Technical Details
+- New methods filter enabled probes client-side for optimal performance
+- SubmitResult wraps Monitoring.SubmitResults with single-result convenience
+- Maintains backward compatibility with existing controller integrations
+- Zero breaking changes to existing API
+
 ## [1.2.0] - 2025-07-23
 
 ### Added
