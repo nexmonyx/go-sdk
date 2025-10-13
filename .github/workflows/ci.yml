@@ -66,14 +66,47 @@ jobs:
             mv integration_test.go.disabled integration_test.go.bak
           fi
           # Run tests with build tags to exclude problematic tests
-          go test -v -race -coverprofile=coverage.out -tags="!integration" ./... || echo "Some tests failed but continuing CI"
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" ./... || echo "Some tests failed but continuing CI"
           if [ -f coverage.out ]; then
-            go tool cover -func=coverage.out || echo "Coverage report generation failed"
+            echo "Generating coverage reports..."
+            go tool cover -func=coverage.out -o coverage.txt || echo "Coverage text report generation failed"
+            go tool cover -html=coverage.out -o coverage.html || echo "Coverage HTML report generation failed"
           fi
           # Restore disabled test files
           if [ -f integration_test.go.bak ]; then
             mv integration_test.go.bak integration_test.go.disabled
           fi
+
+      - name: Generate coverage summary
+        if: always() && hashFiles('coverage.out') != ''
+        run: |
+          echo "## Test Coverage Report" > coverage-summary.md
+          echo "" >> coverage-summary.md
+
+          # Calculate total coverage
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "**Total Coverage:** $COVERAGE" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+
+          # Add coverage by package
+          echo "### Coverage by Package" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo '```' >> coverage-summary.md
+          go tool cover -func=coverage.out | head -n -1 | tail -n +2 >> coverage-summary.md
+          echo '```' >> coverage-summary.md
+
+          # Show summary in logs
+          cat coverage-summary.md
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request' && hashFiles('coverage.out') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Create comment body with coverage summary
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file coverage-summary.md \
+            --repo ${{ github.repository }}
 
       - name: Build SDK
         run: |
@@ -96,7 +129,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sdk-coverage-${{ matrix.go-version }}
-          path: coverage.out
+          path: |
+            coverage.out
+            coverage.txt
+            coverage.html
+            coverage-summary.md
           retention-days: 7
 
       - name: Validate documentation
