@@ -4129,10 +4129,13 @@ if err != nil {
 }
 
 // List assignments with filtering
+probeUUID := "probe-uuid-here"
+region := "us-east-1"
+status := "active"
 assignments, err := client.ProbeController.ListAssignments(ctx, &nexmonyx.ProbeControllerAssignmentListOptions{
-    ProbeUUID: "probe-uuid-here",
-    Region:    "us-east-1",
-    Status:    "active",
+    ProbeUUID: &probeUUID,
+    Region:    &region,
+    Status:    &status,
 })
 if err != nil {
     log.Fatalf("Failed to list assignments: %v", err)
@@ -4170,9 +4173,11 @@ if err != nil {
 }
 
 // Get regional results for consensus calculation
+since := "2024-01-01T00:00:00Z"
+statusFilter := "up"
 results, err := client.ProbeController.GetRegionalResults(ctx, "probe-uuid-here", &nexmonyx.ProbeControllerRegionalResultListOptions{
-    Since:  "2024-01-01T00:00:00Z",
-    Status: "up",
+    Since:  &since,
+    Status: &statusFilter,
 })
 if err != nil {
     log.Fatalf("Failed to get regional results: %v", err)
@@ -4198,9 +4203,11 @@ if err != nil {
 }
 
 // Get consensus history for trend analysis
+historySince := "2024-01-01T00:00:00Z"
+historyLimit := 100
 history, err := client.ProbeController.GetConsensusHistory(ctx, "probe-uuid-here", &nexmonyx.ConsensusHistoryOptions{
-    Since: "2024-01-01T00:00:00Z",
-    Limit: 100,
+    Since: &historySince,
+    Limit: &historyLimit,
 })
 if err != nil {
     log.Fatalf("Failed to get history: %v", err)

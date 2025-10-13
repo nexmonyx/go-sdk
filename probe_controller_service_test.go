@@ -152,7 +152,7 @@ func TestProbeControllerService_ListAssignments(t *testing.T) {
 		{
 			name: "filter by probe UUID",
 			options: &ProbeControllerAssignmentListOptions{
-				ProbeUUID: "probe-123",
+				ProbeUUID: stringPtr("probe-123"),
 			},
 			serverResponse: []ProbeControllerAssignment{
 				{ID: 1, ProbeUUID: "probe-123", Region: "us-east-1", Status: "active"},
@@ -167,9 +167,9 @@ func TestProbeControllerService_ListAssignments(t *testing.T) {
 		{
 			name: "filter by multiple criteria",
 			options: &ProbeControllerAssignmentListOptions{
-				ProbeUUID: "probe-456",
-				Region:    "ap-southeast-1",
-				Status:    "active",
+				ProbeUUID: stringPtr("probe-456"),
+				Region:    stringPtr("ap-southeast-1"),
+				Status:    stringPtr("active"),
 			},
 			serverResponse: []ProbeControllerAssignment{
 				{ID: 3, ProbeUUID: "probe-456", Region: "ap-southeast-1", Status: "active"},
@@ -499,7 +499,7 @@ func TestProbeControllerService_GetRegionalResults(t *testing.T) {
 			name:      "filter by region",
 			probeUUID: "probe-456",
 			options: &ProbeControllerRegionalResultListOptions{
-				Region: "ap-southeast-1",
+				Region: stringPtr("ap-southeast-1"),
 			},
 			serverResponse: []ProbeControllerRegionalResult{
 				{ID: 3, ProbeUUID: "probe-456", Region: "ap-southeast-1", Status: "down", Success: false},
@@ -733,8 +733,9 @@ func TestProbeControllerService_GetConsensusHistory(t *testing.T) {
 		Auth:    AuthConfig{Token: "test-token"},
 	})
 
+	limit := 100
 	results, err := client.ProbeController.GetConsensusHistory(context.Background(), probeUUID, &ConsensusHistoryOptions{
-		Limit: 100,
+		Limit: &limit,
 	})
 
 	if err != nil {

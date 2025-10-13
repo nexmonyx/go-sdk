@@ -49,11 +49,11 @@ type ProbeControllerAssignmentUpdateRequest struct {
 }
 
 // ProbeControllerAssignmentListOptions provides filtering options when listing
-// probe execution assignments.
+// probe execution assignments. All fields are optional - use nil to skip filtering.
 type ProbeControllerAssignmentListOptions struct {
-	ProbeUUID        string
-	Region           string
-	Status           string
+	ProbeUUID        *string
+	Region           *string
+	Status           *string
 	MonitoringNodeID *uint
 }
 
@@ -91,12 +91,12 @@ type ProbeControllerRegionalResultStoreRequest struct {
 }
 
 // ProbeControllerRegionalResultListOptions provides filtering options when listing
-// regional probe execution results.
+// regional probe execution results. All fields are optional - use nil to skip filtering.
 type ProbeControllerRegionalResultListOptions struct {
-	Region           string
-	Status           string
+	Region           *string
+	Status           *string
 	IsCustomerRegion *bool
-	Since            string
+	Since            *string
 }
 
 // ProbeControllerConsensusResult represents the aggregated consensus calculation
@@ -140,10 +140,10 @@ type ProbeControllerConsensusResultStoreRequest struct {
 }
 
 // ConsensusHistoryOptions provides filtering options when retrieving historical
-// consensus results for a probe.
+// consensus results for a probe. All fields are optional - use nil to skip filtering.
 type ConsensusHistoryOptions struct {
-	Since string
-	Limit int
+	Since *string
+	Limit *int
 }
 
 // ProbeControllerHealthState represents a key-value health state entry for
@@ -176,6 +176,20 @@ type ProbeControllerHealthUpdateRequest struct {
 //	    Status:    "active",
 //	})
 func (s *ProbeControllerService) CreateAssignment(ctx context.Context, req *ProbeControllerAssignmentCreateRequest) (*ProbeControllerAssignment, error) {
+	// Validate required fields
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	if req.ProbeID == 0 {
+		return nil, fmt.Errorf("probe_id is required")
+	}
+	if req.ProbeUUID == "" {
+		return nil, fmt.Errorf("probe_uuid is required")
+	}
+	if req.Region == "" {
+		return nil, fmt.Errorf("region is required")
+	}
+
 	var result struct {
 		Status  string                     `json:"status"`
 		Data    *ProbeControllerAssignment `json:"data"`
@@ -211,14 +225,14 @@ func (s *ProbeControllerService) ListAssignments(ctx context.Context, opts *Prob
 	}
 	query := make(map[string]string)
 	if opts != nil {
-		if opts.ProbeUUID != "" {
-			query["probe_uuid"] = opts.ProbeUUID
+		if opts.ProbeUUID != nil && *opts.ProbeUUID != "" {
+			query["probe_uuid"] = *opts.ProbeUUID
 		}
-		if opts.Region != "" {
-			query["region"] = opts.Region
+		if opts.Region != nil && *opts.Region != "" {
+			query["region"] = *opts.Region
 		}
-		if opts.Status != "" {
-			query["status"] = opts.Status
+		if opts.Status != nil && *opts.Status != "" {
+			query["status"] = *opts.Status
 		}
 		if opts.MonitoringNodeID != nil {
 			query["monitoring_node_id"] = fmt.Sprintf("%d", *opts.MonitoringNodeID)
@@ -247,6 +261,14 @@ func (s *ProbeControllerService) ListAssignments(ctx context.Context, opts *Prob
 //	    Status:           "paused",
 //	})
 func (s *ProbeControllerService) UpdateAssignment(ctx context.Context, id uint, req *ProbeControllerAssignmentUpdateRequest) (*ProbeControllerAssignment, error) {
+	// Validate required fields
+	if id == 0 {
+		return nil, fmt.Errorf("assignment id is required")
+	}
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+
 	var result struct {
 		Status  string                     `json:"status"`
 		Data    *ProbeControllerAssignment `json:"data"`
@@ -271,6 +293,11 @@ func (s *ProbeControllerService) UpdateAssignment(ctx context.Context, id uint, 
 //
 //	deletedAssignment, err := client.ProbeController.DeleteAssignment(ctx, assignmentID)
 func (s *ProbeControllerService) DeleteAssignment(ctx context.Context, id uint) (*ProbeControllerAssignment, error) {
+	// Validate required fields
+	if id == 0 {
+		return nil, fmt.Errorf("assignment id is required")
+	}
+
 	var result struct {
 		Status  string                     `json:"status"`
 		Data    *ProbeControllerAssignment `json:"data"`
@@ -304,6 +331,20 @@ func (s *ProbeControllerService) DeleteAssignment(ctx context.Context, id uint) 
 //	    TTLSeconds:       3600, // 1 hour
 //	})
 func (s *ProbeControllerService) StoreRegionalResult(ctx context.Context, req *ProbeControllerRegionalResultStoreRequest) (*ProbeControllerRegionalResult, error) {
+	// Validate required fields
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	if req.ProbeUUID == "" {
+		return nil, fmt.Errorf("probe_uuid is required")
+	}
+	if req.Region == "" {
+		return nil, fmt.Errorf("region is required")
+	}
+	if req.Status == "" {
+		return nil, fmt.Errorf("status is required")
+	}
+
 	var result struct {
 		Status  string                         `json:"status"`
 		Data    *ProbeControllerRegionalResult `json:"data"`
@@ -332,6 +373,11 @@ func (s *ProbeControllerService) StoreRegionalResult(ctx context.Context, req *P
 //	    Since:  "2024-01-01T00:00:00Z",
 //	})
 func (s *ProbeControllerService) GetRegionalResults(ctx context.Context, probeUUID string, opts *ProbeControllerRegionalResultListOptions) ([]*ProbeControllerRegionalResult, error) {
+	// Validate required fields
+	if probeUUID == "" {
+		return nil, fmt.Errorf("probe_uuid is required")
+	}
+
 	var result struct {
 		Status  string                           `json:"status"`
 		Data    []*ProbeControllerRegionalResult `json:"data"`
@@ -339,17 +385,17 @@ func (s *ProbeControllerService) GetRegionalResults(ctx context.Context, probeUU
 	}
 	query := make(map[string]string)
 	if opts != nil {
-		if opts.Region != "" {
-			query["region"] = opts.Region
+		if opts.Region != nil && *opts.Region != "" {
+			query["region"] = *opts.Region
 		}
-		if opts.Status != "" {
-			query["status"] = opts.Status
+		if opts.Status != nil && *opts.Status != "" {
+			query["status"] = *opts.Status
 		}
 		if opts.IsCustomerRegion != nil {
 			query["is_customer_region"] = fmt.Sprintf("%t", *opts.IsCustomerRegion)
 		}
-		if opts.Since != "" {
-			query["since"] = opts.Since
+		if opts.Since != nil && *opts.Since != "" {
+			query["since"] = *opts.Since
 		}
 	}
 	_, err := s.client.Do(ctx, &Request{
@@ -383,6 +429,23 @@ func (s *ProbeControllerService) GetRegionalResults(ctx context.Context, probeUU
 //	    AlertTriggered:  false,
 //	})
 func (s *ProbeControllerService) StoreConsensusResult(ctx context.Context, req *ProbeControllerConsensusResultStoreRequest) (*ProbeControllerConsensusResult, error) {
+	// Validate required fields
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	if req.ProbeID == 0 {
+		return nil, fmt.Errorf("probe_id is required")
+	}
+	if req.ProbeUUID == "" {
+		return nil, fmt.Errorf("probe_uuid is required")
+	}
+	if req.GlobalStatus == "" {
+		return nil, fmt.Errorf("global_status is required")
+	}
+	if req.ConsensusType == "" {
+		return nil, fmt.Errorf("consensus_type is required")
+	}
+
 	var result struct {
 		Status  string                          `json:"status"`
 		Data    *ProbeControllerConsensusResult `json:"data"`
@@ -410,6 +473,11 @@ func (s *ProbeControllerService) StoreConsensusResult(ctx context.Context, req *
 //	    Limit: 100,
 //	})
 func (s *ProbeControllerService) GetConsensusHistory(ctx context.Context, probeUUID string, opts *ConsensusHistoryOptions) ([]*ProbeControllerConsensusResult, error) {
+	// Validate required fields
+	if probeUUID == "" {
+		return nil, fmt.Errorf("probe_uuid is required")
+	}
+
 	var result struct {
 		Status  string                            `json:"status"`
 		Data    []*ProbeControllerConsensusResult `json:"data"`
@@ -417,11 +485,11 @@ func (s *ProbeControllerService) GetConsensusHistory(ctx context.Context, probeU
 	}
 	query := make(map[string]string)
 	if opts != nil {
-		if opts.Since != "" {
-			query["since"] = opts.Since
+		if opts.Since != nil && *opts.Since != "" {
+			query["since"] = *opts.Since
 		}
-		if opts.Limit > 0 {
-			query["limit"] = fmt.Sprintf("%d", opts.Limit)
+		if opts.Limit != nil && *opts.Limit > 0 {
+			query["limit"] = fmt.Sprintf("%d", *opts.Limit)
 		}
 	}
 	_, err := s.client.Do(ctx, &Request{
@@ -447,6 +515,14 @@ func (s *ProbeControllerService) GetConsensusHistory(ctx context.Context, probeU
 //	    Value: "healthy",
 //	})
 func (s *ProbeControllerService) UpdateHealthState(ctx context.Context, req *ProbeControllerHealthUpdateRequest) (*ProbeControllerHealthState, error) {
+	// Validate required fields
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	if req.Key == "" {
+		return nil, fmt.Errorf("key is required")
+	}
+
 	var result struct {
 		Status  string                      `json:"status"`
 		Data    *ProbeControllerHealthState `json:"data"`
