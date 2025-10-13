@@ -4112,6 +4112,149 @@ if err != nil {
 6. Record result with `RecordConsensusResult()`
 7. Update probe status with `UpdateControllerStatus()`
 
+### Probe Controller Service
+
+**Infrastructure management for probe controller orchestration** - The `ProbeController` service manages the low-level infrastructure for probe execution across regional monitoring nodes, including assignment management, regional result storage, consensus tracking, and health state monitoring.
+
+```go
+// Create probe assignment (link probe to monitoring node in region)
+assignment, err := client.ProbeController.CreateAssignment(ctx, &nexmonyx.ProbeControllerAssignmentCreateRequest{
+    ProbeID:   123,
+    ProbeUUID: "probe-uuid-here",
+    Region:    "us-east-1",
+    Status:    "active",
+})
+if err != nil {
+    log.Fatalf("Failed to create assignment: %v", err)
+}
+
+// List assignments with filtering
+assignments, err := client.ProbeController.ListAssignments(ctx, &nexmonyx.ProbeControllerAssignmentListOptions{
+    ProbeUUID: "probe-uuid-here",
+    Region:    "us-east-1",
+    Status:    "active",
+})
+if err != nil {
+    log.Fatalf("Failed to list assignments: %v", err)
+}
+
+// Update assignment (change node or status)
+newNodeID := uint(456)
+assignment, err = client.ProbeController.UpdateAssignment(ctx, assignmentID, &nexmonyx.ProbeControllerAssignmentUpdateRequest{
+    MonitoringNodeID: &newNodeID,
+    Status:           "paused",
+})
+if err != nil {
+    log.Fatalf("Failed to update assignment: %v", err)
+}
+
+// Delete assignment
+deletedAssignment, err := client.ProbeController.DeleteAssignment(ctx, assignmentID)
+if err != nil {
+    log.Fatalf("Failed to delete assignment: %v", err)
+}
+
+// Store regional execution result
+responseTime := 150
+result, err := client.ProbeController.StoreRegionalResult(ctx, &nexmonyx.ProbeControllerRegionalResultStoreRequest{
+    ProbeUUID:        "probe-uuid-here",
+    Region:           "us-east-1",
+    Status:           "up",
+    ResponseTime:     &responseTime,
+    Success:          true,
+    IsCustomerRegion: false,
+    TTLSeconds:       3600, // 1 hour retention
+})
+if err != nil {
+    log.Fatalf("Failed to store result: %v", err)
+}
+
+// Get regional results for consensus calculation
+results, err := client.ProbeController.GetRegionalResults(ctx, "probe-uuid-here", &nexmonyx.ProbeControllerRegionalResultListOptions{
+    Since:  "2024-01-01T00:00:00Z",
+    Status: "up",
+})
+if err != nil {
+    log.Fatalf("Failed to get regional results: %v", err)
+}
+
+// Store consensus calculation result
+consensus, err := client.ProbeController.StoreConsensusResult(ctx, &nexmonyx.ProbeControllerConsensusResultStoreRequest{
+    ProbeID:         123,
+    ProbeUUID:       "probe-uuid-here",
+    GlobalStatus:    "up",
+    ConsensusType:   "majority",
+    ShouldAlert:     false,
+    UpRegions:       3,
+    DownRegions:     0,
+    DegradedRegions: 0,
+    UnknownRegions:  0,
+    TotalRegions:    3,
+    ConsensusRatio:  1.0,
+    AlertTriggered:  false,
+})
+if err != nil {
+    log.Fatalf("Failed to store consensus: %v", err)
+}
+
+// Get consensus history for trend analysis
+history, err := client.ProbeController.GetConsensusHistory(ctx, "probe-uuid-here", &nexmonyx.ConsensusHistoryOptions{
+    Since: "2024-01-01T00:00:00Z",
+    Limit: 100,
+})
+if err != nil {
+    log.Fatalf("Failed to get history: %v", err)
+}
+
+// Update controller health state
+state, err := client.ProbeController.UpdateHealthState(ctx, &nexmonyx.ProbeControllerHealthUpdateRequest{
+    Key:   "controller_status",
+    Value: "healthy",
+})
+if err != nil {
+    log.Fatalf("Failed to update health: %v", err)
+}
+
+// Get all health states
+states, err := client.ProbeController.GetHealthStates(ctx)
+if err != nil {
+    log.Fatalf("Failed to get health states: %v", err)
+}
+for _, state := range states {
+    log.Printf("Health: %s = %s (updated: %s)", state.Key, state.Value, state.UpdatedAt)
+}
+```
+
+**Available Methods:**
+- **Assignment Management:**
+  - `CreateAssignment()` - Link probe to monitoring node in region
+  - `ListAssignments()` - List assignments with filtering
+  - `UpdateAssignment()` - Update node or status
+  - `DeleteAssignment()` - Remove assignment
+- **Regional Results:**
+  - `StoreRegionalResult()` - Store probe execution result from region
+  - `GetRegionalResults()` - Retrieve results for consensus engine
+- **Consensus Tracking:**
+  - `StoreConsensusResult()` - Store aggregated consensus calculation
+  - `GetConsensusHistory()` - Analyze probe health trends over time
+- **Health Monitoring:**
+  - `UpdateHealthState()` - Update controller health metrics
+  - `GetHealthStates()` - Retrieve all health state entries
+
+**Key Features:**
+- **TTL-based Result Storage** - Regional results auto-expire based on TTLSeconds
+- **Customer Region Support** - Track results from customer-deployed monitoring agents
+- **Consensus Tracking** - Store and analyze consensus calculations over time
+- **Health State Management** - Monitor controller operational metrics
+
+**Usage Pattern:**
+1. Create assignments to distribute probe work across monitoring nodes
+2. Monitoring nodes execute probes and store regional results via `StoreRegionalResult()`
+3. Consensus engine retrieves regional results via `GetRegionalResults()`
+4. Consensus engine calculates global status and stores via `StoreConsensusResult()`
+5. Track controller health via `UpdateHealthState()` and `GetHealthStates()`
+6. Analyze probe health trends via `GetConsensusHistory()`
+
 ### Alerts
 
 ```go

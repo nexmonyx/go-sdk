@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Probe Controller Service**: New `ProbeControllerService` for infrastructure management
+  - 10 methods for probe controller orchestration across regional monitoring nodes
+  - `CreateAssignment()`, `ListAssignments()`, `UpdateAssignment()`, `DeleteAssignment()` for assignment management
+  - `StoreRegionalResult()`, `GetRegionalResults()` for regional result storage and retrieval
+  - `StoreConsensusResult()`, `GetConsensusHistory()` for consensus tracking and trend analysis
+  - `UpdateHealthState()`, `GetHealthStates()` for controller health monitoring
+  - Comprehensive unit tests in `probe_controller_service_test.go` (10 test functions, 18 test scenarios)
+  - Full godoc documentation for all exported methods and types
+  - README.md section with complete usage examples and patterns
+
+### Enhanced
+- **Documentation**: Added comprehensive Probe Controller Service documentation
+  - Usage examples for all 10 service methods
+  - Key features: TTL-based storage, customer region support, consensus tracking, health management
+  - Complete 6-step usage pattern for controller orchestration workflow
+  - Method grouping by functionality: assignments, regional results, consensus, health
+
+### Technical Details
+- TTL-based regional result storage with automatic expiration via `TTLSeconds` parameter
+- Customer region support for tracking results from customer-deployed monitoring agents
+- Historical consensus tracking for probe health trend analysis
+- Health state management with key-value store for controller operational metrics
+- Full test coverage with properly structured JSON responses and edge case handling
+- Backward compatible - no breaking changes to existing API
+
 ## [2.8.0] - 2025-10-12
 
 ### Added

@@ -82,8 +82,8 @@ func TestProbeControllerService_CreateAssignment(t *testing.T) {
 					t.Errorf("Expected path /v1/controllers/probe/assignments, got %s", r.URL.Path)
 				}
 
-				w.WriteHeader(tt.serverStatus)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.serverStatus)
 				if tt.serverStatus == http.StatusOK {
 					response := struct {
 						Status  string                        `json:"status"`
@@ -199,8 +199,8 @@ func TestProbeControllerService_ListAssignments(t *testing.T) {
 					tt.validateQuery(t, r.URL.Query())
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                         `json:"status"`
 					Data    []*ProbeControllerAssignment   `json:"data"`
@@ -282,8 +282,8 @@ func TestProbeControllerService_UpdateAssignment(t *testing.T) {
 					t.Errorf("Expected PUT request, got %s", r.Method)
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                        `json:"status"`
 					Data    *ProbeControllerAssignment    `json:"data"`
@@ -331,8 +331,8 @@ func TestProbeControllerService_DeleteAssignment(t *testing.T) {
 			t.Errorf("Expected path /v1/controllers/probe/assignments/123, got %s", r.URL.Path)
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		deletedAssignment := ProbeControllerAssignment{
 			ID:        123,
 			ProbeUUID: "deleted-probe",
@@ -432,8 +432,8 @@ func TestProbeControllerService_StoreRegionalResult(t *testing.T) {
 					t.Errorf("Expected path /v1/controllers/probe/results/regional, got %s", r.URL.Path)
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                           `json:"status"`
 					Data    *ProbeControllerRegionalResult   `json:"data"`
@@ -526,8 +526,8 @@ func TestProbeControllerService_GetRegionalResults(t *testing.T) {
 					t.Errorf("Expected GET request, got %s", r.Method)
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                             `json:"status"`
 					Data    []*ProbeControllerRegionalResult   `json:"data"`
@@ -651,8 +651,8 @@ func TestProbeControllerService_StoreConsensusResult(t *testing.T) {
 					t.Errorf("Expected path /v1/controllers/probe/results/consensus, got %s", r.URL.Path)
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                            `json:"status"`
 					Data    *ProbeControllerConsensusResult   `json:"data"`
@@ -708,8 +708,8 @@ func TestProbeControllerService_GetConsensusHistory(t *testing.T) {
 			t.Errorf("Expected limit=100, got %s", limit)
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		consensusResults := []*ProbeControllerConsensusResult{
 			{ID: 1, ProbeUUID: probeUUID, GlobalStatus: "up", ConsensusType: "majority"},
 			{ID: 2, ProbeUUID: probeUUID, GlobalStatus: "down", ConsensusType: "majority"},
@@ -798,8 +798,8 @@ func TestProbeControllerService_UpdateHealthState(t *testing.T) {
 					t.Errorf("Expected path /v1/controllers/probe/health, got %s", r.URL.Path)
 				}
 
-				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
 				response := struct {
 					Status  string                        `json:"status"`
 					Data    *ProbeControllerHealthState   `json:"data"`
@@ -849,8 +849,8 @@ func TestProbeControllerService_GetHealthStates(t *testing.T) {
 			t.Errorf("Expected path /v1/controllers/probe/health, got %s", r.URL.Path)
 		}
 
-		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 		healthStates := []*ProbeControllerHealthState{
 			{ID: 1, Key: "controller_status", Value: "healthy", UpdatedAt: time.Now()},
 			{ID: 2, Key: "active_probes", Value: "42", UpdatedAt: time.Now()},
