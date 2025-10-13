@@ -39,7 +39,8 @@
       "Bash(gh release list:*)",
       "Bash(gh run list:*)",
       "Bash(gh run watch:*)",
-      "Bash(SERVER_UUID=test-server-uuid SERVER_SECRET=test-secret go run network_hardware_example.go)"
+      "Bash(SERVER_UUID=test-server-uuid SERVER_SECRET=test-secret go run network_hardware_example.go)",
+      "Bash(gofmt:*)"
     ],
     "deny": [],
     "additionalDirectories": [
