@@ -7,7 +7,7 @@ import (
 )
 
 // QuotaHistoryService handles quota usage history operations
-type QuotaHistoryService service
+type QuotaHistoryService struct{ client *Client }
 
 // RecordQuotaUsage records quota usage metrics in batch
 // Authentication: Admin JWT Token or API Key required
