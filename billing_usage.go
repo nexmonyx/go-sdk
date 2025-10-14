@@ -230,3 +230,79 @@ func (s *BillingUsageService) GetAllUsageOverview(ctx context.Context, opts *Lis
 
 	return resp.Data, resp.Pagination, nil
 }
+
+// RecordUsageMetrics records usage metrics for an organization (admin/controller only)
+// Authentication: Admin JWT Token or API Key required
+// Endpoint: POST /v1/admin/usage-metrics/record
+// Parameters:
+//   - metrics: Usage metrics to record
+//
+// This method is used by org-management-controller to submit usage metrics
+// to the API. It records both current and historical metrics in a single call.
+func (s *BillingUsageService) RecordUsageMetrics(ctx context.Context, metrics *UsageMetricsRecordRequest) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/admin/usage-metrics/record",
+		Body:   metrics,
+		Result: &resp,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetOrgAgentCounts retrieves agent counts for an organization (admin only)
+// Authentication: Admin JWT Token or API Key required
+// Endpoint: GET /v1/admin/usage-metrics/:org_id/agent-counts
+// Parameters:
+//   - orgID: Organization ID to retrieve agent counts for
+//
+// Returns active and total agent counts used for billing calculations.
+func (s *BillingUsageService) GetOrgAgentCounts(ctx context.Context, orgID uint) (*AgentCountsResponse, error) {
+	var resp StandardResponse
+	resp.Data = &AgentCountsResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/admin/usage-metrics/%d/agent-counts", orgID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if counts, ok := resp.Data.(*AgentCountsResponse); ok {
+		return counts, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetOrgStorageUsage calculates storage usage for an organization (admin only)
+// Authentication: Admin JWT Token or API Key required
+// Endpoint: GET /v1/admin/usage-metrics/:org_id/storage
+// Parameters:
+//   - orgID: Organization ID to calculate storage for
+//
+// Returns storage usage in bytes and GB used for billing calculations.
+func (s *BillingUsageService) GetOrgStorageUsage(ctx context.Context, orgID uint) (*StorageUsageResponse, error) {
+	var resp StandardResponse
+	resp.Data = &StorageUsageResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/admin/usage-metrics/%d/storage", orgID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if storage, ok := resp.Data.(*StorageUsageResponse); ok {
+		return storage, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}

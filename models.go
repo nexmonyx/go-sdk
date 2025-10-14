@@ -1875,6 +1875,32 @@ type OrganizationUsageOverview struct {
 	Organizations      []OrganizationUsageMetrics   `json:"organizations"`
 }
 
+// UsageMetricsRecordRequest represents the request body for recording usage metrics
+// Used by org-management-controller to submit usage metrics to the API
+type UsageMetricsRecordRequest struct {
+	OrganizationID   uint            `json:"organization_id"`
+	ActiveAgentCount int             `json:"active_agent_count"`
+	TotalAgentCount  int             `json:"total_agent_count"`
+	FeaturesEnabled  map[string]bool `json:"features_enabled"`
+	RetentionDays    int             `json:"retention_days"`
+	StorageUsedBytes int64           `json:"storage_used_bytes"`
+	CollectedAt      time.Time       `json:"collected_at"`
+}
+
+// AgentCountsResponse represents agent count statistics for billing
+type AgentCountsResponse struct {
+	OrganizationID uint `json:"organization_id"`
+	ActiveCount    int  `json:"active_count"`
+	TotalCount     int  `json:"total_count"`
+}
+
+// StorageUsageResponse represents storage usage statistics for billing
+type StorageUsageResponse struct {
+	OrganizationID uint    `json:"organization_id"`
+	StorageBytes   int64   `json:"storage_bytes"`
+	StorageGB      float64 `json:"storage_gb"`
+}
+
 // ============================================================================
 // Tag Management
 // ============================================================================
