@@ -170,7 +170,12 @@ func (ws *WebSocketServiceImpl) Connect() error {
 
 	// Authenticate
 	if err := ws.authenticate(); err != nil {
-		ws.conn.Close()
+		// Close connection on authentication failure
+		if closeErr := ws.conn.Close(); closeErr != nil {
+			// Log but don't fail - we're already in an error state
+			// Silently ignore close error as we're already in error state
+			_ = closeErr
+		}
 		ws.conn = nil
 		ws.connected = false
 		return fmt.Errorf("authentication failed: %w", err)
@@ -375,7 +380,9 @@ func (ws *WebSocketServiceImpl) authenticate() error {
 	}
 
 	// Wait for auth response
-	ws.conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	if err := ws.conn.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		return fmt.Errorf("failed to set read deadline: %w", err)
+	}
 	var response WSMessage
 	if err := ws.conn.ReadJSON(&response); err != nil {
 		return err
@@ -395,7 +402,9 @@ func (ws *WebSocketServiceImpl) authenticate() error {
 	}
 
 	// Clear read deadline
-	ws.conn.SetReadDeadline(time.Time{})
+	if err := ws.conn.SetReadDeadline(time.Time{}); err != nil {
+		return fmt.Errorf("failed to clear read deadline: %w", err)
+	}
 	return nil
 }
 
@@ -497,7 +506,14 @@ func (ws *WebSocketServiceImpl) handleMessages() {
 			case WSTypeCommandResponse:
 				ws.handleCommandResponse(&msg)
 			case WSTypePing:
-				ws.sendPong()
+				// Send pong response
+				if err := ws.sendPong(); err != nil {
+					// Connection likely broken, trigger disconnect
+					if ws.onDisconnect != nil && ws.connected {
+						ws.onDisconnect(err)
+					}
+					return
+				}
 			case WSTypePong:
 				// Pong received, connection is alive
 			default:
