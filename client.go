@@ -81,6 +81,7 @@ type Client struct {
 	Notifications         *NotificationsService
 	WebSocket             *WebSocketServiceImpl
 	ProbeController       *ProbeControllerService
+	Database              *DatabaseService
 }
 
 // Config holds the configuration for the client
@@ -279,6 +280,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Packages = &PackagesService{client: client}
 	client.Notifications = &NotificationsService{client: client}
 	client.ProbeController = &ProbeControllerService{client: client}
+	client.Database = &DatabaseService{client: client}
 
 	// Note: WebSocket service requires separate initialization via NewWebSocketService()
 	// to ensure proper server credentials validation and connection management
