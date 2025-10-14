@@ -337,6 +337,7 @@ func (a *AdvancedMonitoringAgent) executeProbe(probe *nexmonyx.ProbeAssignment) 
 func (a *AdvancedMonitoringAgent) executeHTTPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
 	// Simulate HTTP request timing
 	// Safe conversion: uint → int for modulo operation (ProbeID is always < max int)
+	// #nosec G115 - Safe conversion in example code: modulo operation ensures value fits in int
 	responseTime := 50 + int(probe.ProbeID%200) // Mock response time
 	
 	result := nexmonyx.ProbeExecutionResult{
@@ -370,6 +371,7 @@ func (a *AdvancedMonitoringAgent) executeHTTPProbe(probe *nexmonyx.ProbeAssignme
 // executeTCPProbe simulates TCP probe execution
 func (a *AdvancedMonitoringAgent) executeTCPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
 	// Safe conversion: perform modulo before conversion to avoid overflow
+	// #nosec G115 - Safe conversion in example code: modulo operation ensures value fits in int
 	responseTime := 20 + int(probe.ProbeID%50)
 	
 	return nexmonyx.ProbeExecutionResult{
@@ -387,6 +389,7 @@ func (a *AdvancedMonitoringAgent) executeTCPProbe(probe *nexmonyx.ProbeAssignmen
 // executeICMPProbe simulates ICMP probe execution
 func (a *AdvancedMonitoringAgent) executeICMPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
 	// Safe conversion: perform modulo before conversion to avoid overflow
+	// #nosec G115 - Safe conversion in example code: modulo operation ensures value fits in int
 	responseTime := 5 + int(probe.ProbeID%20)
 	
 	return nexmonyx.ProbeExecutionResult{

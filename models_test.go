@@ -6,6 +6,113 @@ import (
 	"time"
 )
 
+// ============================================================================
+// CustomTime Additional Tests (beyond what's in client_test.go)
+// ============================================================================
+
+// TestCustomTime_MarshalJSON tests CustomTime marshaling
+func TestCustomTime_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		time     CustomTime
+		wantNull bool
+	}{
+		{
+			name:     "zero time returns null",
+			time:     CustomTime{},
+			wantNull: true,
+		},
+		{
+			name:     "valid time returns RFC3339",
+			time:     CustomTime{Time: time.Date(2023, 10, 14, 12, 30, 45, 0, time.UTC)},
+			wantNull: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := tt.time.MarshalJSON()
+			if err != nil {
+				t.Fatalf("failed to marshal: %v", err)
+			}
+
+			if tt.wantNull {
+				if string(data) != "null" {
+					t.Errorf("expected null, got %s", string(data))
+				}
+			} else {
+				if string(data) == "null" {
+					t.Error("expected non-null value, got null")
+				}
+				// Verify it's valid JSON string
+				var s string
+				if err := json.Unmarshal(data, &s); err != nil {
+					t.Errorf("marshaled value is not valid JSON string: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// TestCustomTime_IsZero tests the IsZero behavior
+func TestCustomTime_IsZero(t *testing.T) {
+	tests := []struct {
+		name     string
+		time     CustomTime
+		expected bool
+	}{
+		{
+			name:     "zero time",
+			time:     CustomTime{},
+			expected: true,
+		},
+		{
+			name:     "non-zero time",
+			time:     CustomTime{Time: time.Now()},
+			expected: false,
+		},
+		{
+			name:     "explicitly zero",
+			time:     CustomTime{Time: time.Time{}},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.time.IsZero(); got != tt.expected {
+				t.Errorf("IsZero() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCustomTime_RoundTrip tests full marshal/unmarshal cycle
+func TestCustomTime_RoundTrip(t *testing.T) {
+	original := CustomTime{Time: time.Date(2023, 10, 14, 12, 30, 45, 0, time.UTC)}
+
+	// Marshal
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	// Unmarshal
+	var decoded CustomTime
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	// Compare (truncate to seconds as JSON doesn't preserve nanoseconds)
+	if !original.Time.Truncate(time.Second).Equal(decoded.Time.Truncate(time.Second)) {
+		t.Errorf("times don't match: original=%v, decoded=%v", original.Time, decoded.Time)
+	}
+}
+
+// ============================================================================
+// Base Model Tests
+// ============================================================================
+
 // TestGormModel_JSON tests GormModel JSON serialization
 func TestGormModel_JSON(t *testing.T) {
 	now := CustomTime{Time: time.Now().UTC()}
@@ -95,6 +202,10 @@ func TestPaginationOptions_JSON(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// Domain Model Tests
+// ============================================================================
+
 // TestOrganization_JSON tests Organization model serialization
 func TestOrganization_JSON(t *testing.T) {
 	now := CustomTime{Time: time.Now().UTC()}
@@ -104,20 +215,20 @@ func TestOrganization_JSON(t *testing.T) {
 			CreatedAt: &now,
 			UpdatedAt: &now,
 		},
-		UUID:        "org-uuid-123",
-		Name:        "Test Organization",
-		Description: "Test description",
-		Industry:    "Technology",
-		Website:     "https://example.com",
-		Size:        "50-200",
-		Country:     "US",
-		TimeZone:    "America/New_York",
-		MaxServers:  100,
-		MaxUsers:    50,
-		MaxProbes:   200,
+		UUID:              "org-uuid-123",
+		Name:              "Test Organization",
+		Description:       "Test description",
+		Industry:          "Technology",
+		Website:           "https://example.com",
+		Size:              "50-200",
+		Country:           "US",
+		TimeZone:          "America/New_York",
+		MaxServers:        100,
+		MaxUsers:          50,
+		MaxProbes:         200,
 		AlertsEnabled:     true,
 		MonitoringEnabled: true,
-		Tags:        []string{"test", "demo"},
+		Tags:              []string{"test", "demo"},
 	}
 
 	// Marshal
@@ -330,9 +441,9 @@ func TestMapFields(t *testing.T) {
 		UUID: "test-uuid",
 		Name: "Test Org",
 		Settings: map[string]interface{}{
-			"theme":        "dark",
+			"theme":         "dark",
 			"notifications": true,
-			"max_retries":  3,
+			"max_retries":   3,
 		},
 		Metadata: map[string]interface{}{
 			"created_by": "admin",
@@ -410,53 +521,6 @@ func TestOmitemptyFields(t *testing.T) {
 	}
 }
 
-// contains checks if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-// TestCustomTime_IsZero tests the IsZero behavior
-func TestCustomTime_IsZero(t *testing.T) {
-	tests := []struct {
-		name     string
-		time     CustomTime
-		expected bool
-	}{
-		{
-			name:     "zero time",
-			time:     CustomTime{},
-			expected: true,
-		},
-		{
-			name:     "non-zero time",
-			time:     CustomTime{Time: time.Now()},
-			expected: false,
-		},
-		{
-			name:     "explicitly zero",
-			time:     CustomTime{Time: time.Time{}},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.time.IsZero(); got != tt.expected {
-				t.Errorf("IsZero() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
 // TestNestedStructs tests models with nested struct fields
 func TestNestedStructs(t *testing.T) {
 	now := CustomTime{Time: time.Now().UTC()}
@@ -495,6 +559,10 @@ func TestNestedStructs(t *testing.T) {
 		t.Errorf("BillingContact.Email = %s, want billing@example.com", decoded.BillingContact.Email)
 	}
 }
+
+// ============================================================================
+// UnifiedAPIKey Method Tests
+// ============================================================================
 
 // TestUnifiedAPIKey_IsActive tests the IsActive method
 func TestUnifiedAPIKey_IsActive(t *testing.T) {
@@ -1102,4 +1170,551 @@ func TestAPIKeyType_String(t *testing.T) {
 			t.Errorf("keyType comparison failed for %v", keyType)
 		}
 	}
+}
+
+// ============================================================================
+// ServerDetailsUpdateRequest Method Tests
+// ============================================================================
+
+// TestServerDetailsUpdateRequest_WithBasicInfo tests WithBasicInfo method
+func TestServerDetailsUpdateRequest_WithBasicInfo(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	result := req.WithBasicInfo("test-host", "192.168.1.1", "production", "US-East", "web")
+
+	if result.Hostname != "test-host" {
+		t.Errorf("Hostname = %s, want test-host", result.Hostname)
+	}
+	if result.MainIP != "192.168.1.1" {
+		t.Errorf("MainIP = %s, want 192.168.1.1", result.MainIP)
+	}
+	if result.Environment != "production" {
+		t.Errorf("Environment = %s, want production", result.Environment)
+	}
+	if result.Location != "US-East" {
+		t.Errorf("Location = %s, want US-East", result.Location)
+	}
+	if result.Classification != "web" {
+		t.Errorf("Classification = %s, want web", result.Classification)
+	}
+
+	// Verify it returns self for chaining
+	if result != req {
+		t.Error("WithBasicInfo should return self for chaining")
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithSystemInfo tests WithSystemInfo method
+func TestServerDetailsUpdateRequest_WithSystemInfo(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	result := req.WithSystemInfo("Ubuntu", "22.04", "x86_64", "SN123", "00:11:22:33:44:55")
+
+	if result.OS != "Ubuntu" {
+		t.Errorf("OS = %s, want Ubuntu", result.OS)
+	}
+	if result.OSVersion != "22.04" {
+		t.Errorf("OSVersion = %s, want 22.04", result.OSVersion)
+	}
+	if result.OSArch != "x86_64" {
+		t.Errorf("OSArch = %s, want x86_64", result.OSArch)
+	}
+	if result.SerialNumber != "SN123" {
+		t.Errorf("SerialNumber = %s, want SN123", result.SerialNumber)
+	}
+	if result.MacAddress != "00:11:22:33:44:55" {
+		t.Errorf("MacAddress = %s, want 00:11:22:33:44:55", result.MacAddress)
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithLegacyHardware tests WithLegacyHardware method
+func TestServerDetailsUpdateRequest_WithLegacyHardware(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	result := req.WithLegacyHardware("Intel Xeon", 2, 16, 32768, 512000)
+
+	if result.CPUModel != "Intel Xeon" {
+		t.Errorf("CPUModel = %s, want Intel Xeon", result.CPUModel)
+	}
+	if result.CPUCount != 2 {
+		t.Errorf("CPUCount = %d, want 2", result.CPUCount)
+	}
+	if result.CPUCores != 16 {
+		t.Errorf("CPUCores = %d, want 16", result.CPUCores)
+	}
+	if result.MemoryTotal != 32768 {
+		t.Errorf("MemoryTotal = %d, want 32768", result.MemoryTotal)
+	}
+	if result.StorageTotal != 512000 {
+		t.Errorf("StorageTotal = %d, want 512000", result.StorageTotal)
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithHardwareDetails tests WithHardwareDetails method
+func TestServerDetailsUpdateRequest_WithHardwareDetails(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	hardware := &HardwareDetails{
+		CPU: []ServerCPUInfo{
+			{ModelName: "Intel Xeon", PhysicalCores: 8},
+		},
+	}
+
+	result := req.WithHardwareDetails(hardware)
+
+	if result.Hardware == nil {
+		t.Fatal("Hardware should not be nil")
+	}
+	if len(result.Hardware.CPU) != 1 {
+		t.Errorf("CPU count = %d, want 1", len(result.Hardware.CPU))
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithCPUs tests WithCPUs method
+func TestServerDetailsUpdateRequest_WithCPUs(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	cpus := []ServerCPUInfo{
+		{ModelName: "Intel Xeon E5", PhysicalCores: 8},
+		{ModelName: "Intel Xeon E7", PhysicalCores: 12},
+	}
+
+	result := req.WithCPUs(cpus)
+
+	if result.Hardware == nil {
+		t.Fatal("Hardware should not be nil")
+	}
+	if len(result.Hardware.CPU) != 2 {
+		t.Errorf("CPU count = %d, want 2", len(result.Hardware.CPU))
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithMemory tests WithMemory method
+func TestServerDetailsUpdateRequest_WithMemory(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	memory := &ServerMemoryInfo{
+		TotalSize:  32768,
+		MemoryType: "DDR4",
+		Speed:      2400,
+	}
+
+	result := req.WithMemory(memory)
+
+	if result.Hardware == nil {
+		t.Fatal("Hardware should not be nil")
+	}
+	if result.Hardware.Memory == nil {
+		t.Fatal("Memory should not be nil")
+	}
+	if result.Hardware.Memory.TotalSize != 32768 {
+		t.Errorf("TotalSize = %d, want 32768", result.Hardware.Memory.TotalSize)
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithNetworkInterfaces tests WithNetworkInterfaces method
+func TestServerDetailsUpdateRequest_WithNetworkInterfaces(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	interfaces := []ServerNetworkInterfaceInfo{
+		{Name: "eth0", SpeedMbps: 1000},
+		{Name: "eth1", SpeedMbps: 10000},
+	}
+
+	result := req.WithNetworkInterfaces(interfaces)
+
+	if result.Hardware == nil {
+		t.Fatal("Hardware should not be nil")
+	}
+	if len(result.Hardware.Network) != 2 {
+		t.Errorf("Network interface count = %d, want 2", len(result.Hardware.Network))
+	}
+}
+
+// TestServerDetailsUpdateRequest_WithDisks tests WithDisks method
+func TestServerDetailsUpdateRequest_WithDisks(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+	disks := []ServerDiskInfo{
+		{Device: "/dev/sda", Size: 512000},
+		{Device: "/dev/sdb", Size: 1024000},
+	}
+
+	result := req.WithDisks(disks)
+
+	if result.Hardware == nil {
+		t.Fatal("Hardware should not be nil")
+	}
+	if len(result.Hardware.Disks) != 2 {
+		t.Errorf("Disk count = %d, want 2", len(result.Hardware.Disks))
+	}
+}
+
+// TestServerDetailsUpdateRequest_HasHardwareDetails tests HasHardwareDetails method
+func TestServerDetailsUpdateRequest_HasHardwareDetails(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      *ServerDetailsUpdateRequest
+		expected bool
+	}{
+		{
+			name:     "nil hardware",
+			req:      &ServerDetailsUpdateRequest{},
+			expected: false,
+		},
+		{
+			name: "with hardware",
+			req: &ServerDetailsUpdateRequest{
+				Hardware: &HardwareDetails{},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.req.HasHardwareDetails(); got != tt.expected {
+				t.Errorf("HasHardwareDetails() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestServerDetailsUpdateRequest_HasDisks tests HasDisks method
+func TestServerDetailsUpdateRequest_HasDisks(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      *ServerDetailsUpdateRequest
+		expected bool
+	}{
+		{
+			name:     "nil hardware",
+			req:      &ServerDetailsUpdateRequest{},
+			expected: false,
+		},
+		{
+			name: "empty disks",
+			req: &ServerDetailsUpdateRequest{
+				Hardware: &HardwareDetails{},
+			},
+			expected: false,
+		},
+		{
+			name: "with disks",
+			req: &ServerDetailsUpdateRequest{
+				Hardware: &HardwareDetails{
+					Disks: []ServerDiskInfo{
+						{Device: "/dev/sda"},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.req.HasDisks(); got != tt.expected {
+				t.Errorf("HasDisks() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestServerDetailsUpdateRequest_Chaining tests method chaining
+func TestServerDetailsUpdateRequest_Chaining(t *testing.T) {
+	req := &ServerDetailsUpdateRequest{}
+
+	result := req.
+		WithBasicInfo("test-host", "192.168.1.1", "prod", "US", "web").
+		WithSystemInfo("Ubuntu", "22.04", "x86_64", "SN123", "00:11:22:33:44:55").
+		WithLegacyHardware("Intel Xeon", 2, 16, 32768, 512000).
+		WithCPUs([]ServerCPUInfo{{ModelName: "Intel"}}).
+		WithMemory(&ServerMemoryInfo{TotalSize: 16384}).
+		WithDisks([]ServerDiskInfo{{Device: "/dev/sda"}})
+
+	if result.Hostname != "test-host" {
+		t.Error("chaining failed for basic info")
+	}
+	if result.OS != "Ubuntu" {
+		t.Error("chaining failed for system info")
+	}
+	if result.CPUModel != "Intel Xeon" {
+		t.Error("chaining failed for legacy hardware")
+	}
+	if !result.HasHardwareDetails() {
+		t.Error("chaining failed for hardware details")
+	}
+	if !result.HasDisks() {
+		t.Error("chaining failed for disks")
+	}
+}
+
+// ============================================================================
+// ToQuery Method Tests
+// ============================================================================
+
+// TestHardwareInventoryListOptions_ToQuery tests HardwareInventoryListOptions ToQuery method
+func TestHardwareInventoryListOptions_ToQuery(t *testing.T) {
+	startTime := time.Date(2023, 10, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2023, 10, 31, 23, 59, 59, 0, time.UTC)
+
+	opts := &HardwareInventoryListOptions{
+		StartTime: &startTime,
+		EndTime:   &endTime,
+	}
+
+	query := opts.ToQuery()
+
+	if query["start_time"] == "" {
+		t.Error("start_time should be present in query")
+	}
+	if query["end_time"] == "" {
+		t.Error("end_time should be present in query")
+	}
+
+	// Test with nil times
+	opts2 := &HardwareInventoryListOptions{}
+	query2 := opts2.ToQuery()
+
+	if _, exists := query2["start_time"]; exists {
+		t.Error("start_time should not be present when nil")
+	}
+	if _, exists := query2["end_time"]; exists {
+		t.Error("end_time should not be present when nil")
+	}
+}
+
+// TestTagNamespaceListOptions_ToQuery tests TagNamespaceListOptions ToQuery method
+func TestTagNamespaceListOptions_ToQuery(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	tests := []struct {
+		name     string
+		opts     TagNamespaceListOptions
+		wantKeys []string
+	}{
+		{
+			name:     "all fields",
+			opts:     TagNamespaceListOptions{Type: "custom", Parent: "root", Active: &trueVal, Search: "test"},
+			wantKeys: []string{"type", "parent", "active", "search"},
+		},
+		{
+			name:     "active false",
+			opts:     TagNamespaceListOptions{Active: &falseVal},
+			wantKeys: []string{"active"},
+		},
+		{
+			name:     "empty options",
+			opts:     TagNamespaceListOptions{},
+			wantKeys: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := tt.opts.ToQuery()
+
+			for _, key := range tt.wantKeys {
+				if _, exists := query[key]; !exists {
+					t.Errorf("expected key %s to exist in query", key)
+				}
+			}
+
+			// Check active value if set
+			if tt.opts.Active != nil {
+				expectedValue := "false"
+				if *tt.opts.Active {
+					expectedValue = "true"
+				}
+				if query["active"] != expectedValue {
+					t.Errorf("active = %s, want %s", query["active"], expectedValue)
+				}
+			}
+		})
+	}
+}
+
+// ============================================================================
+// NotificationPriority Tests
+// ============================================================================
+
+// TestNotificationPriority_String tests NotificationPriority String method
+func TestNotificationPriority_String(t *testing.T) {
+	tests := []struct {
+		priority NotificationPriority
+		expected string
+	}{
+		{NotificationPriorityLow, "low"},
+		{NotificationPriorityNormal, "normal"},
+		{NotificationPriorityHigh, "high"},
+		{NotificationPriorityCritical, "critical"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			if got := tt.priority.String(); got != tt.expected {
+				t.Errorf("String() = %s, want %s", got, tt.expected)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// Additional Model Tests
+// ============================================================================
+
+// TestAlert_JSON tests Alert model serialization
+func TestAlert_JSON(t *testing.T) {
+	now := CustomTime{Time: time.Now().UTC()}
+	alert := Alert{
+		GormModel: GormModel{
+			ID:        1,
+			CreatedAt: &now,
+		},
+		Name:        "CPU Alert",
+		Description: "CPU usage too high",
+		Type:        "metric",
+		MetricName:  "cpu_usage",
+		Condition:   "greater_than",
+		Threshold:   80.0,
+		Duration:    300,
+		Enabled:     true,
+		Status:      "active",
+		Severity:    "critical",
+		Channels:    []string{"email", "slack"},
+		Recipients:  []string{"admin@example.com"},
+		Tags:        []string{"production", "critical"},
+	}
+
+	data, err := json.Marshal(alert)
+	if err != nil {
+		t.Fatalf("failed to marshal Alert: %v", err)
+	}
+
+	var decoded Alert
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal Alert: %v", err)
+	}
+
+	if decoded.Name != alert.Name {
+		t.Errorf("Name = %s, want %s", decoded.Name, alert.Name)
+	}
+	if decoded.Threshold != alert.Threshold {
+		t.Errorf("Threshold = %f, want %f", decoded.Threshold, alert.Threshold)
+	}
+}
+
+// TestMetric_JSON tests Metric model serialization
+func TestMetric_JSON(t *testing.T) {
+	metric := Metric{
+		ServerUUID: "server-123",
+		Timestamp:  time.Now().UTC(),
+		Name:       "cpu_usage",
+		Value:      75.5,
+		Unit:       "percent",
+		Tags: map[string]string{
+			"host": "web-01",
+			"env":  "production",
+		},
+	}
+
+	data, err := json.Marshal(metric)
+	if err != nil {
+		t.Fatalf("failed to marshal Metric: %v", err)
+	}
+
+	var decoded Metric
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal Metric: %v", err)
+	}
+
+	if decoded.Name != metric.Name {
+		t.Errorf("Name = %s, want %s", decoded.Name, metric.Name)
+	}
+	if decoded.Value != metric.Value {
+		t.Errorf("Value = %f, want %f", decoded.Value, metric.Value)
+	}
+}
+
+// TestServerCreateRequest_JSON tests ServerCreateRequest serialization
+func TestServerCreateRequest_JSON(t *testing.T) {
+	req := ServerCreateRequest{
+		Hostname:       "test-server",
+		MainIP:         "192.168.1.100",
+		OS:             "Ubuntu",
+		OSVersion:      "22.04",
+		OSArch:         "x86_64",
+		SerialNumber:   "SN123456",
+		MacAddress:     "00:11:22:33:44:55",
+		Environment:    "production",
+		Location:       "US-East",
+		Classification: "web",
+	}
+
+	data, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("failed to marshal ServerCreateRequest: %v", err)
+	}
+
+	var decoded ServerCreateRequest
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal ServerCreateRequest: %v", err)
+	}
+
+	if decoded.Hostname != req.Hostname {
+		t.Errorf("Hostname = %s, want %s", decoded.Hostname, req.Hostname)
+	}
+	if decoded.MainIP != req.MainIP {
+		t.Errorf("MainIP = %s, want %s", decoded.MainIP, req.MainIP)
+	}
+}
+
+// TestMonitoringAgent_JSON tests MonitoringAgent serialization
+func TestMonitoringAgent_JSON(t *testing.T) {
+	now := CustomTime{Time: time.Now().UTC()}
+	agent := MonitoringAgent{
+		GormModel: GormModel{
+			ID:        1,
+			CreatedAt: &now,
+		},
+		UUID:           "agent-uuid-123",
+		Name:           "Test Agent",
+		Status:         "active",
+		Version:        "1.0.0",
+		OrganizationID: 1,
+		ServerUUID:     "server-uuid-123",
+		Configuration: map[string]interface{}{
+			"interval": 60,
+			"enabled":  true,
+		},
+	}
+
+	data, err := json.Marshal(agent)
+	if err != nil {
+		t.Fatalf("failed to marshal MonitoringAgent: %v", err)
+	}
+
+	var decoded MonitoringAgent
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal MonitoringAgent: %v", err)
+	}
+
+	if decoded.UUID != agent.UUID {
+		t.Errorf("UUID = %s, want %s", decoded.UUID, agent.UUID)
+	}
+	if decoded.Status != agent.Status {
+		t.Errorf("Status = %s, want %s", decoded.Status, agent.Status)
+	}
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// contains checks if a string contains a substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }

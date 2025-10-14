@@ -45,7 +45,10 @@
       "mcp__taskforge__getProject",
       "mcp__taskforge__listFeatures",
       "mcp__taskforge__getTasks",
-      "mcp__taskforge__getTask"
+      "mcp__taskforge__getTask",
+      "mcp__github__get_pull_request",
+      "WebFetch(domain:github.com)",
+      "Bash(gh run view:*)"
     ],
     "deny": [],
     "additionalDirectories": [

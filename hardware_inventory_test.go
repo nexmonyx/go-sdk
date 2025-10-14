@@ -117,6 +117,302 @@ func TestHardwareInventoryService_Submit(t *testing.T) {
 	assert.Equal(t, 2, resp.ComponentCounts["cpus"])
 }
 
+func TestHardwareInventoryService_Get(t *testing.T) {
+	serverUUID := "test-server-123"
+	_ = time.Now()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory/"+serverUUID, r.URL.Path)
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": HardwareInventoryInfo{
+				Manufacturer:     "Dell Inc.",
+				Model:            "PowerEdge R740",
+				CollectionMethod: "dmidecode",
+				DetectionTool:    "lshw",
+				
+				CPUs: []CPUInfo{
+					{
+						Manufacturer: "Intel",
+						Model:        "Xeon Gold 6230",
+						Cores:        20,
+					},
+				},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	inventory, err := client.HardwareInventory.Get(context.Background(), serverUUID)
+	require.NoError(t, err)
+	assert.NotNil(t, inventory)
+	assert.Equal(t, "Dell Inc.", inventory.Manufacturer)
+	assert.Equal(t, "PowerEdge R740", inventory.Model)
+	assert.Len(t, inventory.CPUs, 1)
+}
+
+func TestHardwareInventoryService_List(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory", r.URL.Path)
+		assert.Equal(t, "1", r.URL.Query().Get("page"))
+		assert.Equal(t, "25", r.URL.Query().Get("limit"))
+
+		inventories := []*HardwareInventoryInfo{
+			{
+				Manufacturer: "Dell Inc.",
+				Model:        "PowerEdge R740",
+			},
+			{
+				Manufacturer: "HP",
+				Model:        "ProLiant DL380",
+			},
+		}
+
+		response := map[string]interface{}{
+			"success": true,
+			"data":    inventories,
+			"meta": map[string]interface{}{
+				"total":       2,
+				"page":        1,
+				"limit":       25,
+				"total_pages": 1,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	inventories, meta, err := client.HardwareInventory.List(context.Background(), &ListOptions{
+		Page:  1,
+		Limit: 25,
+	})
+	require.NoError(t, err)
+	assert.Len(t, inventories, 2)
+	assert.NotNil(t, meta)
+	assert.Equal(t, 1, meta.Page)
+}
+
+func TestHardwareInventoryService_GetHistory(t *testing.T) {
+	serverUUID := "test-server-123"
+	_ = time.Now()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory/"+serverUUID+"/history", r.URL.Path)
+		assert.Equal(t, "1", r.URL.Query().Get("page"))
+
+		inventories := []*HardwareInventoryInfo{
+			{
+				Manufacturer: "Dell Inc.",
+				Model:        "PowerEdge R740",
+				
+			},
+			{
+				Manufacturer: "Dell Inc.",
+				Model:        "PowerEdge R740",
+				
+			},
+		}
+
+		response := map[string]interface{}{
+			"success": true,
+			"data":    inventories,
+			"meta": map[string]interface{}{
+				"total":       2,
+				"page":        1,
+				"limit":       25,
+				"total_pages": 1,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	inventories, meta, err := client.HardwareInventory.GetHistory(context.Background(), serverUUID, &ListOptions{
+		Page: 1,
+	})
+	require.NoError(t, err)
+	assert.Len(t, inventories, 2)
+	assert.NotNil(t, meta)
+}
+
+func TestHardwareInventoryService_GetChanges(t *testing.T) {
+	serverUUID := "test-server-123"
+	now := time.Now()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory/"+serverUUID+"/changes", r.URL.Path)
+		assert.NotEmpty(t, r.URL.Query().Get("start"))
+		assert.NotEmpty(t, r.URL.Query().Get("end"))
+
+		changes := []HardwareChange{
+			{
+				ID:            1,
+				ServerUUID:    serverUUID,
+				ComponentType: "memory",
+				ChangeType:    "added",
+				NewValue:      "32GB DDR4 Module",
+				ChangedAt:     &CustomTime{Time: now},
+				Details:       "Added new memory module",
+			},
+			{
+				ID:            2,
+				ServerUUID:    serverUUID,
+				ComponentType: "storage",
+				ChangeType:    "removed",
+				OldValue:      "500GB SSD",
+				ChangedAt:     &CustomTime{Time: now.Add(-1 * time.Hour)},
+				Details:       "Removed old SSD",
+			},
+		}
+
+		response := map[string]interface{}{
+			"success": true,
+			"data":    changes,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	timeRange := &QueryTimeRange{
+		Start: now.Add(-7 * 24 * time.Hour),
+		End:   now,
+	}
+
+	changes, err := client.HardwareInventory.GetChanges(context.Background(), serverUUID, timeRange)
+	require.NoError(t, err)
+	assert.Len(t, changes, 2)
+	assert.Equal(t, "memory", changes[0].ComponentType)
+	assert.Equal(t, "added", changes[0].ChangeType)
+}
+
+func TestHardwareInventoryService_Search(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory/search", r.URL.Path)
+
+		var search HardwareSearch
+		err := json.NewDecoder(r.Body).Decode(&search)
+		require.NoError(t, err)
+		assert.Equal(t, "Dell Inc.", search.Manufacturer)
+		assert.Equal(t, "PowerEdge", search.Model)
+
+		inventories := []*HardwareInventoryInfo{
+			{
+				Manufacturer: "Dell Inc.",
+				Model:        "PowerEdge R740",
+			},
+			{
+				Manufacturer: "Dell Inc.",
+				Model:        "PowerEdge R640",
+			},
+		}
+
+		response := map[string]interface{}{
+			"success": true,
+			"data":    inventories,
+			"meta": map[string]interface{}{
+				"total": 2,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	inventories, meta, err := client.HardwareInventory.Search(context.Background(), &HardwareSearch{
+		Manufacturer: "Dell Inc.",
+		Model:        "PowerEdge",
+	})
+	require.NoError(t, err)
+	assert.Len(t, inventories, 2)
+	assert.NotNil(t, meta)
+}
+
+func TestHardwareInventoryService_Export(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/hardware-inventory/export", r.URL.Path)
+
+		var body map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&body)
+		require.NoError(t, err)
+		assert.Equal(t, "csv", body["format"])
+
+		csvData := "Server UUID,Manufacturer,Model\nserver-1,Dell Inc.,PowerEdge R740\n"
+		w.Header().Set("Content-Type", "text/csv")
+		w.Write([]byte(csvData))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth: AuthConfig{
+			Token: "test-token",
+		},
+	})
+	require.NoError(t, err)
+
+	data, err := client.HardwareInventory.Export(context.Background(), "csv", []string{"server-1", "server-2"})
+	require.NoError(t, err)
+	assert.NotNil(t, data)
+	assert.Contains(t, string(data), "PowerEdge R740")
+}
+
 func TestHardwareInventoryService_GetHardwareInventory(t *testing.T) {
 	serverUUID := "test-server-123"
 	now := time.Now()

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -211,6 +212,312 @@ func TestBackgroundJobsService_CancelJob(t *testing.T) {
 	assert.NotNil(t, resp)
 }
 
+func TestBackgroundJobsService_Retry(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/background-jobs/job-123/retry", r.URL.Path)
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": BackgroundJob{
+				ID:         1,
+				Type:       "data_export",
+				Status:     "pending",
+				RetryCount: 1,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	job, err := client.BackgroundJobs.Retry(ctx, "job-123")
+
+	require.NoError(t, err)
+	assert.NotNil(t, job)
+	assert.Equal(t, "pending", job.Status)
+	assert.Equal(t, 1, job.RetryCount)
+}
+
+func TestBackgroundJobsService_GetStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/background-jobs/job-456/status", r.URL.Path)
+
+		now := time.Now()
+		response := map[string]interface{}{
+			"success": true,
+			"data": JobStatus{
+				ID:       "job-456",
+				Status:   "running",
+				Progress: 75,
+				Message:  "Processing data",
+				Steps: []JobStep{
+					{
+						Name:   "Download",
+						Status: "completed",
+					},
+					{
+						Name:   "Process",
+						Status: "running",
+					},
+				},
+				UpdatedAt: &CustomTime{Time: now},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	status, err := client.BackgroundJobs.GetStatus(ctx, "job-456")
+
+	require.NoError(t, err)
+	assert.NotNil(t, status)
+	assert.Equal(t, "job-456", status.ID)
+	assert.Equal(t, "running", status.Status)
+	assert.Equal(t, 75, status.Progress)
+	assert.Len(t, status.Steps, 2)
+}
+
+func TestBackgroundJobsService_UpdateJobStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PATCH", r.Method)
+		assert.Equal(t, "/v1/background-jobs/123/status", r.URL.Path)
+
+		var req BackgroundJobStatusUpdateRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
+		assert.Equal(t, "running", req.Status)
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": BackgroundJob{
+				ID:     123,
+				Status: "running",
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	job, resp, err := client.BackgroundJobs.UpdateJobStatus(ctx, 123, &BackgroundJobStatusUpdateRequest{
+		Status: "running",
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, job)
+	assert.Equal(t, "running", job.Status)
+}
+
+func TestBackgroundJobsService_UpdateJobProgress(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PATCH", r.Method)
+		assert.Equal(t, "/v1/background-jobs/123/progress", r.URL.Path)
+
+		var req BackgroundJobProgressUpdateRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
+		assert.Equal(t, 85, req.Progress)
+		assert.Equal(t, "Almost done", req.ProgressText)
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": BackgroundJob{
+				ID:           123,
+				Progress:     85,
+				ProgressText: "Almost done",
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	job, resp, err := client.BackgroundJobs.UpdateJobProgress(ctx, 123, &BackgroundJobProgressUpdateRequest{
+		Progress:     85,
+		ProgressText: "Almost done",
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, job)
+	assert.Equal(t, 85, job.Progress)
+	assert.Equal(t, "Almost done", job.ProgressText)
+}
+
+func TestBackgroundJobsService_CompleteJob(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/background-jobs/123/complete", r.URL.Path)
+
+		var body map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&body)
+		require.NoError(t, err)
+		assert.NotNil(t, body["result"])
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": BackgroundJob{
+				ID:     123,
+				Status: "completed",
+				Result: map[string]interface{}{
+					"exported_records": 1000,
+				},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	job, resp, err := client.BackgroundJobs.CompleteJob(ctx, 123, map[string]interface{}{
+		"exported_records": 1000,
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, job)
+	assert.Equal(t, "completed", job.Status)
+	assert.NotNil(t, job.Result)
+}
+
+func TestBackgroundJobsService_FailJob(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/background-jobs/123/fail", r.URL.Path)
+
+		var body map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&body)
+		require.NoError(t, err)
+		assert.Equal(t, "Database connection failed", body["error"])
+
+		response := map[string]interface{}{
+			"success": true,
+			"data": BackgroundJob{
+				ID:     123,
+				Status: "failed",
+				Error:  "Database connection failed",
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	job, resp, err := client.BackgroundJobs.FailJob(ctx, 123, "Database connection failed")
+
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.NotNil(t, job)
+	assert.Equal(t, "failed", job.Status)
+	assert.Equal(t, "Database connection failed", job.Error)
+}
+
+func TestBackgroundJobsService_GetPendingJobs(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/background-jobs/pending", r.URL.Path)
+		assert.Equal(t, "10", r.URL.Query().Get("limit"))
+		assert.Equal(t, "true", r.URL.Query().Get("immediate_only"))
+
+		jobs := []*BackgroundJob{
+			{
+				ID:       1,
+				Status:   "pending",
+				Priority: 3,
+			},
+			{
+				ID:       2,
+				Status:   "pending",
+				Priority: 2,
+			},
+		}
+
+		response := map[string]interface{}{
+			"success": true,
+			"data":    jobs,
+			"meta": map[string]interface{}{
+				"total":       2,
+				"page":        1,
+				"limit":       10,
+				"total_pages": 1,
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL:    server.URL,
+		HTTPClient: &http.Client{},
+	})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	jobs, meta, err := client.BackgroundJobs.GetPendingJobs(ctx, &GetPendingJobsOptions{
+		Limit:         10,
+		ImmediateOnly: true,
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, meta)
+	assert.Len(t, jobs, 2)
+	assert.Equal(t, "pending", jobs[0].Status)
+}
+
 func TestBackgroundJobsService_ConvenienceMethods(t *testing.T) {
 	callCount := 0
 	// Create test server
@@ -278,4 +585,70 @@ func TestBackgroundJobsService_ConvenienceMethods(t *testing.T) {
 	assert.Equal(t, "alert_digest", job3.Type)
 
 	assert.Equal(t, 3, callCount)
+}
+
+func TestBackgroundJob_StatusMethods(t *testing.T) {
+	t.Run("IsComplete", func(t *testing.T) {
+		tests := []struct {
+			status   string
+			expected bool
+		}{
+			{"completed", true},
+			{"failed", true},
+			{"cancelled", true},
+			{"pending", false},
+			{"running", false},
+		}
+
+		for _, tt := range tests {
+			job := &BackgroundJob{Status: tt.status}
+			assert.Equal(t, tt.expected, job.IsComplete(), "Status: %s", tt.status)
+		}
+	})
+
+	t.Run("IsRunning", func(t *testing.T) {
+		job := &BackgroundJob{Status: "running"}
+		assert.True(t, job.IsRunning())
+
+		job.Status = "pending"
+		assert.False(t, job.IsRunning())
+	})
+
+	t.Run("IsFailed", func(t *testing.T) {
+		job := &BackgroundJob{Status: "failed"}
+		assert.True(t, job.IsFailed())
+
+		job.Status = "completed"
+		assert.False(t, job.IsFailed())
+	})
+}
+
+func TestListJobsOptions_ToQuery(t *testing.T) {
+	opts := &ListJobsOptions{
+		Page:   1,
+		Limit:  25,
+		Type:   "data_export",
+		Status: "pending",
+		UserID: 123,
+	}
+
+	query := opts.ToQuery()
+
+	assert.Equal(t, "1", query["page"])
+	assert.Equal(t, "25", query["limit"])
+	assert.Equal(t, "data_export", query["type"])
+	assert.Equal(t, "pending", query["status"])
+	assert.Equal(t, "123", query["user_id"])
+}
+
+func TestGetPendingJobsOptions_ToQuery(t *testing.T) {
+	opts := &GetPendingJobsOptions{
+		Limit:         50,
+		ImmediateOnly: true,
+	}
+
+	query := opts.ToQuery()
+
+	assert.Equal(t, "50", query["limit"])
+	assert.Equal(t, "true", query["immediate_only"])
 }

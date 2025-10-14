@@ -51,8 +51,8 @@
 		}
 	],
 	"Stats": {
-		"files": 64,
-		"lines": 21026,
+		"files": 66,
+		"lines": 21710,
 		"nosec": 0,
 		"found": 3
 	},
