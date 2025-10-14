@@ -136,7 +136,10 @@ func (a *AdvancedMonitoringAgent) stop() {
 	// Send final heartbeat with unhealthy status
 	nodeInfo := a.createNodeInfo()
 	nodeInfo.Status = "stopping"
-	a.client.Monitoring.Heartbeat(context.Background(), nodeInfo)
+	if err := a.client.Monitoring.Heartbeat(context.Background(), nodeInfo); err != nil {
+		// Log error but continue shutdown
+		fmt.Printf("Warning: Failed to send final heartbeat: %v\n", err)
+	}
 	
 	a.wg.Wait()
 }
@@ -333,7 +336,8 @@ func (a *AdvancedMonitoringAgent) executeProbe(probe *nexmonyx.ProbeAssignment) 
 // executeHTTPProbe simulates HTTP/HTTPS probe execution
 func (a *AdvancedMonitoringAgent) executeHTTPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
 	// Simulate HTTP request timing
-	responseTime := 50 + (int(probe.ProbeID) % 200) // Mock response time
+	// Safe conversion: uint → int for modulo operation (ProbeID is always < max int)
+	responseTime := 50 + int(probe.ProbeID%200) // Mock response time
 	
 	result := nexmonyx.ProbeExecutionResult{
 		ProbeID:       probe.ProbeID,
@@ -365,7 +369,8 @@ func (a *AdvancedMonitoringAgent) executeHTTPProbe(probe *nexmonyx.ProbeAssignme
 
 // executeTCPProbe simulates TCP probe execution
 func (a *AdvancedMonitoringAgent) executeTCPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
-	responseTime := 20 + (int(probe.ProbeID) % 50)
+	// Safe conversion: perform modulo before conversion to avoid overflow
+	responseTime := 20 + int(probe.ProbeID%50)
 	
 	return nexmonyx.ProbeExecutionResult{
 		ProbeID:     probe.ProbeID,
@@ -381,7 +386,8 @@ func (a *AdvancedMonitoringAgent) executeTCPProbe(probe *nexmonyx.ProbeAssignmen
 
 // executeICMPProbe simulates ICMP probe execution
 func (a *AdvancedMonitoringAgent) executeICMPProbe(probe *nexmonyx.ProbeAssignment) nexmonyx.ProbeExecutionResult {
-	responseTime := 5 + (int(probe.ProbeID) % 20)
+	// Safe conversion: perform modulo before conversion to avoid overflow
+	responseTime := 5 + int(probe.ProbeID%20)
 	
 	return nexmonyx.ProbeExecutionResult{
 		ProbeID:      probe.ProbeID,

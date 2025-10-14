@@ -1,0 +1,60 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion uint -\u003e int",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/examples/monitoring/advanced/main.go",
+			"code": "389: \t// Safe conversion: perform modulo before conversion to avoid overflow\n390: \tresponseTime := 5 + int(probe.ProbeID%20)\n391: \t\n",
+			"line": "390",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion uint -\u003e int",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/examples/monitoring/advanced/main.go",
+			"code": "372: \t// Safe conversion: perform modulo before conversion to avoid overflow\n373: \tresponseTime := 20 + int(probe.ProbeID%50)\n374: \t\n",
+			"line": "373",
+			"column": "26",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion uint -\u003e int",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/examples/monitoring/advanced/main.go",
+			"code": "339: \t// Safe conversion: uint → int for modulo operation (ProbeID is always \u003c max int)\n340: \tresponseTime := 50 + int(probe.ProbeID%200) // Mock response time\n341: \t\n",
+			"line": "340",
+			"column": "26",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 64,
+		"lines": 21026,
+		"nosec": 0,
+		"found": 3
+	},
+	"GosecVersion": "dev"
+}

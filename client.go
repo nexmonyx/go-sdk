@@ -35,6 +35,7 @@ type Client struct {
 	Monitoring            *MonitoringService
 	Billing               *BillingService
 	BillingUsage          *BillingUsageService
+	QuotaHistory          *QuotaHistoryService
 	Settings              *SettingsService
 	Alerts                *AlertsService
 	ProbeAlerts           *ProbeAlertsService
@@ -235,6 +236,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Monitoring = &MonitoringService{client: client}
 	client.Billing = &BillingService{client: client}
 	client.BillingUsage = &BillingUsageService{client: client}
+	client.QuotaHistory = &QuotaHistoryService{client: client}
 	client.Settings = &SettingsService{client: client}
 	client.Alerts = &AlertsService{client: client}
 	client.ProbeAlerts = &ProbeAlertsService{client: client}

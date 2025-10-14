@@ -403,9 +403,11 @@ func ConvertLegacyToTimescaleMetrics(legacy *ComprehensiveMetricsRequest) *Times
 
 	// Convert memory metrics
 	if legacy.Memory != nil {
+		// Safely convert int64 to uint64 for memory metrics
+		// Negative values are treated as zero (invalid data)
 		metrics.Metrics.Memory = &TimescaleMemoryMetrics{
-			Total:       uint64(legacy.Memory.TotalBytes),
-			Used:        uint64(legacy.Memory.UsedBytes),
+			Total:       SafeInt64ToUint64OrZero(legacy.Memory.TotalBytes),
+			Used:        SafeInt64ToUint64OrZero(legacy.Memory.UsedBytes),
 			UsedPercent: legacy.Memory.UsagePercent,
 		}
 	}

@@ -290,13 +290,21 @@ func trackServiceResources() {
 	// Add metrics for trend analysis
 	for _, service := range serviceInfo.Services {
 		cpuPercent := float64(service.CPUUsageNSec) / float64(time.Since(*service.ActiveSince).Nanoseconds()) * 100
+
+		// Safe conversion: uint64 → int with overflow check
+		// Note: In production, validate that TasksCurrent fits in int range
+		threadCount := int(service.TasksCurrent)
+		if service.TasksCurrent > uint64(^uint(0)>>1) { // Check if exceeds max int
+			threadCount = int(^uint(0) >> 1) // Cap at max int value
+		}
+
 		serviceInfo.AddMetrics(&nexmonyx.ServiceMetrics{
 			ServiceName:  service.Name,
 			Timestamp:    time.Now(),
 			CPUPercent:   cpuPercent,
 			MemoryRSS:    service.MemoryCurrent,
 			ProcessCount: 1,
-			ThreadCount:  int(service.TasksCurrent),
+			ThreadCount:  threadCount,
 		})
 	}
 

@@ -54,9 +54,54 @@ jobs:
           go mod tidy
           go mod verify
 
-      - name: Security scanning
+      - name: Security scanning with baseline
         run: |
-          gosec -exclude-generated ./... || true
+          echo "Running gosec security scanner with baseline validation..."
+          chmod +x scripts/check-gosec.sh
+          ./scripts/check-gosec.sh --ci
+        continue-on-error: false
+
+      - name: Upload security scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results-${{ matrix.go-version }}
+          path: |
+            gosec-results.json
+          retention-days: 30
+
+      - name: Generate security report summary
+        if: always()
+        run: |
+          if [ -f gosec-results.json ]; then
+            echo "## Security Scan Report" > security-summary.md
+            echo "" >> security-summary.md
+
+            TOTAL=$(jq '.Issues | length' gosec-results.json)
+            HIGH=$(jq '[.Issues[] | select(.severity == "HIGH")] | length' gosec-results.json)
+            MEDIUM=$(jq '[.Issues[] | select(.severity == "MEDIUM")] | length' gosec-results.json)
+            LOW=$(jq '[.Issues[] | select(.severity == "LOW")] | length' gosec-results.json)
+
+            echo "**Total Issues:** $TOTAL" >> security-summary.md
+            echo "- 🔴 High: $HIGH" >> security-summary.md
+            echo "- 🟡 Medium: $MEDIUM" >> security-summary.md
+            echo "- 🔵 Low: $LOW" >> security-summary.md
+            echo "" >> security-summary.md
+            echo "**Baseline:** 15 tracked issues (see gosec.json)" >> security-summary.md
+            echo "" >> security-summary.md
+            echo "See [Security Baseline Documentation](docs/security/GOSEC_BASELINE.md) for details." >> security-summary.md
+
+            cat security-summary.md
+          fi
+
+      - name: Comment security report on PR
+        if: github.event_name == 'pull_request' && hashFiles('security-summary.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file security-summary.md \
+            --repo ${{ github.repository }} || echo "Could not post PR comment"
 
       - name: Run unit tests
         run: |
@@ -76,6 +121,13 @@ jobs:
           if [ -f integration_test.go.bak ]; then
             mv integration_test.go.bak integration_test.go.disabled
           fi
+
+      - name: Check coverage thresholds
+        if: hashFiles('coverage.out') != ''
+        run: |
+          echo "Enforcing coverage thresholds..."
+          chmod +x scripts/check-coverage.sh
+          ./scripts/check-coverage.sh coverage.out
 
       - name: Generate coverage summary
         if: always() && hashFiles('coverage.out') != ''

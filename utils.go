@@ -23,10 +23,16 @@ func AggregateDiskUsage(disks []DiskMetrics) *DiskUsageAggregate {
 			continue
 		}
 
-		// Convert int64 to uint64 for aggregation
-		totalBytes := uint64(disk.TotalBytes)
-		usedBytes := uint64(disk.UsedBytes)
-		freeBytes := uint64(disk.FreeBytes)
+		// Safely convert int64 to uint64 for aggregation
+		// Negative values indicate invalid data and are treated as zero
+		totalBytes := SafeInt64ToUint64OrZero(disk.TotalBytes)
+		usedBytes := SafeInt64ToUint64OrZero(disk.UsedBytes)
+		freeBytes := SafeInt64ToUint64OrZero(disk.FreeBytes)
+
+		// Skip disks with invalid/zero total size
+		if totalBytes == 0 {
+			continue
+		}
 
 		total += totalBytes
 		used += usedBytes

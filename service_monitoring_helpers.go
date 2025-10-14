@@ -120,13 +120,16 @@ func (s *ServiceInfo) CalculateTotalMemoryUsage() uint64 {
 	return total
 }
 
-// CalculateTotalCPUTime calculates total CPU time across all services
+// CalculateTotalCPUTime calculates total CPU time across all services.
+// Returns the maximum representable duration if the total would overflow.
 func (s *ServiceInfo) CalculateTotalCPUTime() time.Duration {
 	var totalNanoseconds uint64
 	for _, service := range s.Services {
 		totalNanoseconds += service.CPUUsageNSec
 	}
-	return time.Duration(totalNanoseconds) * time.Nanosecond
+	// Safely convert uint64 nanoseconds to time.Duration (int64)
+	// Cap at max duration (~292 years) if overflow would occur
+	return SafeUint64ToDurationCapped(totalNanoseconds)
 }
 
 // GetHighMemoryServices returns services using more than the specified memory threshold

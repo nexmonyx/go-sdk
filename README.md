@@ -1,5 +1,16 @@
 # Nexmonyx Go SDK
 
+<div align="center">
+
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/nexmonyx/go-sdk/ci.yml?branch=main&style=for-the-badge&logo=github&label=Build)](https://github.com/nexmonyx/go-sdk/actions)
+[![Test Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen?style=for-the-badge&logo=codecov)](https://github.com/nexmonyx/go-sdk/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nexmonyx/go-sdk?style=for-the-badge)](https://goreportcard.com/report/github.com/nexmonyx/go-sdk)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-pkg.go.dev-007d9c?style=for-the-badge&logo=go)](https://pkg.go.dev/github.com/nexmonyx/go-sdk)
+
+</div>
+
 The official Go SDK for the Nexmonyx API - a comprehensive server monitoring and management platform.
 
 ## Features
@@ -5781,6 +5792,52 @@ func (m *MonitoringAgent) executeProbe(probe *nexmonyx.Probe) {
 ```
 
 ## Testing
+
+The Nexmonyx Go SDK maintains high test coverage standards to ensure code quality and reliability.
+
+### Coverage Standards
+
+We enforce the following coverage thresholds in CI/CD:
+
+- **Overall Coverage**: Minimum 80% (current: [![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)]())
+- **Per-Package**: Minimum 70% for all packages
+- **Critical Files**: Minimum 90% for `client.go`, `errors.go`, `models.go`, `response.go`
+- **New Code**: Minimum 85% for changes in pull requests
+
+Coverage is automatically checked on every commit and pull request. Builds will fail if coverage drops below these thresholds.
+
+### Running Tests
+
+```bash
+# Run all tests
+go test -v ./...
+
+# Run tests with coverage
+go test -v -coverprofile=coverage.out ./...
+
+# View coverage report in browser
+go tool cover -html=coverage.out
+
+# Check coverage thresholds (local verification)
+./scripts/check-coverage.sh coverage.out
+
+# Run with race detection
+go test -v -race ./...
+
+# Run only unit tests (exclude integration)
+go test -v -short ./...
+
+# Run integration tests (requires credentials)
+export NEXMONYX_INTEGRATION_TESTS="true"
+export NEXMONYX_API_URL="https://api-dev.nexmonyx.com"
+export NEXMONYX_AUTH_TOKEN="your-token"
+go test -v -tags=integration ./...
+```
+
+### Coverage Reports
+
+- [Latest Coverage Report](https://github.com/nexmonyx/go-sdk/actions) - View detailed coverage from CI/CD runs
+- [Go Report Card](https://goreportcard.com/report/github.com/nexmonyx/go-sdk) - Comprehensive code quality report
 
 ### Unit Testing
 ```go

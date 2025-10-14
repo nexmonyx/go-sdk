@@ -40,7 +40,12 @@
       "Bash(gh run list:*)",
       "Bash(gh run watch:*)",
       "Bash(SERVER_UUID=test-server-uuid SERVER_SECRET=test-secret go run network_hardware_example.go)",
-      "Bash(gofmt:*)"
+      "Bash(gofmt:*)",
+      "mcp__taskforge__listProjects",
+      "mcp__taskforge__getProject",
+      "mcp__taskforge__listFeatures",
+      "mcp__taskforge__getTasks",
+      "mcp__taskforge__getTask"
     ],
     "deny": [],
     "additionalDirectories": [

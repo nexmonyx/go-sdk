@@ -1,0 +1,41 @@
+# Coverage threshold configuration for go-sdk
+#
+# This file defines the minimum test coverage requirements for the project.
+# The CI/CD pipeline enforces these thresholds to prevent coverage regression.
+
+[thresholds]
+# Overall project coverage requirement
+overall_minimum = 80.0
+
+# Per-package coverage requirement (default for all packages)
+package_minimum = 70.0
+
+# Critical packages require higher coverage
+critical_packages = client.go,errors.go,models.go,response.go
+critical_minimum = 90.0
+
+# Packages exempt from coverage requirements (with justification)
+# Format: package_path = reason
+[exemptions]
+# examples/ = "Example code, not production"
+# testutil/ = "Test helpers, tested implicitly"
+
+[pr_requirements]
+# Minimum coverage for new/changed code in pull requests
+new_code_minimum = 85.0
+
+# Whether to fail PR if new code doesn't meet threshold
+fail_on_new_code = true
+
+# Whether to fail PR if overall coverage decreases
+fail_on_coverage_decrease = true
+
+[reporting]
+# Generate detailed per-file coverage report
+detailed_report = true
+
+# Show only files below threshold in reports
+show_failures_only = false
+
+# Output format (text, json, html, all)
+format = text

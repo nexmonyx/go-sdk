@@ -3535,3 +3535,99 @@ type ProbeConfigValidationResult struct {
 	AllowedProbeTypes  []string `json:"allowed_probe_types,omitempty"`   // List of allowed probe types
 	UpgradeSuggestion  string   `json:"upgrade_suggestion,omitempty"`    // Suggested tier for meeting requirements
 }
+
+// ============================================================
+// Quota History Types
+// ============================================================
+
+// QuotaUsageRecordRequest represents a batch of quota usage records to store
+type QuotaUsageRecordRequest struct {
+	Records []QuotaUsageRecord `json:"records"`
+}
+
+// QuotaUsageRecord represents a single quota usage data point
+type QuotaUsageRecord struct {
+	OrganizationID uint      `json:"organization_id"`
+	ResourceType   string    `json:"resource_type"` // cpu, memory, storage, pods, services, configmaps, secrets, persistentvolumeclaims
+	UsedAmount     int64     `json:"used_amount"`
+	HardLimit      int64     `json:"hard_limit"`
+	CollectedAt    time.Time `json:"collected_at"`
+}
+
+// QuotaUsageHistory represents a historical quota usage record
+type QuotaUsageHistory struct {
+	ID                 uint64    `json:"id"`
+	OrganizationID     uint      `json:"organization_id"`
+	ResourceType       string    `json:"resource_type"`
+	UsedAmount         int64     `json:"used_amount"`
+	HardLimit          int64     `json:"hard_limit"`
+	UtilizationPercent float64   `json:"utilization_percent"`
+	CollectedAt        time.Time `json:"collected_at"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
+// AverageUtilizationResponse represents average utilization statistics
+type AverageUtilizationResponse struct {
+	OrganizationID     uint    `json:"organization_id"`
+	ResourceType       string  `json:"resource_type"`
+	AverageUtilization float64 `json:"average_utilization"`
+	AverageUsedAmount  float64 `json:"average_used_amount"`
+	AverageHardLimit   float64 `json:"average_hard_limit"`
+	StartDate          string  `json:"start_date"`
+	EndDate            string  `json:"end_date"`
+	SampleCount        int     `json:"sample_count"`
+}
+
+// DailyAggregateResponse represents daily aggregated quota statistics
+type DailyAggregateResponse struct {
+	Date               string  `json:"date"`
+	AverageUtilization float64 `json:"average_utilization"`
+	MaxUtilization     float64 `json:"max_utilization"`
+	MinUtilization     float64 `json:"min_utilization"`
+	AverageUsedAmount  float64 `json:"average_used_amount"`
+	SampleCount        int     `json:"sample_count"`
+}
+
+// ResourceSummaryResponse represents summary statistics for a single resource type
+type ResourceSummaryResponse struct {
+	ResourceType       string  `json:"resource_type"`
+	CurrentUtilization float64 `json:"current_utilization"`
+	AverageUtilization float64 `json:"average_utilization"`
+	PeakUtilization    float64 `json:"peak_utilization"`
+	CurrentUsedAmount  int64   `json:"current_used_amount"`
+	CurrentHardLimit   int64   `json:"current_hard_limit"`
+	SampleCount        int     `json:"sample_count"`
+}
+
+// UsageTrendResponse represents trend analysis results
+type UsageTrendResponse struct {
+	OrganizationID uint    `json:"organization_id"`
+	ResourceType   string  `json:"resource_type"`
+	TrendSlope     float64 `json:"trend_slope"`
+	TrendDirection string  `json:"trend_direction"` // increasing, decreasing, stable
+	CurrentValue   float64 `json:"current_value"`
+	PredictedValue float64 `json:"predicted_value"`
+	DaysAnalyzed   int     `json:"days_analyzed"`
+	SampleCount    int     `json:"sample_count"`
+	StartDate      string  `json:"start_date"`
+	EndDate        string  `json:"end_date"`
+}
+
+// UsagePattern represents a detected usage pattern
+type UsagePattern struct {
+	PatternType      string  `json:"pattern_type"` // high_utilization, rapid_growth, high_volatility, near_limit
+	Description      string  `json:"description"`
+	Severity         string  `json:"severity"` // info, warning, critical
+	AffectedResource string  `json:"affected_resource"`
+	DetectedValue    float64 `json:"detected_value"`
+	ThresholdValue   float64 `json:"threshold_value"`
+	Recommendation   string  `json:"recommendation"`
+}
+
+// UsagePatternsResponse contains all detected patterns
+type UsagePatternsResponse struct {
+	OrganizationID uint           `json:"organization_id"`
+	AnalysisDate   string         `json:"analysis_date"`
+	Patterns       []UsagePattern `json:"patterns"`
+	PatternCount   int            `json:"pattern_count"`
+}
