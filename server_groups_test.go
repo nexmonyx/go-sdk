@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -225,6 +226,134 @@ func TestServerGroupsService_GetGroupServers(t *testing.T) {
 	assert.Equal(t, "online", members[0].ServerStatus)
 	assert.NotNil(t, meta)
 	assert.Equal(t, 2, meta.TotalItems)
+}
+
+// TestServerGroupsService_GetGroupServers_ErrorScenarios tests error handling for GetGroupServers
+func TestServerGroupsService_GetGroupServers_ErrorScenarios(t *testing.T) {
+	tests := []struct {
+		name           string
+		groupID        uint
+		options        *PaginationOptions
+		status         string
+		tags           []string
+		responseStatus int
+		responseData   []ServerGroupMembership
+		responseMeta   *PaginationMeta
+		responseError  bool
+		expectError    bool
+		expectedCount  int
+	}{
+		{
+			name:           "empty_results",
+			groupID:        uint(2),
+			options:        &PaginationOptions{Page: 1, Limit: 25},
+			status:         "offline",
+			tags:           nil,
+			responseStatus: http.StatusOK,
+			responseData:   []ServerGroupMembership{}, // Empty results
+			responseMeta: &PaginationMeta{
+				CurrentPage: 1,
+				TotalItems:  0,
+				TotalPages:  0,
+			},
+			expectError:   false,
+			expectedCount: 0,
+		},
+		{
+			name:           "server_error_500",
+			groupID:        uint(3),
+			options:        &PaginationOptions{Page: 1, Limit: 10},
+			status:         "",
+			tags:           nil,
+			responseStatus: http.StatusInternalServerError,
+			responseError:  true,
+			expectError:    true,
+		},
+		{
+			name:           "unauthorized_401",
+			groupID:        uint(4),
+			options:        &PaginationOptions{Page: 1, Limit: 10},
+			status:         "",
+			tags:           nil,
+			responseStatus: http.StatusUnauthorized,
+			responseError:  true,
+			expectError:    true,
+		},
+		{
+			name:           "group_not_found_404",
+			groupID:        uint(999),
+			options:        &PaginationOptions{Page: 1, Limit: 10},
+			status:         "",
+			tags:           nil,
+			responseStatus: http.StatusNotFound,
+			responseError:  true,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "GET", r.Method)
+				assert.Equal(t, fmt.Sprintf("/v1/groups/%d/servers", tt.groupID), r.URL.Path)
+
+				// Verify query parameters
+				query := r.URL.Query()
+				if tt.options != nil {
+					assert.Equal(t, fmt.Sprintf("%d", tt.options.Page), query.Get("page"))
+					assert.Equal(t, fmt.Sprintf("%d", tt.options.Limit), query.Get("limit"))
+				}
+				if tt.status != "" {
+					assert.Equal(t, tt.status, query.Get("status"))
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.responseStatus)
+
+				if tt.responseError {
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "error",
+						"error":  "Server error",
+					})
+				} else {
+					response := struct {
+						Data []ServerGroupMembership `json:"data"`
+						Meta *PaginationMeta         `json:"meta"`
+					}{
+						Data: tt.responseData,
+						Meta: tt.responseMeta,
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+			require.NoError(t, err)
+
+			members, meta, err := client.ServerGroups.GetGroupServers(
+				context.Background(),
+				tt.groupID,
+				tt.options,
+				tt.status,
+				tt.tags,
+			)
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Len(t, members, tt.expectedCount)
+				if tt.expectedCount > 0 && meta != nil {
+					assert.NotNil(t, meta)
+					assert.Equal(t, tt.responseMeta.TotalItems, meta.TotalItems)
+				}
+			}
+		})
+	}
 }
 
 func TestServerGroupsService_ErrorHandling(t *testing.T) {

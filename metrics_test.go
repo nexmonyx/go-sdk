@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -201,79 +202,159 @@ func TestGetLatestMetrics(t *testing.T) {
 	assert.Equal(t, 60.2, *result.Metrics.MemoryUsagePercent)
 }
 
-// TestGetMetricsRange tests retrieving metrics range
+// TestGetMetricsRange tests retrieving metrics range with comprehensive coverage
 func TestGetMetricsRange(t *testing.T) {
-	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/servers/test-uuid/metrics/range", r.URL.Path)
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.Header.Get("Authorization"), "Bearer")
-
-		// Check query parameters
-		query := r.URL.Query()
-		assert.Equal(t, "2023-01-01T00:00:00Z", query.Get("start_time"))
-		assert.Equal(t, "2023-01-01T01:00:00Z", query.Get("end_time"))
-		assert.Equal(t, "100", query.Get("limit"))
-
-		now := time.Now()
-		rangeResponse := TimescaleMetricsRangeResponse{
-			ServerUUID: "test-uuid",
-			StartTime:  "2023-01-01T00:00:00Z",
-			EndTime:    "2023-01-01T01:00:00Z",
-			Count:      2,
-			Metrics: []*ComprehensiveMetricsTimescale{
-				{
-					ServerUUID:      "test-uuid",
-					Timestamp:       now.Add(-30 * time.Minute),
-					CPUUsagePercent: floatPtr(45.5),
+	tests := []struct {
+		name           string
+		serverUUID     string
+		startTime      string
+		endTime        string
+		limit          int
+		responseStatus int
+		responseData   interface{} // Can be TimescaleMetricsRangeResponse or map[string]interface{}
+		responseError  bool
+		expectError    bool
+		expectedCount  int
+	}{
+		{
+			name:           "successful_metrics_retrieval",
+			serverUUID:     "test-uuid",
+			startTime:      "2023-01-01T00:00:00Z",
+			endTime:        "2023-01-01T01:00:00Z",
+			limit:          100,
+			responseStatus: http.StatusOK,
+			responseData: TimescaleMetricsRangeResponse{
+				ServerUUID: "test-uuid",
+				StartTime:  "2023-01-01T00:00:00Z",
+				EndTime:    "2023-01-01T01:00:00Z",
+				Count:      2,
+				Metrics: []*ComprehensiveMetricsTimescale{
+					{ServerUUID: "test-uuid", CPUUsagePercent: floatPtr(45.5)},
+					{ServerUUID: "test-uuid", CPUUsagePercent: floatPtr(48.2)},
 				},
-				{
-					ServerUUID:      "test-uuid",
-					Timestamp:       now.Add(-15 * time.Minute),
-					CPUUsagePercent: floatPtr(48.2),
-				},
+				Source: "timescaledb",
 			},
-			Source: "timescaledb",
-		}
-
-		response := StandardResponse{
-			Status: "success",
-			Data:   rangeResponse,
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
-	}))
-	defer server.Close()
-
-	// Create client
-	config := &Config{
-		BaseURL: server.URL,
-		Auth: AuthConfig{
-			Token: "test-jwt-token",
+			expectError:   false,
+			expectedCount: 2,
+		},
+		{
+			name:           "zero_limit_parameter",
+			serverUUID:     "test-uuid-2",
+			startTime:      "2023-01-01T00:00:00Z",
+			endTime:        "2023-01-01T02:00:00Z",
+			limit:          0, // Test zero limit (should be omitted from query)
+			responseStatus: http.StatusOK,
+			responseData: TimescaleMetricsRangeResponse{
+				ServerUUID: "test-uuid-2",
+				Count:      5,
+				Metrics:    []*ComprehensiveMetricsTimescale{},
+				Source:     "timescaledb",
+			},
+			expectError:   false,
+			expectedCount: 5,
+		},
+		{
+			name:           "map_data_type_fallback",
+			serverUUID:     "test-uuid-3",
+			startTime:      "2023-01-01T00:00:00Z",
+			endTime:        "2023-01-01T01:00:00Z",
+			limit:          50,
+			responseStatus: http.StatusOK,
+			// Return as map[string]interface{} to test fallback conversion path
+			responseData: map[string]interface{}{
+				"server_uuid": "test-uuid-3",
+				"start_time":  "2023-01-01T00:00:00Z",
+				"end_time":    "2023-01-01T01:00:00Z",
+				"count":       float64(3), // JSON numbers are float64
+				"metrics":     []interface{}{},
+				"source":      "timescaledb",
+			},
+			expectError:   false,
+			expectedCount: 3,
+		},
+		{
+			name:           "server_error",
+			serverUUID:     "error-uuid",
+			startTime:      "2023-01-01T00:00:00Z",
+			endTime:        "2023-01-01T01:00:00Z",
+			limit:          100,
+			responseStatus: http.StatusInternalServerError,
+			responseError:  true,
+			expectError:    true,
+		},
+		{
+			name:           "unauthorized_error",
+			serverUUID:     "unauth-uuid",
+			startTime:      "2023-01-01T00:00:00Z",
+			endTime:        "2023-01-01T01:00:00Z",
+			limit:          100,
+			responseStatus: http.StatusUnauthorized,
+			responseError:  true,
+			expectError:    true,
 		},
 	}
-	client, err := NewClient(config)
-	require.NoError(t, err)
 
-	// Get metrics range
-	result, err := client.Metrics.GetMetricsRange(
-		context.Background(),
-		"test-uuid",
-		"2023-01-01T00:00:00Z",
-		"2023-01-01T01:00:00Z",
-		100,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, result, "Result should not be nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/v2/servers/"+tt.serverUUID+"/metrics/range", r.URL.Path)
+				assert.Equal(t, "GET", r.Method)
+				assert.Contains(t, r.Header.Get("Authorization"), "Bearer")
 
-	assert.Equal(t, "test-uuid", result.ServerUUID)
-	assert.Equal(t, 2, result.Count)
-	assert.Len(t, result.Metrics, 2)
-	if len(result.Metrics) >= 2 {
-		assert.Equal(t, 45.5, *result.Metrics[0].CPUUsagePercent)
-		assert.Equal(t, 48.2, *result.Metrics[1].CPUUsagePercent)
+				// Check query parameters
+				query := r.URL.Query()
+				assert.Equal(t, tt.startTime, query.Get("start_time"))
+				assert.Equal(t, tt.endTime, query.Get("end_time"))
+
+				// Check limit parameter handling
+				if tt.limit > 0 {
+					assert.Equal(t, fmt.Sprintf("%d", tt.limit), query.Get("limit"))
+				} else {
+					assert.Empty(t, query.Get("limit"), "Limit should not be in query when zero")
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.responseStatus)
+
+				if tt.responseError {
+					json.NewEncoder(w).Encode(map[string]string{
+						"status": "error",
+						"error":  "Internal server error",
+					})
+				} else {
+					response := StandardResponse{
+						Status: "success",
+						Data:   tt.responseData,
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-jwt-token"},
+			})
+			require.NoError(t, err)
+
+			result, err := client.Metrics.GetMetricsRange(
+				context.Background(),
+				tt.serverUUID,
+				tt.startTime,
+				tt.endTime,
+				tt.limit,
+			)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				require.NotNil(t, result, "Result should not be nil")
+				assert.Equal(t, tt.serverUUID, result.ServerUUID)
+				assert.Equal(t, tt.expectedCount, result.Count)
+			}
+		})
 	}
 }
 

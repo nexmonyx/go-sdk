@@ -840,6 +840,123 @@ func TestProbeControllerService_UpdateHealthState(t *testing.T) {
 	}
 }
 
+// TestProbeControllerService_UpdateHealthState_ErrorHandling tests error scenarios for UpdateHealthState
+func TestProbeControllerService_UpdateHealthState_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name           string
+		request        *ProbeControllerHealthUpdateRequest
+		responseStatus int
+		responseError  map[string]interface{}
+		expectError    bool
+	}{
+		{
+			name:           "nil_request_validation",
+			request:        nil,
+			responseStatus: http.StatusOK, // Won't be called
+			expectError:    true,          // nil request causes validation error
+		},
+		{
+			name: "server_error_500",
+			request: &ProbeControllerHealthUpdateRequest{
+				Key:   "controller_status",
+				Value: "healthy",
+			},
+			responseStatus: http.StatusInternalServerError,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Internal server error",
+			},
+			expectError: true,
+		},
+		{
+			name: "unauthorized_401",
+			request: &ProbeControllerHealthUpdateRequest{
+				Key:   "active_probes",
+				Value: "100",
+			},
+			responseStatus: http.StatusUnauthorized,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Unauthorized",
+			},
+			expectError: true,
+		},
+		{
+			name: "validation_error_400",
+			request: &ProbeControllerHealthUpdateRequest{
+				Key:   "", // Empty key
+				Value: "test",
+			},
+			responseStatus: http.StatusBadRequest,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Invalid key",
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != "PUT" {
+					t.Errorf("Expected PUT request, got %s", r.Method)
+				}
+				if r.URL.Path != "/v1/controllers/probe/health" {
+					t.Errorf("Expected path /v1/controllers/probe/health, got %s", r.URL.Path)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.responseStatus)
+
+				if tt.expectError {
+					json.NewEncoder(w).Encode(tt.responseError)
+				} else {
+					response := struct {
+						Status  string                        `json:"status"`
+						Data    *ProbeControllerHealthState   `json:"data"`
+						Message string                        `json:"message"`
+					}{
+						Status: "success",
+						Data: &ProbeControllerHealthState{
+							ID:        1,
+							Key:       tt.request.Key,
+							Value:     tt.request.Value,
+							UpdatedAt: time.Now(),
+						},
+						Message: "Health state updated successfully",
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.ProbeController.UpdateHealthState(context.Background(), tt.request)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				if result != nil {
+					t.Error("Expected nil result on error")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if result == nil && tt.request != nil {
+					t.Error("Expected non-nil result")
+				}
+			}
+		})
+	}
+}
+
 // TestProbeControllerService_GetHealthStates tests the GetHealthStates method
 func TestProbeControllerService_GetHealthStates(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
