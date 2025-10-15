@@ -105,13 +105,14 @@ jobs:
 
       - name: Run unit tests
         run: |
-          # Run tests excluding integration tests and disabled test files
+          # Run tests excluding integration tests, examples, and disabled test files
           # Remove or rename disabled test files temporarily
           if [ -f integration_test.go.disabled ]; then
             mv integration_test.go.disabled integration_test.go.bak
           fi
           # Run tests with build tags to exclude problematic tests
-          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" ./... || echo "Some tests failed but continuing CI"
+          # Exclude examples directory to prevent 0% coverage from affecting overall metrics
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" $(go list ./... | grep -v '/examples') || echo "Some tests failed but continuing CI"
           if [ -f coverage.out ]; then
             echo "Generating coverage reports..."
             go tool cover -func=coverage.out -o coverage.txt || echo "Coverage text report generation failed"

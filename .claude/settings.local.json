@@ -51,7 +51,8 @@
       "Bash(gh run view:*)",
       "Bash(awk:*)",
       "Bash(go tool cover:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "additionalDirectories": [

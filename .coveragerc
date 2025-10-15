@@ -17,7 +17,7 @@ critical_minimum = 90.0
 # Packages exempt from coverage requirements (with justification)
 # Format: package_path = reason
 [exemptions]
-# examples/ = "Example code, not production"
+examples/ = "Example code, not production"
 # testutil/ = "Test helpers, tested implicitly"
 
 [pr_requirements]
