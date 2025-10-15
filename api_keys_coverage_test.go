@@ -327,3 +327,84 @@ func TestAPIKeysService_FilterHelpers(t *testing.T) {
 	_, _, err = client.APIKeys.GetRegistrationKeys(context.Background(), &ListOptions{})
 	assert.NoError(t, err)
 }
+
+// Test legacy API key methods
+func TestAPIKeysService_LegacyList(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{{"id": 1, "name": "Test Key"}},
+			"meta":   map[string]interface{}{"total": 1, "page": 1},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	keys, meta, err := client.APIKeys.List(context.Background(), &ListOptions{Page: 1, Limit: 10})
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+}
+
+func TestAPIKeysService_LegacyDelete(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "success",
+			"message": "API key deleted",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	err := client.APIKeys.Delete(context.Background(), "key-123")
+	assert.NoError(t, err)
+}
+
+func TestAPIKeysService_LegacyRevoke(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Contains(t, r.URL.Path, "/revoke")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "success",
+			"message": "API key revoked",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	err := client.APIKeys.Revoke(context.Background(), "key-123")
+	assert.NoError(t, err)
+}
+
+func TestAPIKeysService_LegacyRegenerate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Contains(t, r.URL.Path, "/regenerate")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data": map[string]interface{}{
+				"key": map[string]interface{}{
+					"id":     1,
+					"key":    "new-regenerated-key",
+					"secret": "new-secret",
+					"name":   "Regenerated Key",
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	key, err := client.APIKeys.Regenerate(context.Background(), "key-123")
+	assert.NoError(t, err)
+	assert.NotNil(t, key)
+}
