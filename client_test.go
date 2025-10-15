@@ -620,7 +620,7 @@ func TestClient_HandleError(t *testing.T) {
 		{
 			name:           "api error with details",
 			statusCode:     http.StatusBadRequest,
-			responseBody:   `{"error_type": "validation_error", "message": "Invalid input", "details": "Field required"}`,
+			responseBody:   `{"error": "validation_error", "message": "Invalid input", "details": "Field required"}`,
 			expectedErrType: &APIError{},
 			checkError: func(t *testing.T, err error) {
 				apiErr, ok := err.(*APIError)

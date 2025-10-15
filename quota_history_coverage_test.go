@@ -172,8 +172,20 @@ func TestQuotaHistoryService_DetectUsagePatterns(t *testing.T) {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
 			"data": map[string]interface{}{
-				"patterns":  []string{"spike_detected", "normal"},
-				"anomalies": 2,
+				"organization_id": 1,
+				"analysis_date":   "2024-01-01",
+				"patterns": []map[string]interface{}{
+					{
+						"pattern_type":      "high_utilization",
+						"description":       "High CPU usage detected",
+						"severity":          "warning",
+						"affected_resource": "cpu",
+						"detected_value":    85.5,
+						"threshold_value":   80.0,
+						"recommendation":    "Consider upgrading CPU resources",
+					},
+				},
+				"pattern_count": 1,
 			},
 		})
 	}))

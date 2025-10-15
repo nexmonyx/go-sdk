@@ -49,7 +49,9 @@
       "mcp__github__get_pull_request",
       "WebFetch(domain:github.com)",
       "Bash(gh run view:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(go tool cover:*)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "additionalDirectories": [

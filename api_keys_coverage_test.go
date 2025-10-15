@@ -408,3 +408,287 @@ func TestAPIKeysService_LegacyRegenerate(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, key)
 }
+
+func TestAPIKeysService_LegacyRegenerate_Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": "API key not found",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	key, err := client.APIKeys.Regenerate(context.Background(), "invalid-key")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+}
+
+func TestAPIKeysService_ValidateKey_Active(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "/v2/api-keys/")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   map[string]interface{}{"id": 1, "name": "Active Key", "status": "active"},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	key, err := client.APIKeys.ValidateKey(context.Background(), "key-123")
+	assert.NoError(t, err)
+	assert.NotNil(t, key)
+}
+
+func TestAPIKeysService_ValidateKey_Inactive(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "/v2/api-keys/")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   map[string]interface{}{"id": 1, "name": "Inactive Key", "status": "revoked"},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	key, err := client.APIKeys.ValidateKey(context.Background(), "key-123")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+	assert.Contains(t, err.Error(), "not active")
+}
+
+func TestAPIKeysService_ValidateKey_NotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": "API key not found",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	key, err := client.APIKeys.ValidateKey(context.Background(), "invalid-key")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+}
+
+func TestAPIKeysService_ListForOrganization_WithOptions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Contains(t, r.URL.Path, "/v2/organizations/")
+		assert.Contains(t, r.URL.Path, "/api-keys")
+
+		// Verify query parameters
+		query := r.URL.Query()
+		assert.Equal(t, "user", query.Get("type"))
+		assert.Equal(t, "active", query.Get("status"))
+		assert.Equal(t, "1", query.Get("page"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{{"id": 1, "name": "Org Key"}},
+			"meta":   map[string]interface{}{"page": 1, "limit": 25, "total": 1},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	opts := &ListUnifiedAPIKeysOptions{
+		ListOptions: ListOptions{Page: 1, Limit: 25},
+		Type:        APIKeyTypeUser,
+		Status:      APIKeyStatusActive,
+	}
+	keys, meta, err := client.APIKeys.ListForOrganization(context.Background(), "org-123", opts)
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+}
+
+func TestAPIKeysService_ListForOrganization_AllFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+
+		// Verify all query parameters are set
+		query := r.URL.Query()
+		assert.Equal(t, "monitoring_agent", query.Get("type"))
+		assert.Equal(t, "active", query.Get("status"))
+		assert.Equal(t, "100", query.Get("user_id"))
+		assert.Equal(t, "probe", query.Get("agent_type"))
+		assert.Equal(t, "us-east-1", query.Get("region_code"))
+		assert.Equal(t, "production", query.Get("namespace"))
+		assert.Equal(t, "metrics:read", query.Get("capability"))
+		assert.Equal(t, "critical", query.Get("tag"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{},
+			"meta":   map[string]interface{}{"page": 1, "limit": 25, "total": 0},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	opts := &ListUnifiedAPIKeysOptions{
+		ListOptions: ListOptions{Page: 1, Limit: 25},
+		Type:        APIKeyTypeMonitoringAgent,
+		Status:      APIKeyStatusActive,
+		UserID:      100,
+		AgentType:   "probe",
+		RegionCode:  "us-east-1",
+		Namespace:   "production",
+		Capability:  "metrics:read",
+		Tag:         "critical",
+	}
+	keys, meta, err := client.APIKeys.ListForOrganization(context.Background(), "org-123", opts)
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+}
+
+func TestAPIKeysService_ListForOrganization_NilOptions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{{"id": 1}},
+			"meta":   map[string]interface{}{"page": 1},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	keys, meta, err := client.APIKeys.ListForOrganization(context.Background(), "org-123", nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+}
+
+func TestAPIKeysService_ListForOrganization_Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": "Access denied",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	keys, meta, err := client.APIKeys.ListForOrganization(context.Background(), "org-123", nil)
+	assert.Error(t, err)
+	assert.Nil(t, keys)
+	assert.Nil(t, meta)
+}
+
+func TestAPIKeysService_AdminListUnified_WithFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v2/admin/api-keys", r.URL.Path)
+
+		// Verify query parameters
+		query := r.URL.Query()
+		assert.Equal(t, "admin", query.Get("type"))
+		assert.Equal(t, "active", query.Get("status"))
+		assert.Equal(t, "50", query.Get("user_id"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{{"id": 1, "name": "Admin Key"}},
+			"meta":   map[string]interface{}{"page": 1, "limit": 25, "total": 1},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	opts := &ListUnifiedAPIKeysOptions{
+		ListOptions: ListOptions{Page: 1, Limit: 25},
+		Type:        APIKeyTypeAdmin,
+		Status:      APIKeyStatusActive,
+		UserID:      50,
+	}
+	keys, meta, err := client.APIKeys.AdminListUnified(context.Background(), opts)
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+	assert.Len(t, keys, 1)
+}
+
+func TestAPIKeysService_AdminListUnified_AllFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+
+		// Verify all filters are properly set
+		query := r.URL.Query()
+		assert.Equal(t, "registration", query.Get("type"))
+		assert.Equal(t, "revoked", query.Get("status"))
+		assert.Equal(t, "200", query.Get("user_id"))
+		assert.Equal(t, "controller", query.Get("agent_type"))
+		assert.Equal(t, "eu-west-1", query.Get("region_code"))
+		assert.Equal(t, "staging", query.Get("namespace"))
+		assert.Equal(t, "admin:write", query.Get("capability"))
+		assert.Equal(t, "deprecated", query.Get("tag"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data":   []map[string]interface{}{},
+			"meta":   map[string]interface{}{"page": 1, "limit": 25, "total": 0},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	opts := &ListUnifiedAPIKeysOptions{
+		ListOptions: ListOptions{Page: 1, Limit: 25},
+		Type:        APIKeyTypeRegistration,
+		Status:      APIKeyStatusRevoked,
+		UserID:      200,
+		AgentType:   "controller",
+		RegionCode:  "eu-west-1",
+		Namespace:   "staging",
+		Capability:  "admin:write",
+		Tag:         "deprecated",
+	}
+	keys, meta, err := client.APIKeys.AdminListUnified(context.Background(), opts)
+	assert.NoError(t, err)
+	assert.NotNil(t, keys)
+	assert.NotNil(t, meta)
+}
+
+func TestAPIKeysService_AdminListUnified_Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": "Unauthorized",
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{BaseURL: server.URL})
+	keys, meta, err := client.APIKeys.AdminListUnified(context.Background(), nil)
+	assert.Error(t, err)
+	assert.Nil(t, keys)
+	assert.Nil(t, meta)
+}
