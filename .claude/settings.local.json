@@ -48,7 +48,8 @@
       "mcp__taskforge__getTask",
       "mcp__github__get_pull_request",
       "WebFetch(domain:github.com)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "additionalDirectories": [
