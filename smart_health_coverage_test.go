@@ -16,6 +16,7 @@ func TestSmartHealthService_Submit(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v2/metrics/smart-health", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "success",
@@ -47,6 +48,7 @@ func TestSmartHealthService_Submit(t *testing.T) {
 
 func TestSmartHealthService_Submit_CompleteHDDMetrics(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -110,6 +112,7 @@ func TestSmartHealthService_Submit_CompleteHDDMetrics(t *testing.T) {
 
 func TestSmartHealthService_Submit_CompleteSSDMetrics(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -153,6 +156,7 @@ func TestSmartHealthService_Submit_CompleteSSDMetrics(t *testing.T) {
 
 func TestSmartHealthService_Submit_CompleteNVMeMetrics(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -214,6 +218,7 @@ func TestSmartHealthService_Submit_CompleteNVMeMetrics(t *testing.T) {
 
 func TestSmartHealthService_Submit_WithWarningsAndAlerts(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -246,6 +251,7 @@ func TestSmartHealthService_Submit_WithWarningsAndAlerts(t *testing.T) {
 
 func TestSmartHealthService_Submit_MultipleDevices(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",

@@ -14,11 +14,12 @@ func TestAPIKeysService_CreateUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v2/api-keys", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
 			"data": map[string]interface{}{
-				"key":    map[string]interface{}{"id": "key-123", "name": "Test Key"},
+				"key":    map[string]interface{}{"id": 1, "name": "Test Key"},
 				"secret": "secret-value",
 			},
 		})
@@ -40,10 +41,11 @@ func TestAPIKeysService_GetUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
 		assert.Contains(t, r.URL.Path, "/v2/api-keys/")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"id": "key-123", "name": "Test Key"},
+			"data":   map[string]interface{}{"id": 1, "name": "Test Key"},
 		})
 	}))
 	defer server.Close()
@@ -58,10 +60,11 @@ func TestAPIKeysService_ListUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
 		assert.Equal(t, "/v2/api-keys", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   []map[string]interface{}{{"id": "key-1"}, {"id": "key-2"}},
+			"data":   []map[string]interface{}{{"id": 1, "name": "Key 1"}, {"id": 2, "name": "Key 2"}},
 			"meta":   map[string]interface{}{"page": 1, "limit": 25, "total": 2},
 		})
 	}))
@@ -82,10 +85,11 @@ func TestAPIKeysService_UpdateUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "PUT", r.Method)
 		assert.Contains(t, r.URL.Path, "/v2/api-keys/")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"id": "key-123", "name": "Updated Key"},
+			"data":   map[string]interface{}{"id": 1, "name": "Updated Key"},
 		})
 	}))
 	defer server.Close()
@@ -102,6 +106,7 @@ func TestAPIKeysService_DeleteUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "DELETE", r.Method)
 		assert.Contains(t, r.URL.Path, "/v2/api-keys/")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "success"})
 	}))
@@ -116,6 +121,7 @@ func TestAPIKeysService_RevokeUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Contains(t, r.URL.Path, "/revoke")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "success"})
 	}))
@@ -130,10 +136,11 @@ func TestAPIKeysService_RegenerateUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Contains(t, r.URL.Path, "/regenerate")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"key": map[string]interface{}{"id": "key-123"}},
+			"data":   map[string]interface{}{"key": map[string]interface{}{"id": 1}},
 		})
 	}))
 	defer server.Close()
@@ -148,10 +155,11 @@ func TestAPIKeysService_CreateForOrganization(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "/v2/organizations/")
 		assert.Contains(t, r.URL.Path, "/api-keys")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"key": map[string]interface{}{"id": "key-123"}},
+			"data":   map[string]interface{}{"key": map[string]interface{}{"id": 1}},
 		})
 	}))
 	defer server.Close()
@@ -167,10 +175,11 @@ func TestAPIKeysService_ListForOrganization(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "/v2/organizations/")
 		assert.Contains(t, r.URL.Path, "/api-keys")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   []map[string]interface{}{{"id": "key-1"}},
+			"data":   []map[string]interface{}{{"id": 1, "name": "Key 1"}},
 			"meta":   map[string]interface{}{"page": 1},
 		})
 	}))
@@ -186,10 +195,11 @@ func TestAPIKeysService_ListForOrganization(t *testing.T) {
 func TestAPIKeysService_AdminCreateUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/v2/admin/api-keys", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"key": map[string]interface{}{"id": "admin-key"}},
+			"data":   map[string]interface{}{"key": map[string]interface{}{"id": 1, "name": "Admin Key"}},
 		})
 	}))
 	defer server.Close()
@@ -204,10 +214,11 @@ func TestAPIKeysService_AdminCreateUnified(t *testing.T) {
 func TestAPIKeysService_AdminListUnified(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/v2/admin/api-keys", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   []map[string]interface{}{{"id": "key-1"}},
+			"data":   []map[string]interface{}{{"id": 1, "name": "Key 1"}},
 			"meta":   map[string]interface{}{"page": 1},
 		})
 	}))
@@ -222,10 +233,11 @@ func TestAPIKeysService_AdminListUnified(t *testing.T) {
 
 func TestAPIKeysService_LegacyMethods(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"id": "key-123", "name": "Legacy Key"},
+			"data":   map[string]interface{}{"id": 1, "name": "Legacy Key"},
 		})
 	}))
 	defer server.Close()
@@ -248,10 +260,11 @@ func TestAPIKeysService_LegacyMethods(t *testing.T) {
 
 func TestAPIKeysService_SpecializedHelpers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"key": map[string]interface{}{"id": "key-123"}},
+			"data":   map[string]interface{}{"key": map[string]interface{}{"id": 1}},
 		})
 	}))
 	defer server.Close()
@@ -273,10 +286,11 @@ func TestAPIKeysService_SpecializedHelpers(t *testing.T) {
 
 func TestAPIKeysService_Validators(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   map[string]interface{}{"id": "key-123", "status": "active"},
+			"data":   map[string]interface{}{"id": 1, "status": "active"},
 		})
 	}))
 	defer server.Close()
@@ -289,10 +303,11 @@ func TestAPIKeysService_Validators(t *testing.T) {
 
 func TestAPIKeysService_FilterHelpers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
-			"data":   []map[string]interface{}{{"id": "key-1"}},
+			"data":   []map[string]interface{}{{"id": 1, "name": "Key 1"}},
 			"meta":   map[string]interface{}{"page": 1},
 		})
 	}))

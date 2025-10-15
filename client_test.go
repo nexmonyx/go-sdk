@@ -374,10 +374,10 @@ func TestClient_Do(t *testing.T) {
 			w.Write([]byte(`{"status": "success"}`))
 		case "/error":
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"status": "error", "error": "bad_request", "message": "Invalid request"}`))
+			w.Write([]byte(`{"status": "error", "message": "Invalid request"}`))
 		case "/not-found":
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"status": "error", "error": "not_found", "message": "Resource not found"}`))
+			w.Write([]byte(`{"status": "error", "message": "Resource not found"}`))
 		case "/unauthorized":
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"message": "authentication required"}`))

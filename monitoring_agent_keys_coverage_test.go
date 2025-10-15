@@ -14,6 +14,7 @@ func TestMonitoringAgentKeysService_CreateAdmin(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v1/admin/monitoring-agent-keys", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -46,6 +47,7 @@ func TestMonitoringAgentKeysService_Create(t *testing.T) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Contains(t, r.URL.Path, "/v1/organizations/")
 		assert.Contains(t, r.URL.Path, "/monitoring-agent-keys")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -74,6 +76,7 @@ func TestMonitoringAgentKeysService_List(t *testing.T) {
 		assert.Equal(t, "GET", r.Method)
 		assert.Contains(t, r.URL.Path, "/v1/organizations/")
 		assert.Contains(t, r.URL.Path, "/monitoring-agent-keys")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -96,6 +99,7 @@ func TestMonitoringAgentKeysService_List(t *testing.T) {
 
 func TestMonitoringAgentKeysService_List_NilOptions(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":     "success",
@@ -116,6 +120,7 @@ func TestMonitoringAgentKeysService_Revoke(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Contains(t, r.URL.Path, "/revoke")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "success",

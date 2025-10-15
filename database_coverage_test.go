@@ -14,6 +14,7 @@ func TestDatabaseService_CreateOrganizationSchema(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/v1/admin/database/schemas", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -53,6 +54,7 @@ func TestDatabaseService_DeleteOrganizationSchema(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "DELETE", r.Method)
 		assert.Contains(t, r.URL.Path, "/v1/admin/database/schemas/")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
@@ -111,6 +113,7 @@ func TestDatabaseService_CheckSchemaExists(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "GET", r.Method)
 				assert.Contains(t, r.URL.Path, "/v1/admin/database/schemas/")
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.statusCode)
 				json.NewEncoder(w).Encode(map[string]interface{}{
 					"status": "success",
