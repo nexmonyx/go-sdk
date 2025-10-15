@@ -52,7 +52,9 @@
       "Bash(awk:*)",
       "Bash(go tool cover:*)",
       "Bash(sort:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(gh run download:*)",
+      "Read(//tmp/**)"
     ],
     "deny": [],
     "additionalDirectories": [
