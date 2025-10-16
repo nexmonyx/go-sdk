@@ -120,17 +120,34 @@
 **Actual Result**: Coverage is 65.1% (expected 74-77%)
 **Root Cause Analysis**: Test additions were highly targeted (7 functions), but overall codebase is large (~25,000 LOC across 66 files)
 
-### Phase 4: Baseline Stabilization (Target: +4.9% to reach 70%)
+### Phase 4: Test Enhancement Discovery 🔍 **IN PROGRESS** (2025-10-15)
 **Timeline**: Sprint 10
-- [ ] Add basic tests for untested functions in high-impact services
-  - [ ] servers.go: Target 26.5% → 60% (add 10-15 basic tests)
-  - [ ] analytics.go: Add 5-8 basic tests for core functions
-  - [ ] Review other services with <60% file-level coverage
-- [ ] Focus on breadth (many simple tests) vs depth (comprehensive test scenarios)
-- [ ] Prioritize critical user-facing services
+**Status**: Analysis phase - discovered that most services already have test files
 
-**Estimated Impact**: 65.1% → 70%+
-**Strategy**: Add basic happy-path tests for currently untested functions to raise baseline
+**Key Findings**:
+- ✅ incidents.go - Has comprehensive tests in `incidents_coverage_test.go` (19 test functions)
+- ✅ analytics.go - Has tests in `analytics_coverage_test.go` (11 test functions)
+- ✅ monitoring.go - Has tests in `monitoring_coverage_test.go`
+- ✅ servers.go - Has 25 test functions (one per method) in `servers_test.go`
+
+**Real Issue Identified**: Tests exist but coverage is low because:
+1. Tests may only cover happy paths, missing error scenarios
+2. Tests might use mocks that don't execute actual function code
+3. Complex functions have shallow test scenarios
+
+**Revised Strategy**:
+- [ ] Enhance existing tests with additional scenarios (error paths, edge cases)
+- [ ] Focus on servers.go (26.5% despite having 25 tests) - add validation/error tests
+- [ ] Review test execution - some tests may be hanging (timeout issues observed)
+- [ ] Prioritize depth over breadth - comprehensive scenarios for existing tests
+
+**Next Steps**:
+1. Investigate test timeout issues preventing full coverage verification
+2. Analyze which specific test functions need error scenario additions
+3. Add table-driven test cases to existing shallow tests
+4. Run targeted coverage analysis on enhanced tests
+
+**Estimated Impact**: 65.1% → 70%+ (requires systematic test enhancement, not new test files)
 
 ## Testing Guidelines
 
