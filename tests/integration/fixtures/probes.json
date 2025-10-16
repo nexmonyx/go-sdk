@@ -1,0 +1,89 @@
+[
+  {
+    "id": 1,
+    "probe_uuid": "probe-001",
+    "name": "Website Health Check",
+    "description": "Monitors main website availability",
+    "type": "https",
+    "target": "https://example.com",
+    "interval": 60,
+    "timeout": 10,
+    "enabled": true,
+    "organization_id": 1,
+    "server_id": null,
+    "regions": ["us-east", "us-west"],
+    "config": {
+      "method": "GET",
+      "expected_status": 200,
+      "verify_ssl": true
+    },
+    "alert_config": {
+      "enabled": true,
+      "failure_threshold": 3,
+      "success_threshold": 2,
+      "notification_delay": 300,
+      "channels": ["email", "slack"],
+      "recipients": ["ops@example.com"]
+    },
+    "tags": ["production", "website"],
+    "created_at": "2025-01-15T00:00:00Z",
+    "updated_at": "2025-10-16T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "probe_uuid": "probe-002",
+    "name": "API Endpoint Monitor",
+    "description": "Monitors API health endpoint",
+    "type": "https",
+    "target": "https://api.example.com/health",
+    "interval": 30,
+    "timeout": 5,
+    "enabled": true,
+    "organization_id": 1,
+    "server_id": 1,
+    "regions": ["us-east"],
+    "config": {
+      "method": "GET",
+      "expected_status": 200,
+      "expected_body": "{\"status\":\"ok\"}",
+      "verify_ssl": true
+    },
+    "alert_config": {
+      "enabled": true,
+      "failure_threshold": 2,
+      "success_threshold": 1,
+      "channels": ["email", "pagerduty"],
+      "recipients": ["devops@example.com"]
+    },
+    "tags": ["api", "critical"],
+    "created_at": "2025-02-01T00:00:00Z",
+    "updated_at": "2025-10-16T00:00:00Z"
+  },
+  {
+    "id": 3,
+    "probe_uuid": "probe-003",
+    "name": "Database Connection Test",
+    "description": "Checks database TCP connectivity",
+    "type": "tcp",
+    "target": "db.example.com:5432",
+    "interval": 120,
+    "timeout": 15,
+    "enabled": false,
+    "organization_id": 1,
+    "server_id": 2,
+    "regions": ["us-east", "us-west", "eu-west"],
+    "config": {
+      "port": 5432
+    },
+    "alert_config": {
+      "enabled": false,
+      "failure_threshold": 5,
+      "success_threshold": 3,
+      "channels": ["email"],
+      "recipients": ["dba@example.com"]
+    },
+    "tags": ["database", "internal"],
+    "created_at": "2025-03-10T00:00:00Z",
+    "updated_at": "2025-10-16T00:00:00Z"
+  }
+]

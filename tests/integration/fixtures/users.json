@@ -1,0 +1,44 @@
+[
+  {
+    "uuid": "user-001",
+    "id": 1,
+    "email": "admin@acme-corp.com",
+    "name": "John Administrator",
+    "role": "admin",
+    "organization_id": 1,
+    "status": "active",
+    "email_verified": true,
+    "two_factor_enabled": true,
+    "last_login": "2025-10-16T09:00:00Z",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2025-10-16T09:00:00Z"
+  },
+  {
+    "uuid": "user-002",
+    "id": 2,
+    "email": "ops@acme-corp.com",
+    "name": "Sarah Operations",
+    "role": "member",
+    "organization_id": 1,
+    "status": "active",
+    "email_verified": true,
+    "two_factor_enabled": false,
+    "last_login": "2025-10-16T08:30:00Z",
+    "created_at": "2024-01-15T00:00:00Z",
+    "updated_at": "2025-10-16T08:30:00Z"
+  },
+  {
+    "uuid": "user-003",
+    "id": 3,
+    "email": "viewer@acme-corp.com",
+    "name": "Mike Viewer",
+    "role": "viewer",
+    "organization_id": 1,
+    "status": "active",
+    "email_verified": true,
+    "two_factor_enabled": false,
+    "last_login": "2025-10-15T16:00:00Z",
+    "created_at": "2024-02-01T00:00:00Z",
+    "updated_at": "2025-10-15T16:00:00Z"
+  }
+]

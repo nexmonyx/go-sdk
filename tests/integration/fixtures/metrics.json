@@ -1,0 +1,65 @@
+{
+  "comprehensive_metrics": {
+    "server_uuid": "server-001",
+    "timestamp": "2025-10-16T10:00:00Z",
+    "cpu": {
+      "usage_percent": 45.2,
+      "cores": 8,
+      "load_avg": [2.1, 1.8, 1.5]
+    },
+    "memory": {
+      "total_bytes": 16777216000,
+      "used_bytes": 8388608000,
+      "available_bytes": 8388608000,
+      "usage_percent": 50.0
+    },
+    "disk": [
+      {
+        "mount_point": "/",
+        "total_bytes": 107374182400,
+        "used_bytes": 64424509440,
+        "available_bytes": 42949672960,
+        "usage_percent": 60.0
+      },
+      {
+        "mount_point": "/data",
+        "total_bytes": 536870912000,
+        "used_bytes": 214748364800,
+        "available_bytes": 322122547200,
+        "usage_percent": 40.0
+      }
+    ],
+    "network": {
+      "bytes_sent": 1073741824,
+      "bytes_received": 2147483648,
+      "packets_sent": 1000000,
+      "packets_received": 1500000,
+      "errors_in": 0,
+      "errors_out": 0
+    }
+  },
+  "simple_metrics": {
+    "server_uuid": "server-002",
+    "timestamp": "2025-10-16T10:00:00Z",
+    "cpu_percent": 25.5,
+    "memory_percent": 65.3,
+    "disk_percent": 75.2
+  },
+  "historical_metrics": [
+    {
+      "timestamp": "2025-10-16T09:00:00Z",
+      "cpu_percent": 42.1,
+      "memory_percent": 48.3
+    },
+    {
+      "timestamp": "2025-10-16T09:30:00Z",
+      "cpu_percent": 43.8,
+      "memory_percent": 49.1
+    },
+    {
+      "timestamp": "2025-10-16T10:00:00Z",
+      "cpu_percent": 45.2,
+      "memory_percent": 50.0
+    }
+  ]
+}

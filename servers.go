@@ -84,11 +84,20 @@ func (s *ServersService) Create(ctx context.Context, server *Server) (*Server, e
 // This method assumes the ID is actually a UUID and uses the details endpoint
 func (s *ServersService) Update(ctx context.Context, id string, server *Server) (*Server, error) {
 	// Convert to server update request and use UpdateDetails
-	// This is a best-effort mapping
+	// Map all relevant fields from Server to ServerDetailsUpdateRequest
 	req := &ServerDetailsUpdateRequest{
-		// Map relevant fields from Server to ServerDetailsUpdateRequest
-		Hostname: server.Hostname,
-		// Add other fields as needed
+		Hostname:       server.Hostname,
+		MainIP:         server.MainIP,
+		Environment:    server.Environment,
+		Location:       server.Location,
+		Classification: server.Classification,
+		OS:             server.OS,
+		OSVersion:      server.OSVersion,
+		OSArch:         server.OSArch,
+		CPUModel:       server.CPUModel,
+		CPUCores:       server.CPUCores,
+		// Note: Server uses TotalMemoryGB/TotalDiskGB while UpdateRequest uses MemoryTotal/StorageTotal
+		// These are intentionally not mapped as they have different units (GB vs bytes)
 	}
 	return s.UpdateDetails(ctx, id, req)
 }

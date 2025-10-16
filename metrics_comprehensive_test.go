@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -1609,4 +1610,601 @@ func TestMetricsService_Edge_Cases(t *testing.T) {
 		err = client.Metrics.Submit(context.Background(), "test-uuid", metrics)
 		assert.NoError(t, err)
 	})
+}
+// TestMetricsService_GetLatestMetrics tests the GetLatestMetrics method with various scenarios
+func TestMetricsService_GetLatestMetrics(t *testing.T) {
+	tests := []struct {
+		name       string
+		serverUUID string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *TimescaleMetricsResponse)
+	}{
+		{
+			name:       "success - with full metrics",
+			serverUUID: "server-123",
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"server_uuid": "server-123",
+					"timestamp":   "2024-01-01T12:00:00Z",
+					"metrics": map[string]interface{}{
+						"server_uuid":          "server-123",
+						"collected_at":         "2024-01-01T12:00:00Z",
+						"agent_version":        "1.0.0",
+						"collection_duration":  1.5,
+						"cpu_usage_percent":    45.5,
+						"memory_usage_percent": 62.3,
+					},
+					"source": "timescaledb",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *TimescaleMetricsResponse) {
+				assert.Equal(t, "server-123", resp.ServerUUID)
+				assert.Equal(t, "2024-01-01T12:00:00Z", resp.Timestamp)
+				assert.NotNil(t, resp.Metrics)
+				assert.Equal(t, "timescaledb", resp.Source)
+			},
+		},
+		{
+			name:       "success - minimal metrics",
+			serverUUID: "server-456",
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"server_uuid": "server-456",
+					"timestamp":   "2024-01-01T13:00:00Z",
+					"metrics": map[string]interface{}{
+						"server_uuid":         "server-456",
+						"collected_at":        "2024-01-01T13:00:00Z",
+						"agent_version":       "1.0.1",
+						"collection_duration": 0.8,
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *TimescaleMetricsResponse) {
+				assert.Equal(t, "server-456", resp.ServerUUID)
+				assert.NotNil(t, resp.Metrics)
+			},
+		},
+		{
+			name:       "not found - server doesn't exist",
+			serverUUID: "nonexistent",
+			mockStatus: http.StatusNotFound,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized",
+			serverUUID: "server-123",
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden - no access",
+			serverUUID: "server-789",
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Access denied",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "server error",
+			serverUUID: "server-123",
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Internal server error",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "empty server UUID",
+			serverUUID: "",
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Server UUID required",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "GET", r.Method)
+				if tt.serverUUID != "" {
+					assert.Contains(t, r.URL.Path, tt.serverUUID)
+				}
+				assert.Contains(t, r.URL.Path, "/v2/servers/")
+				assert.Contains(t, r.URL.Path, "/metrics/latest")
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			// Use timeout context for error scenarios with 500 status
+			ctx := context.Background()
+			if tt.wantErr && tt.mockStatus >= 500 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+			}
+
+			result, err := client.Metrics.GetLatestMetrics(ctx, tt.serverUUID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, result)
+				}
+			}
+		})
+	}
+}
+
+// TestMetricsService_GetMetricsRange tests the GetMetricsRange method with various scenarios
+func TestMetricsService_GetMetricsRange(t *testing.T) {
+	tests := []struct {
+		name       string
+		serverUUID string
+		startTime  string
+		endTime    string
+		limit      int
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *TimescaleMetricsRangeResponse)
+	}{
+		{
+			name:       "success - with limit",
+			serverUUID: "server-123",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"server_uuid": "server-123",
+					"start_time":  "2024-01-01T00:00:00Z",
+					"end_time":    "2024-01-01T23:59:59Z",
+					"metrics": []map[string]interface{}{
+						{
+							"server_uuid":          "server-123",
+							"collected_at":         "2024-01-01T12:00:00Z",
+							"agent_version":        "1.0.0",
+							"collection_duration":  1.2,
+							"cpu_usage_percent":    45.5,
+							"memory_usage_percent": 62.3,
+						},
+						{
+							"server_uuid":          "server-123",
+							"collected_at":         "2024-01-01T13:00:00Z",
+							"agent_version":        "1.0.0",
+							"collection_duration":  1.1,
+							"cpu_usage_percent":    48.2,
+							"memory_usage_percent": 64.1,
+						},
+					},
+					"count":  2,
+					"source": "timescaledb",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *TimescaleMetricsRangeResponse) {
+				assert.Equal(t, "server-123", resp.ServerUUID)
+				assert.Equal(t, "2024-01-01T00:00:00Z", resp.StartTime)
+				assert.Equal(t, "2024-01-01T23:59:59Z", resp.EndTime)
+				assert.Len(t, resp.Metrics, 2)
+				assert.Equal(t, 2, resp.Count)
+				assert.Equal(t, "timescaledb", resp.Source)
+			},
+		},
+		{
+			name:       "success - without limit (unlimited)",
+			serverUUID: "server-456",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-02T00:00:00Z",
+			limit:      0, // No limit
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"server_uuid": "server-456",
+					"start_time":  "2024-01-01T00:00:00Z",
+					"end_time":    "2024-01-02T00:00:00Z",
+					"metrics":     []map[string]interface{}{},
+					"count":       0,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *TimescaleMetricsRangeResponse) {
+				assert.Equal(t, "server-456", resp.ServerUUID)
+				assert.Len(t, resp.Metrics, 0)
+				assert.Equal(t, 0, resp.Count)
+			},
+		},
+		{
+			name:       "success - large result set",
+			serverUUID: "server-789",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-07T00:00:00Z",
+			limit:      1000,
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"server_uuid": "server-789",
+					"start_time":  "2024-01-01T00:00:00Z",
+					"end_time":    "2024-01-07T00:00:00Z",
+					"metrics": func() []map[string]interface{} {
+						metrics := make([]map[string]interface{}, 500)
+						for i := 0; i < 500; i++ {
+							metrics[i] = map[string]interface{}{
+								"server_uuid":         "server-789",
+								"collected_at":        "2024-01-01T12:00:00Z",
+								"agent_version":       "1.0.0",
+								"collection_duration": 1.0,
+							}
+						}
+						return metrics
+					}(),
+					"count": 500,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *TimescaleMetricsRangeResponse) {
+				assert.Equal(t, "server-789", resp.ServerUUID)
+				assert.Len(t, resp.Metrics, 500)
+				assert.Equal(t, 500, resp.Count)
+			},
+		},
+		{
+			name:       "validation error - invalid time range",
+			serverUUID: "server-123",
+			startTime:  "invalid-time",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Invalid time format",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "not found - server doesn't exist",
+			serverUUID: "nonexistent",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusNotFound,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized",
+			serverUUID: "server-123",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			serverUUID: "server-123",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Access denied",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "server error",
+			serverUUID: "server-123",
+			startTime:  "2024-01-01T00:00:00Z",
+			endTime:    "2024-01-01T23:59:59Z",
+			limit:      100,
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Internal server error",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "GET", r.Method)
+				assert.Contains(t, r.URL.Path, tt.serverUUID)
+				assert.Contains(t, r.URL.Path, "/v2/servers/")
+				assert.Contains(t, r.URL.Path, "/metrics/range")
+
+				// Verify query parameters
+				assert.Equal(t, tt.startTime, r.URL.Query().Get("start_time"))
+				assert.Equal(t, tt.endTime, r.URL.Query().Get("end_time"))
+				if tt.limit > 0 {
+					assert.Equal(t, fmt.Sprintf("%d", tt.limit), r.URL.Query().Get("limit"))
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			// Use timeout context for error scenarios with 500 status
+			ctx := context.Background()
+			if tt.wantErr && tt.mockStatus >= 500 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+			}
+
+			result, err := client.Metrics.GetMetricsRange(ctx, tt.serverUUID, tt.startTime, tt.endTime, tt.limit)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, result)
+				}
+			}
+		})
+	}
+}
+// TestMetricsService_SubmitComprehensiveToTimescale tests the SubmitComprehensiveToTimescale method with various scenarios
+func TestMetricsService_SubmitComprehensiveToTimescale(t *testing.T) {
+	tests := []struct {
+		name       string
+		metrics    *ComprehensiveMetricsSubmission
+		serverAuth *AuthConfig // Optional server auth to test auto-population
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *http.Request)
+	}{
+		{
+			name: "success - full metrics submission",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-123",
+					CollectedAt: time.Now().Format(time.RFC3339),
+					CPU: &TimescaleCPUMetrics{
+						UsagePercent: 45.5,
+					},
+					Memory: &TimescaleMemoryMetrics{
+						UsedPercent: 62.3,
+					},
+				},
+			},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status":  "success",
+				"message": "Metrics submitted successfully",
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Contains(t, r.URL.Path, "/v2/metrics/comprehensive")
+			},
+		},
+		{
+			name: "success - with server auth auto-population",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "", // Empty, should be auto-populated
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			serverAuth: &AuthConfig{
+				ServerUUID:   "auto-server-uuid",
+				ServerSecret: "auto-secret",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status":  "success",
+				"message": "Metrics submitted",
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - minimal metrics",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-456",
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+			},
+			wantErr: false,
+		},
+		{
+			name: "validation error - missing server UUID",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "",
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Server UUID required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "validation error - invalid metrics data",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-123",
+					CollectedAt: "invalid-date",
+				},
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Invalid metrics data",
+			},
+			wantErr: true,
+		},
+		{
+			name: "unauthorized",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-123",
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "forbidden",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-123",
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Access denied",
+			},
+			wantErr: true,
+		},
+		{
+			name: "server error",
+			metrics: &ComprehensiveMetricsSubmission{
+				Metrics: &ComprehensiveMetricsPayload{
+					ServerUUID:  "server-123",
+					CollectedAt: time.Now().Format(time.RFC3339),
+				},
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Internal server error",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "nil metrics",
+			metrics:    &ComprehensiveMetricsSubmission{Metrics: nil},
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "Metrics required",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var lastRequest *http.Request
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				lastRequest = r
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, r)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			auth := AuthConfig{Token: "test-token"}
+			if tt.serverAuth != nil {
+				auth = *tt.serverAuth
+			}
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       auth,
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			// Use timeout context for error scenarios with 500 status
+			ctx := context.Background()
+			if tt.wantErr && tt.mockStatus >= 500 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+			}
+
+			err = client.Metrics.SubmitComprehensiveToTimescale(ctx, tt.metrics)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, lastRequest)
+			}
+		})
+	}
 }

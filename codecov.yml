@@ -1,0 +1,89 @@
+codecov:
+  require_ci_to_pass: true
+  precision: 2
+  round: down
+  layout: "reach,diff,flags,tree,footer"
+  notification:
+    require_changes: false
+    require_base: false
+    require_head: true
+    branches: null
+
+coverage:
+  precision: 2
+  round: down
+  range: "70..100"
+  status:
+    project:
+      default:
+        target: 80
+        threshold: 2
+        base: auto
+        if_not_found: success
+        if_ci_failed: error
+      critical:
+        target: 85
+        threshold: 1
+        base: auto
+        if_not_found: success
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80
+        threshold: 2
+        base: auto
+        if_not_found: success
+        if_ci_failed: error
+    changes:
+      default:
+        target: auto
+        threshold: 2
+        base: auto
+        if_not_found: success
+        if_ci_failed: error
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      partial: yes
+
+ignore:
+  - "vendor"
+  - "examples"
+  - "tests/integration/fixtures"
+  - "**/*.pb.go"
+
+flags:
+  unit:
+    carryforward: true
+    paths:
+      - "**/*_test.go"
+      - "!tests/integration/**"
+  integration:
+    carryforward: true
+    paths:
+      - "tests/integration/**"
+
+comment:
+  layout: "reach,diff,tree,files"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+github:
+  checks:
+    annotations: true
+  statuses:
+    - type: "project"
+      project: "default"
+      base: "auto"
+    - type: "patch"
+      project: "default"
+      base: "auto"
+    - type: "changes"
+      project: "default"
+      base: "auto"

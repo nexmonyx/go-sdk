@@ -1,0 +1,81 @@
+version: '3.9'
+
+services:
+  # Mock API Server - Mimics Nexmonyx API for local testing
+  mock-api:
+    build:
+      context: .
+      dockerfile: tests/integration/docker/Dockerfile
+    container_name: nexmonyx-mock-api
+    ports:
+      - "8080:8080"
+    environment:
+      - API_PORT=8080
+      - API_HOST=0.0.0.0
+      - AUTH_TOKEN=test-token
+      - API_LOG_LEVEL=info
+      - FIXTURES_PATH=/app/tests/integration/fixtures
+    volumes:
+      # Mount fixtures for easy updating during development
+      - ./tests/integration/fixtures:/app/tests/integration/fixtures:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - nexmonyx
+    restart: unless-stopped
+
+  # PostgreSQL with TimescaleDB - Optional: for persistence testing
+  # Uncomment to enable database services for integration tests
+  # postgres:
+  #   image: timescale/timescaledb:2.13-pg16-oss
+  #   container_name: nexmonyx-postgres
+  #   environment:
+  #     POSTGRES_DB: nexmonyx_test
+  #     POSTGRES_USER: test
+  #     POSTGRES_PASSWORD: testpass
+  #     POSTGRES_INITDB_ARGS: "-c log_statement=all"
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./tests/integration/fixtures/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U test -d nexmonyx_test"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - nexmonyx
+  #   restart: unless-stopped
+
+  # Redis - Optional: for caching/session testing
+  # Uncomment to enable Redis for integration tests
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: nexmonyx-redis
+  #   ports:
+  #     - "6379:6379"
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - nexmonyx
+  #   restart: unless-stopped
+
+networks:
+  nexmonyx:
+    driver: bridge
+    name: nexmonyx-test-network
+
+# Uncomment to enable persistent PostgreSQL storage
+# volumes:
+#   postgres_data:
+#     driver: local

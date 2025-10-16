@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "server_uuid": "server-001",
+    "hostname": "web-server-01",
+    "organization_id": 1,
+    "main_ip": "192.168.1.100",
+    "location": "US-East",
+    "environment": "production",
+    "classification": "web",
+    "status": "active",
+    "agent_version": "1.5.0",
+    "created_at": "2025-01-15T08:00:00Z",
+    "updated_at": "2025-10-16T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "server_uuid": "server-002",
+    "hostname": "db-server-01",
+    "organization_id": 1,
+    "main_ip": "192.168.1.101",
+    "location": "US-West",
+    "environment": "production",
+    "classification": "database",
+    "status": "active",
+    "agent_version": "1.5.0",
+    "created_at": "2025-02-01T12:00:00Z",
+    "updated_at": "2025-10-16T10:00:00Z"
+  },
+  {
+    "id": 3,
+    "server_uuid": "server-003",
+    "hostname": "app-server-dev",
+    "organization_id": 1,
+    "main_ip": "192.168.1.102",
+    "location": "US-East",
+    "environment": "development",
+    "classification": "application",
+    "status": "active",
+    "agent_version": "1.4.5",
+    "created_at": "2025-03-10T14:00:00Z",
+    "updated_at": "2025-10-16T09:30:00Z"
+  },
+  {
+    "id": 4,
+    "server_uuid": "server-004",
+    "hostname": "cache-server-01",
+    "organization_id": 2,
+    "main_ip": "10.0.1.50",
+    "location": "EU-Central",
+    "environment": "production",
+    "classification": "cache",
+    "status": "maintenance",
+    "agent_version": "1.5.0",
+    "created_at": "2025-04-20T16:00:00Z",
+    "updated_at": "2025-10-16T08:00:00Z"
+  },
+  {
+    "id": 5,
+    "server_uuid": "server-005",
+    "hostname": "worker-server-02",
+    "organization_id": 1,
+    "main_ip": "192.168.1.103",
+    "location": "US-East",
+    "environment": "production",
+    "classification": "worker",
+    "status": "active",
+    "agent_version": "1.5.0",
+    "created_at": "2025-05-05T10:00:00Z",
+    "updated_at": "2025-10-16T10:00:00Z"
+  }
+]

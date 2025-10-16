@@ -1,0 +1,119 @@
+# Pre-commit hooks for Nexmonyx Go SDK
+# Install with: pip install pre-commit && pre-commit install
+# Update hooks with: pre-commit autoupdate
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Go formatting and imports
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        name: Format Go code (gofmt)
+        description: Run gofmt to format Go code
+
+      - id: go-imports
+        name: Organize Go imports (goimports)
+        description: Run goimports to organize imports
+        args: [-local, github.com/nexmonyx/go-sdk]
+
+      - id: go-vet
+        name: Go vet
+        description: Run go vet to check for suspicious constructs
+
+      - id: go-mod-tidy
+        name: Go mod tidy
+        description: Ensure go.mod and go.sum are up to date
+
+  # Go linting with golangci-lint
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.56.0
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Run golangci-lint for comprehensive linting
+        args:
+          - --timeout=5m
+          - --fast
+          - --fix
+
+  # Security scanning (quick)
+  - repo: local
+    hooks:
+      - id: gosec-quick
+        name: gosec security scan (quick)
+        description: Quick security scan with gosec
+        entry: bash -c 'gosec -quiet -fmt=text ./... | head -20 || true'
+        language: system
+        pass_filenames: false
+        files: \.go$
+
+  # Unit tests (fast only)
+  - repo: local
+    hooks:
+      - id: go-test-fast
+        name: Run fast unit tests
+        description: Run unit tests marked as fast
+        entry: bash -c 'go test -short -timeout=30s ./... || true'
+        language: system
+        pass_filenames: false
+        files: \.go$
+
+  # Git hooks - general
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      - id: end-of-file-fixer
+        name: Fix end of files
+
+      - id: check-yaml
+        name: Check YAML syntax
+        args: [--safe]
+
+      - id: check-added-large-files
+        name: Check for large files
+        args: [--maxkb=1000]
+
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+
+      - id: check-case-conflict
+        name: Check for case conflicts
+
+      - id: mixed-line-ending
+        name: Check for mixed line endings
+        args: [--fix=lf]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+      - id: markdownlint
+        name: Lint Markdown files
+        args: [--fix, --disable, MD013, MD033, MD041]
+
+  # Commit message format
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.0.0
+    hooks:
+      - id: conventional-pre-commit
+        name: Check conventional commit format
+        stages: [commit-msg]
+        args: [--force-scope]
+
+# CI settings
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: monthly
+  skip: []
+  submodules: false

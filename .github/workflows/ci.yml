@@ -177,6 +177,17 @@ jobs:
         run: |
           go test -v -tags=integration -timeout 30m ./...
 
+      - name: Upload coverage to Codecov
+        if: always() && hashFiles('coverage.out') != ''
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+          flags: unittests
+          name: go-sdk-coverage
+          fail_ci_if_error: false
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Upload test coverage
         if: always() && hashFiles('coverage.out') != ''
         uses: actions/upload-artifact@v4

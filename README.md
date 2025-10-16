@@ -4,7 +4,7 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://go.dev)
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/nexmonyx/go-sdk/ci.yml?branch=main&style=for-the-badge&logo=github&label=Build)](https://github.com/nexmonyx/go-sdk/actions)
-[![Test Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen?style=for-the-badge&logo=codecov)](https://github.com/nexmonyx/go-sdk/actions)
+[![codecov](https://codecov.io/gh/nexmonyx/go-sdk/branch/main/graph/badge.svg?style=for-the-badge&token=CODECOV_TOKEN)](https://codecov.io/gh/nexmonyx/go-sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nexmonyx/go-sdk?style=for-the-badge)](https://goreportcard.com/report/github.com/nexmonyx/go-sdk)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-pkg.go.dev-007d9c?style=for-the-badge&logo=go)](https://pkg.go.dev/github.com/nexmonyx/go-sdk)

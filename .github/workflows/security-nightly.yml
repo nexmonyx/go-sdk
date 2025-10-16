@@ -1,0 +1,180 @@
+name: Security Scan (Nightly)
+
+on:
+  schedule:
+    # Run every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual triggers
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-scan:
+    name: Comprehensive Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Install security tools
+        run: |
+          echo "Installing security scanning tools..."
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          echo "✅ Security tools installed"
+
+      - name: Run gosec security scanner (full scan)
+        continue-on-error: true
+        run: |
+          echo "Running gosec security scanner (no baseline)..."
+          gosec -fmt=json -out=gosec-full-results.json ./... || true
+
+          # Generate human-readable report
+          gosec -fmt=text -out=gosec-full-report.txt ./... || true
+
+      - name: Run Go vulnerability check
+        continue-on-error: true
+        run: |
+          echo "Checking for known vulnerabilities in dependencies..."
+          govulncheck -json ./... > govulncheck-results.json || true
+
+          # Generate human-readable report
+          govulncheck ./... > govulncheck-report.txt || true
+
+      - name: Generate security summary
+        if: always()
+        run: |
+          echo "# Security Scan Report - $(date +%Y-%m-%d)" > security-report.md
+          echo "" >> security-report.md
+
+          # gosec results
+          if [ -f gosec-full-results.json ]; then
+            echo "## Static Analysis (gosec)" >> security-report.md
+            echo "" >> security-report.md
+
+            TOTAL=$(jq '.Stats.files' gosec-full-results.json)
+            ISSUES=$(jq '.Stats.found' gosec-full-results.json)
+
+            echo "- **Files Scanned:** $TOTAL" >> security-report.md
+            echo "- **Issues Found:** $ISSUES" >> security-report.md
+            echo "" >> security-report.md
+
+            if [ "$ISSUES" -gt "15" ]; then
+              echo "⚠️ **WARNING**: Issue count ($ISSUES) exceeds baseline (15)" >> security-report.md
+              echo "" >> security-report.md
+            fi
+          fi
+
+          # govulncheck results
+          if [ -f govulncheck-results.json ]; then
+            echo "## Vulnerability Check (govulncheck)" >> security-report.md
+            echo "" >> security-report.md
+
+            VULNS=$(cat govulncheck-report.txt | grep -c "Vulnerability" || echo "0")
+
+            if [ "$VULNS" -eq "0" ]; then
+              echo "✅ **No known vulnerabilities found in dependencies**" >> security-report.md
+            else
+              echo "⚠️ **Found $VULNS potential vulnerabilities**" >> security-report.md
+              echo "" >> security-report.md
+              echo '```' >> security-report.md
+              cat govulncheck-report.txt | head -50 >> security-report.md
+              echo '```' >> security-report.md
+            fi
+            echo "" >> security-report.md
+          fi
+
+          echo "## Scan Details" >> security-report.md
+          echo "" >> security-report.md
+          echo "- **Date:** $(date)" >> security-report.md
+          echo "- **Go Version:** $(go version)" >> security-report.md
+          echo "- **Repository:** ${{ github.repository }}" >> security-report.md
+          echo "- **Branch:** ${{ github.ref_name }}" >> security-report.md
+          echo "" >> security-report.md
+          echo "---" >> security-report.md
+          echo "For baseline information, see [GOSEC_BASELINE.md](docs/security/GOSEC_BASELINE.md)" >> security-report.md
+
+          # Show in logs
+          cat security-report.md
+
+      - name: Upload security scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-results-${{ github.run_number }}
+          path: |
+            gosec-full-results.json
+            gosec-full-report.txt
+            govulncheck-results.json
+            govulncheck-report.txt
+            security-report.md
+          retention-days: 90
+
+      - name: Check for critical issues
+        if: always()
+        run: |
+          # Fail workflow if critical vulnerabilities found
+          if [ -f govulncheck-results.json ]; then
+            CRITICAL=$(cat govulncheck-report.txt | grep -i "critical" | wc -l || echo "0")
+            if [ "$CRITICAL" -gt "0" ]; then
+              echo "❌ CRITICAL: Found $CRITICAL critical vulnerabilities!"
+              echo "Please review the security scan results and address critical issues."
+              exit 1
+            fi
+          fi
+
+          # Fail if gosec issues exceed threshold significantly
+          if [ -f gosec-full-results.json ]; then
+            ISSUES=$(jq '.Stats.found' gosec-full-results.json)
+            if [ "$ISSUES" -gt "25" ]; then
+              echo "❌ WARNING: gosec found $ISSUES issues (threshold: 25)"
+              echo "Please review and address security issues or update baseline."
+              exit 1
+            fi
+          fi
+
+          echo "✅ Security scan completed - no critical issues"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Check for outdated dependencies
+        run: |
+          echo "Checking for outdated Go dependencies..."
+          go list -u -m all > dependencies-report.txt
+
+          echo "## Dependency Report" > dependency-summary.md
+          echo "" >> dependency-summary.md
+          echo '```' >> dependency-summary.md
+          cat dependencies-report.txt >> dependency-summary.md
+          echo '```' >> dependency-summary.md
+
+          cat dependency-summary.md
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-report-${{ github.run_number }}
+          path: |
+            dependencies-report.txt
+            dependency-summary.md
+          retention-days: 30

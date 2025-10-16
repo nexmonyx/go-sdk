@@ -54,7 +54,9 @@
       "Bash(sort:*)",
       "Bash(cat:*)",
       "Bash(gh run download:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(export INTEGRATION_TESTS=true)",
+      "Bash(INTEGRATION_TESTS=true go test:*)"
     ],
     "deny": [],
     "additionalDirectories": [
