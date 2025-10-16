@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -210,25 +211,29 @@ func TestAgentVersionsService_ErrorHandling(t *testing.T) {
 
 	client, _ := NewClient(&Config{BaseURL: server.URL})
 
+	// Use short timeout context to prevent retry hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	// Test error handling for all methods
-	err := client.AgentVersions.RegisterVersion(context.Background(), &AgentVersionRequest{})
+	err := client.AgentVersions.RegisterVersion(ctx, &AgentVersionRequest{})
 	assert.Error(t, err)
 
-	_, err = client.AgentVersions.CreateVersion(context.Background(), &AgentVersionRequest{})
+	_, err = client.AgentVersions.CreateVersion(ctx, &AgentVersionRequest{})
 	assert.Error(t, err)
 
-	_, err = client.AgentVersions.GetVersion(context.Background(), "v1.0.0")
+	_, err = client.AgentVersions.GetVersion(ctx, "v1.0.0")
 	assert.Error(t, err)
 
-	_, _, err = client.AgentVersions.ListVersions(context.Background(), nil)
+	_, _, err = client.AgentVersions.ListVersions(ctx, nil)
 	assert.Error(t, err)
 
-	err = client.AgentVersions.AddBinary(context.Background(), 1, &AgentBinaryRequest{})
+	err = client.AgentVersions.AddBinary(ctx, 1, &AgentBinaryRequest{})
 	assert.Error(t, err)
 
-	_, err = client.AgentVersions.AdminCreateVersion(context.Background(), "v2.0.0", "notes")
+	_, err = client.AgentVersions.AdminCreateVersion(ctx, "v2.0.0", "notes")
 	assert.Error(t, err)
 
-	err = client.AgentVersions.AdminAddBinary(context.Background(), 1, &AgentBinaryRequest{})
+	err = client.AgentVersions.AdminAddBinary(ctx, 1, &AgentBinaryRequest{})
 	assert.Error(t, err)
 }

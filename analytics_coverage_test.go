@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -360,35 +361,40 @@ func TestAnalyticsService_Errors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
+	// Disable retries to prevent timeout
+	client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
 
-	_, err := client.Analytics.GetCapabilities(context.Background())
+	// Use short timeout context to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_, err := client.Analytics.GetCapabilities(ctx)
 	assert.Error(t, err)
 
-	_, err = client.Analytics.AnalyzeMetrics(context.Background(), &AIAnalysisRequest{})
+	_, err = client.Analytics.AnalyzeMetrics(ctx, &AIAnalysisRequest{})
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetServiceStatus(context.Background())
+	_, err = client.Analytics.GetServiceStatus(ctx)
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetHardwareTrends(context.Background(), "server-123", "2024-01-01", "2024-01-07")
+	_, err = client.Analytics.GetHardwareTrends(ctx, "server-123", "2024-01-01", "2024-01-07")
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetHardwareHealth(context.Background(), "server-123")
+	_, err = client.Analytics.GetHardwareHealth(ctx, "server-123")
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetHardwarePredictions(context.Background(), "server-123", 30)
+	_, err = client.Analytics.GetHardwarePredictions(ctx, "server-123", 30)
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetFleetOverview(context.Background())
+	_, err = client.Analytics.GetFleetOverview(ctx)
 	assert.Error(t, err)
 
-	_, err = client.Analytics.GetOrganizationDashboard(context.Background())
+	_, err = client.Analytics.GetOrganizationDashboard(ctx)
 	assert.Error(t, err)
 
-	_, err = client.Analytics.AnalyzeCorrelations(context.Background(), &CorrelationAnalysisRequest{})
+	_, err = client.Analytics.AnalyzeCorrelations(ctx, &CorrelationAnalysisRequest{})
 	assert.Error(t, err)
 
-	_, err = client.Analytics.BuildDependencyGraph(context.Background())
+	_, err = client.Analytics.BuildDependencyGraph(ctx)
 	assert.Error(t, err)
 }
