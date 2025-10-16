@@ -684,74 +684,361 @@ func TestIncidentsService_AcknowledgeIncident(t *testing.T) {
 }
 
 func TestIncidentsService_CreateIncidentFromAlert(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data":   map[string]interface{}{"id": 1},
-		})
-	}))
-	defer server.Close()
+	tests := []struct {
+		name        string
+		orgID       uint
+		alertID     uint
+		title       string
+		severity    IncidentSeverity
+		serverID    *uint
+		description string
+		mockStatus  int
+		mockBody    interface{}
+		wantErr     bool
+	}{
+		{
+			name:        "successful create from alert",
+			orgID:       1,
+			alertID:     100,
+			title:       "Alert 1",
+			severity:    IncidentSeverityCritical,
+			serverID:    func() *uint { id := uint(123); return &id }(),
+			description: "Test alert",
+			mockStatus:  http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 1, "title": "Alert 1"},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "create without server ID",
+			orgID:       1,
+			alertID:     100,
+			title:       "Alert 2",
+			severity:    IncidentSeverityWarning,
+			serverID:    nil,
+			description: "Alert without server",
+			mockStatus:  http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 2},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "unauthorized",
+			orgID:       1,
+			alertID:     100,
+			title:       "Alert",
+			severity:    IncidentSeverityCritical,
+			serverID:    nil,
+			description: "Test",
+			mockStatus:  http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:        "forbidden",
+			orgID:       1,
+			alertID:     100,
+			title:       "Alert",
+			severity:    IncidentSeverityCritical,
+			serverID:    nil,
+			description: "Test",
+			mockStatus:  http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:        "server error",
+			orgID:       1,
+			alertID:     100,
+			title:       "Alert",
+			severity:    IncidentSeverityCritical,
+			serverID:    nil,
+			description: "Test",
+			mockStatus:  http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "internal server error",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	serverID := uint(123)
-	incident, err := client.Incidents.CreateIncidentFromAlert(context.Background(), 1, 100, "Alert 1", IncidentSeverityCritical, &serverID, "Test alert")
-	assert.NoError(t, err)
-	assert.NotNil(t, incident)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			incident, err := client.Incidents.CreateIncidentFromAlert(context.Background(), tt.orgID, tt.alertID, tt.title, tt.severity, tt.serverID, tt.description)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, incident)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_CreateIncidentFromProbe(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data":   map[string]interface{}{"id": 1},
-		})
-	}))
-	defer server.Close()
+	tests := []struct {
+		name        string
+		orgID       uint
+		probeID     uint
+		title       string
+		description string
+		mockStatus  int
+		mockBody    interface{}
+		wantErr     bool
+	}{
+		{
+			name:        "successful create from probe",
+			orgID:       1,
+			probeID:     200,
+			title:       "Probe 1",
+			description: "Probe failed",
+			mockStatus:  http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 1, "title": "Probe 1"},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "create with minimal description",
+			orgID:       1,
+			probeID:     201,
+			title:       "Probe Check Failed",
+			description: "Down",
+			mockStatus:  http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 2},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "unauthorized",
+			orgID:       1,
+			probeID:     200,
+			title:       "Probe",
+			description: "Test",
+			mockStatus:  http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:        "forbidden",
+			orgID:       1,
+			probeID:     200,
+			title:       "Probe",
+			description: "Test",
+			mockStatus:  http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:        "server error",
+			orgID:       1,
+			probeID:     200,
+			title:       "Probe",
+			description: "Test",
+			mockStatus:  http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "internal server error",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	incident, err := client.Incidents.CreateIncidentFromProbe(context.Background(), 1, 200, "Probe 1", "Probe failed")
-	assert.NoError(t, err)
-	assert.NotNil(t, incident)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			incident, err := client.Incidents.CreateIncidentFromProbe(context.Background(), tt.orgID, tt.probeID, tt.title, tt.description)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, incident)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_ResolveIncidentFromAlert(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data": map[string]interface{}{
-				"incidents": []map[string]interface{}{},
+	tests := []struct {
+		name       string
+		alertID    uint
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "successful resolve - no incidents",
+			alertID:    100,
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"incidents": []map[string]interface{}{},
+				},
 			},
-		})
-	}))
-	defer server.Close()
+			wantErr: false,
+		},
+		{
+			name:       "unauthorized",
+			alertID:    100,
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			alertID:    100,
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "server error",
+			alertID:    100,
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "internal server error",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	err := client.Incidents.ResolveIncidentFromAlert(context.Background(), 100)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			err := client.Incidents.ResolveIncidentFromAlert(context.Background(), tt.alertID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_ResolveIncidentFromProbe(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data": map[string]interface{}{
-				"incidents": []map[string]interface{}{},
+	tests := []struct {
+		name       string
+		probeID    uint
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "successful resolve - no incidents",
+			probeID:    200,
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"incidents": []map[string]interface{}{},
+				},
 			},
-		})
-	}))
-	defer server.Close()
+			wantErr: false,
+		},
+		{
+			name:       "unauthorized",
+			probeID:    200,
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			probeID:    200,
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "server error",
+			probeID:    200,
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "internal server error",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	err := client.Incidents.ResolveIncidentFromProbe(context.Background(), 200)
-	assert.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			err := client.Incidents.ResolveIncidentFromProbe(context.Background(), tt.probeID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_ResolveIncidentFromAlert_WithIncidents(t *testing.T) {
@@ -814,7 +1101,7 @@ func TestIncidentsService_ResolveIncidentFromAlert_ListError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
+	client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
 	err := client.Incidents.ResolveIncidentFromAlert(context.Background(), 100)
 	assert.Error(t, err)
 }
@@ -851,7 +1138,7 @@ func TestIncidentsService_ResolveIncidentFromAlert_ResolveError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
+	client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
 	err := client.Incidents.ResolveIncidentFromAlert(context.Background(), 100)
 	assert.Error(t, err)
 }
