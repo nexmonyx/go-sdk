@@ -62,6 +62,36 @@ func TestServersService_GetByUUID(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:       "empty uuid",
+			uuid:       "",
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "UUID is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized access",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -101,33 +131,90 @@ func TestServersService_GetByUUID(t *testing.T) {
 
 // TestServersService_Get tests the deprecated Get method
 func TestServersService_Get(t *testing.T) {
-	t.Run("redirects to GetByUUID", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(StandardResponse{
+	tests := []struct {
+		name       string
+		uuid       string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *Server)
+	}{
+		{
+			name:       "successful get",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
 				Status: "success",
 				Data: &Server{
 					ServerUUID: "550e8400-e29b-41d4-a716-446655440000",
 					Hostname:   "test-server",
 				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, s *Server) {
+				if s.Hostname != "test-server" {
+					t.Errorf("Expected hostname 'test-server', got '%s'", s.Hostname)
+				}
+			},
+		},
+		{
+			name:       "server not found",
+			uuid:       "invalid-uuid",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized access",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
 			})
-		}))
-		defer server.Close()
 
-		client, _ := NewClient(&Config{
-			BaseURL: server.URL,
-			Auth:    AuthConfig{Token: "test-token"},
+			result, err := client.Servers.Get(context.Background(), tt.uuid)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Get() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
 		})
-
-		result, err := client.Servers.Get(context.Background(), "550e8400-e29b-41d4-a716-446655440000")
-		if err != nil {
-			t.Errorf("Get() error = %v, want nil", err)
-		}
-		if result.Hostname != "test-server" {
-			t.Errorf("Expected hostname 'test-server', got '%s'", result.Hostname)
-		}
-	})
+	}
 }
 
 // TestServersService_List tests listing servers with pagination
@@ -228,6 +315,36 @@ func TestServersService_List(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name:       "unauthorized access",
+			opts:       &ListOptions{Page: 1, Limit: 25},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			opts:       &ListOptions{Page: 1, Limit: 25},
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			opts:       &ListOptions{Page: 1, Limit: 25},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -318,6 +435,45 @@ func TestServersService_Create(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "unauthorized access",
+			server: &Server{
+				Hostname:       "new-server",
+				OrganizationID: 1,
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "forbidden access",
+			server: &Server{
+				Hostname:       "new-server",
+				OrganizationID: 1,
+			},
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name: "duplicate server",
+			server: &Server{
+				Hostname:       "existing-server",
+				OrganizationID: 1,
+			},
+			mockStatus: http.StatusConflict,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "server already exists",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -357,45 +513,124 @@ func TestServersService_Create(t *testing.T) {
 
 // TestServersService_Update tests the deprecated Update method
 func TestServersService_Update(t *testing.T) {
-	t.Run("redirects to UpdateDetails", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/v1/server/550e8400-e29b-41d4-a716-446655440000/details" {
-				t.Errorf("Unexpected path: %s", r.URL.Path)
-			}
-			if r.Method != http.MethodPut {
-				t.Errorf("Expected PUT, got %s", r.Method)
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(StandardResponse{
+	tests := []struct {
+		name       string
+		uuid       string
+		server     *Server
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *Server)
+	}{
+		{
+			name: "successful update",
+			uuid: "550e8400-e29b-41d4-a716-446655440000",
+			server: &Server{
+				Hostname: "updated-server",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
 				Status:  "success",
 				Message: "Server updated",
 				Data: &Server{
 					ServerUUID: "550e8400-e29b-41d4-a716-446655440000",
 					Hostname:   "updated-server",
 				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, s *Server) {
+				if s.Hostname != "updated-server" {
+					t.Errorf("Expected hostname 'updated-server', got '%s'", s.Hostname)
+				}
+			},
+		},
+		{
+			name: "server not found",
+			uuid: "invalid-uuid",
+			server: &Server{
+				Hostname: "updated-server",
+			},
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name: "unauthorized access",
+			uuid: "550e8400-e29b-41d4-a716-446655440000",
+			server: &Server{
+				Hostname: "updated-server",
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "forbidden access",
+			uuid: "550e8400-e29b-41d4-a716-446655440000",
+			server: &Server{
+				Hostname: "updated-server",
+			},
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name: "validation error",
+			uuid: "550e8400-e29b-41d4-a716-446655440000",
+			server: &Server{
+				Hostname: "",
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "hostname is required",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != fmt.Sprintf("/v1/server/%s/details", tt.uuid) {
+					t.Errorf("Unexpected path: %s", r.URL.Path)
+				}
+				if r.Method != http.MethodPut {
+					t.Errorf("Expected PUT, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
 			})
-		}))
-		defer server.Close()
 
-		client, _ := NewClient(&Config{
-			BaseURL: server.URL,
-			Auth:    AuthConfig{Token: "test-token"},
+			result, err := client.Servers.Update(context.Background(), tt.uuid, tt.server)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Update() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
 		})
-
-		updateServer := &Server{
-			Hostname: "updated-server",
-		}
-
-		result, err := client.Servers.Update(context.Background(), "550e8400-e29b-41d4-a716-446655440000", updateServer)
-		if err != nil {
-			t.Errorf("Update() error = %v, want nil", err)
-		}
-		if result.Hostname != "updated-server" {
-			t.Errorf("Expected hostname 'updated-server', got '%s'", result.Hostname)
-		}
-	})
+	}
 }
 
 // TestServersService_Delete tests deleting a server
@@ -434,6 +669,36 @@ func TestServersService_Delete(t *testing.T) {
 			mockBody: StandardResponse{
 				Status:  "error",
 				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			serverID:   "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "empty server ID",
+			serverID:   "",
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "server ID is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			serverID:   "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
 			},
 			wantErr: true,
 		},
