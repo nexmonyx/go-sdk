@@ -12,89 +12,336 @@ import (
 )
 
 func TestIncidentsService_CreateIncident(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/v1/incidents", r.URL.Path)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data":   map[string]interface{}{"id": 1, "title": "Test Incident"},
-		})
-	}))
-	defer server.Close()
-
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	req := CreateIncidentRequest{
-		Title:       "Test Incident",
-		Description: "Test description",
-		Severity:    IncidentSeverityCritical,
+	tests := []struct {
+		name       string
+		req        CreateIncidentRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name: "successful create",
+			req: CreateIncidentRequest{
+				Title:       "Test Incident",
+				Description: "Test description",
+				Severity:    IncidentSeverityCritical,
+			},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 1, "title": "Test Incident"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "validation error - missing title",
+			req: CreateIncidentRequest{
+				Description: "Test description",
+				Severity:    IncidentSeverityCritical,
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "title is required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "unauthorized",
+			req: CreateIncidentRequest{
+				Title:    "Test Incident",
+				Severity: IncidentSeverityCritical,
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "forbidden",
+			req: CreateIncidentRequest{
+				Title:    "Test Incident",
+				Severity: IncidentSeverityCritical,
+			},
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name: "internal server error",
+			req: CreateIncidentRequest{
+				Title:    "Test Incident",
+				Severity: IncidentSeverityCritical,
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "internal server error",
+			},
+			wantErr: true,
+		},
 	}
-	incident, err := client.Incidents.CreateIncident(context.Background(), req)
-	assert.NoError(t, err)
-	assert.NotNil(t, incident)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "/v1/incidents", r.URL.Path)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			incident, err := client.Incidents.CreateIncident(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, incident)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_GetIncident(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Contains(t, r.URL.Path, "/v1/incidents/")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data":   map[string]interface{}{"id": 1, "title": "Test Incident"},
-		})
-	}))
-	defer server.Close()
+	tests := []struct {
+		name       string
+		incidentID uint
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "successful get",
+			incidentID: 1,
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 1, "title": "Test Incident"},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "incident not found",
+			incidentID: 999,
+			mockStatus: http.StatusNotFound,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "incident not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized",
+			incidentID: 1,
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			incidentID: 1,
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	incident, err := client.Incidents.GetIncident(context.Background(), 1)
-	assert.NoError(t, err)
-	assert.NotNil(t, incident)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "GET", r.Method)
+				assert.Contains(t, r.URL.Path, "/v1/incidents/")
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			incident, err := client.Incidents.GetIncident(context.Background(), tt.incidentID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, incident)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_UpdateIncident(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "PUT", r.Method)
-		assert.Contains(t, r.URL.Path, "/v1/incidents/")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data":   map[string]interface{}{"id": 1, "title": "Updated Incident"},
-		})
-	}))
-	defer server.Close()
+	tests := []struct {
+		name       string
+		incidentID uint
+		req        UpdateIncidentRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "successful update",
+			incidentID: 1,
+			req:        UpdateIncidentRequest{Status: IncidentStatusResolved},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   map[string]interface{}{"id": 1, "title": "Updated Incident"},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "incident not found",
+			incidentID: 999,
+			req:        UpdateIncidentRequest{Status: IncidentStatusResolved},
+			mockStatus: http.StatusNotFound,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "incident not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized",
+			incidentID: 1,
+			req:        UpdateIncidentRequest{Status: IncidentStatusResolved},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			incidentID: 1,
+			req:        UpdateIncidentRequest{Status: IncidentStatusResolved},
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	req := UpdateIncidentRequest{Status: IncidentStatusResolved}
-	incident, err := client.Incidents.UpdateIncident(context.Background(), 1, req)
-	assert.NoError(t, err)
-	assert.NotNil(t, incident)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "PUT", r.Method)
+				assert.Contains(t, r.URL.Path, "/v1/incidents/")
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			incident, err := client.Incidents.UpdateIncident(context.Background(), tt.incidentID, tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, incident)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_ListIncidents(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/v1/incidents", r.URL.Path)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"data": map[string]interface{}{
-				"incidents": []map[string]interface{}{{"id": 1}},
-				"total":     1,
+	tests := []struct {
+		name       string
+		opts       *IncidentListOptions
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name:       "successful list",
+			opts:       &IncidentListOptions{Status: "active", Severity: "critical"},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"incidents": []map[string]interface{}{{"id": 1}},
+					"total":     1,
+				},
 			},
-		})
-	}))
-	defer server.Close()
+			wantErr: false,
+		},
+		{
+			name:       "empty list",
+			opts:       &IncidentListOptions{Status: "resolved"},
+			mockStatus: http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"incidents": []map[string]interface{}{},
+					"total":     0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "unauthorized",
+			opts:       &IncidentListOptions{Status: "active"},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden",
+			opts:       &IncidentListOptions{Status: "active"},
+			mockStatus: http.StatusForbidden,
+			mockBody: map[string]interface{}{
+				"status":  "error",
+				"message": "insufficient permissions",
+			},
+			wantErr: true,
+		},
+	}
 
-	client, _ := NewClient(&Config{BaseURL: server.URL})
-	opts := &IncidentListOptions{Status: "active", Severity: "critical"}
-	response, err := client.Incidents.ListIncidents(context.Background(), opts)
-	assert.NoError(t, err)
-	assert.NotNil(t, response)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "GET", r.Method)
+				assert.Equal(t, "/v1/incidents", r.URL.Path)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{BaseURL: server.URL, RetryCount: 0})
+			response, err := client.Incidents.ListIncidents(context.Background(), tt.opts)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+			}
+		})
+	}
 }
 
 func TestIncidentsService_GetRecentIncidents(t *testing.T) {
