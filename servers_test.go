@@ -782,6 +782,61 @@ func TestServersService_Register(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:       "empty hostname",
+			hostname:   "",
+			orgID:      1,
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "hostname is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "invalid organization ID",
+			hostname:   "new-server",
+			orgID:      0,
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "organization ID is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized access",
+			hostname:   "new-server",
+			orgID:      1,
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			hostname:   "new-server",
+			orgID:      1,
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			hostname:   "new-server",
+			orgID:      1,
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -845,6 +900,46 @@ func TestServersService_SendHeartbeat(t *testing.T) {
 			mockBody: StandardResponse{
 				Status:  "error",
 				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "server not found",
+			uuid:       "invalid-uuid",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "empty uuid",
+			uuid:       "",
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "UUID is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			uuid:       "550e8400-e29b-41d4-a716-446655440000",
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
 			},
 			wantErr: true,
 		},
@@ -1306,6 +1401,33 @@ func TestServersService_Heartbeat(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:       "server not found",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "forbidden access",
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1369,6 +1491,46 @@ func TestServersService_HeartbeatWithVersion(t *testing.T) {
 				Message: "Heartbeat received",
 			},
 			wantErr: false,
+		},
+		{
+			name:         "unauthorized access",
+			agentVersion: "1.2.3",
+			mockStatus:   http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:         "server not found",
+			agentVersion: "1.2.3",
+			mockStatus:   http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:         "forbidden access",
+			agentVersion: "1.2.3",
+			mockStatus:   http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:         "internal server error",
+			agentVersion: "1.2.3",
+			mockStatus:   http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
 		},
 	}
 
