@@ -1047,6 +1047,39 @@ func TestServersService_GetMetrics(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:     "unauthorized access",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			opts:     &ListOptions{Page: 1, Limit: 10},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: PaginatedResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "forbidden access",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			opts:     &ListOptions{Page: 1, Limit: 10},
+			mockStatus: http.StatusForbidden,
+			mockBody: PaginatedResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "internal server error",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			opts:     &ListOptions{Page: 1, Limit: 10},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: PaginatedResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1240,6 +1273,39 @@ func TestServersService_UpdateTags(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:     "unauthorized access",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			tags:     []string{"test"},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "authentication required",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "forbidden access",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			tags:     []string{"test"},
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "insufficient permissions",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "internal server error",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			tags:     []string{"test"},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1334,6 +1400,28 @@ func TestServersService_ExecuteCommand(t *testing.T) {
 			mockBody: StandardResponse{
 				Status:  "error",
 				Message: "Forbidden",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "server not found",
+			serverID: "invalid-uuid",
+			command:  "uptime",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "internal server error",
+			serverID: "550e8400-e29b-41d4-a716-446655440000",
+			command:  "uptime",
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
 			},
 			wantErr: true,
 		},
