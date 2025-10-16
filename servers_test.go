@@ -2084,6 +2084,45 @@ func TestServersService_RegisterWithKey(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:            "empty registration key",
+			registrationKey: "",
+			req: &ServerCreateRequest{
+				Hostname: "new-server",
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "registration key is required",
+			},
+			wantErr: true,
+		},
+		{
+			name:            "duplicate server",
+			registrationKey: "reg-key-123",
+			req: &ServerCreateRequest{
+				Hostname: "existing-server",
+			},
+			mockStatus: http.StatusConflict,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "server already exists",
+			},
+			wantErr: true,
+		},
+		{
+			name:            "internal server error",
+			registrationKey: "reg-key-123",
+			req: &ServerCreateRequest{
+				Hostname: "new-server",
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2318,6 +2357,42 @@ func TestServersService_RegisterWithUnifiedKey(t *testing.T) {
 			mockStatus: http.StatusUnauthorized,
 			mockBody:   StandardResponse{},
 			wantErr:    true,
+		},
+		{
+			name: "duplicate hostname",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeRegistration,
+				Status:       APIKeyStatusActive,
+				FullToken:    "token-123",
+				Capabilities: []string{"servers:register"},
+			},
+			req: &ServerCreateRequest{
+				Hostname: "existing-server",
+			},
+			mockStatus: http.StatusConflict,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "server already exists",
+			},
+			wantErr: true,
+		},
+		{
+			name: "internal server error",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeRegistration,
+				Status:       APIKeyStatusActive,
+				FullToken:    "token-123",
+				Capabilities: []string{"servers:register"},
+			},
+			req: &ServerCreateRequest{
+				Hostname: "new-server",
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "internal server error",
+			},
+			wantErr: true,
 		},
 	}
 
