@@ -9,25 +9,22 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
 
-// MockAPIServer provides a test HTTP server that mimics the Nexmonyx API
+// MockAPIServer provides a standalone HTTP server that mimics the Nexmonyx API
 type MockAPIServer struct {
-	Server      http.Server
-	t           *testing.T
-	mu          sync.RWMutex
-	servers     map[string]interface{}
-	orgs        map[string]interface{}
-	alerts      map[string]interface{}
-	users       map[string]interface{}
+	Server  http.Server
+	mu      sync.RWMutex
+	servers map[string]interface{}
+	orgs    map[string]interface{}
+	alerts  map[string]interface{}
+	users   map[string]interface{}
 	probes      map[string]interface{}
 	nextID      int
 	authEnabled bool
