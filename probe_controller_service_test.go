@@ -3,10 +3,14 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestProbeControllerService_CreateAssignment tests the CreateAssignment method
@@ -126,6 +130,135 @@ func TestProbeControllerService_CreateAssignment(t *testing.T) {
 				if result.Region != tt.serverResponse.Region {
 					t.Errorf("Expected Region %s, got %s", tt.serverResponse.Region, result.Region)
 				}
+			}
+		})
+	}
+}
+
+// TestProbeControllerService_CreateAssignment_ValidationErrors tests validation error handling
+func TestProbeControllerService_CreateAssignment_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name           string
+		request        *ProbeControllerAssignmentCreateRequest
+		responseStatus int
+		responseError  map[string]interface{}
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:         "nil_request_validation",
+			request:      nil,
+			expectError:  true,
+			errorMessage: "request cannot be nil",
+		},
+		{
+			name: "missing_probe_id",
+			request: &ProbeControllerAssignmentCreateRequest{
+				ProbeID:   0, // Missing/zero
+				ProbeUUID: "probe-uuid-123",
+				Region:    "us-east-1",
+			},
+			expectError:  true,
+			errorMessage: "probe_id is required",
+		},
+		{
+			name: "missing_probe_uuid",
+			request: &ProbeControllerAssignmentCreateRequest{
+				ProbeID:   1,
+				ProbeUUID: "", // Missing/empty
+				Region:    "us-east-1",
+			},
+			expectError:  true,
+			errorMessage: "probe_uuid is required",
+		},
+		{
+			name: "missing_region",
+			request: &ProbeControllerAssignmentCreateRequest{
+				ProbeID:   1,
+				ProbeUUID: "probe-uuid-123",
+				Region:    "", // Missing/empty
+			},
+			expectError:  true,
+			errorMessage: "region is required",
+		},
+		{
+			name: "unauthorized_401",
+			request: &ProbeControllerAssignmentCreateRequest{
+				ProbeID:   1,
+				ProbeUUID: "probe-uuid-123",
+				Region:    "us-east-1",
+			},
+			responseStatus: http.StatusUnauthorized,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Unauthorized access",
+			},
+			expectError: true,
+		},
+		{
+			name: "server_error_500",
+			request: &ProbeControllerAssignmentCreateRequest{
+				ProbeID:   1,
+				ProbeUUID: "probe-uuid-123",
+				Region:    "us-east-1",
+			},
+			responseStatus: http.StatusInternalServerError,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Internal server error",
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "/v1/controllers/probe/assignments", r.URL.Path)
+
+				w.Header().Set("Content-Type", "application/json")
+
+				if tt.responseStatus != 0 {
+					w.WriteHeader(tt.responseStatus)
+					if tt.responseError != nil {
+						json.NewEncoder(w).Encode(tt.responseError)
+					}
+				} else {
+					w.WriteHeader(http.StatusCreated)
+					response := StandardResponse{
+						Status:  "success",
+						Message: "Assignment created",
+						Data: &ProbeControllerAssignment{
+							ID:        1,
+							ProbeID:   tt.request.ProbeID,
+							ProbeUUID: tt.request.ProbeUUID,
+							Region:    tt.request.Region,
+							Status:    "active",
+						},
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{MonitoringKey: "test-monitoring-key"},
+			})
+			require.NoError(t, err)
+
+			result, err := client.ProbeController.CreateAssignment(context.Background(), tt.request)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMessage != "" {
+					assert.Contains(t, err.Error(), tt.errorMessage)
+				}
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
 			}
 		})
 	}
@@ -320,6 +453,138 @@ func TestProbeControllerService_UpdateAssignment(t *testing.T) {
 	}
 }
 
+// TestProbeControllerService_UpdateAssignment_ErrorHandling tests error handling for UpdateAssignment
+func TestProbeControllerService_UpdateAssignment_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name           string
+		assignmentID   uint
+		request        *ProbeControllerAssignmentUpdateRequest
+		responseStatus int
+		responseError  map[string]interface{}
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:         "zero_assignment_id_validation",
+			assignmentID: 0,
+			request: &ProbeControllerAssignmentUpdateRequest{
+				Status: "active",
+			},
+			expectError:  true,
+			errorMessage: "assignment id is required",
+		},
+		{
+			name:         "nil_request_validation",
+			assignmentID: 1,
+			request:      nil,
+			expectError:  true,
+			errorMessage: "request cannot be nil",
+		},
+		{
+			name:         "assignment_not_found_404",
+			assignmentID: 9999,
+			request: &ProbeControllerAssignmentUpdateRequest{
+				Status: "active",
+			},
+			responseStatus: http.StatusNotFound,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Assignment not found",
+			},
+			expectError: true,
+		},
+		{
+			name:         "unauthorized_401",
+			assignmentID: 1,
+			request: &ProbeControllerAssignmentUpdateRequest{
+				Status: "active",
+			},
+			responseStatus: http.StatusUnauthorized,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Unauthorized access",
+			},
+			expectError: true,
+		},
+		{
+			name:         "validation_error_400",
+			assignmentID: 1,
+			request: &ProbeControllerAssignmentUpdateRequest{
+				Status: "invalid-status",
+			},
+			responseStatus: http.StatusBadRequest,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Invalid status value",
+			},
+			expectError: true,
+		},
+		{
+			name:         "server_error_500",
+			assignmentID: 1,
+			request: &ProbeControllerAssignmentUpdateRequest{
+				Status: "active",
+			},
+			responseStatus: http.StatusInternalServerError,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Internal server error",
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "PUT", r.Method)
+				expectedPath := fmt.Sprintf("/v1/controllers/probe/assignments/%d", tt.assignmentID)
+				assert.Equal(t, expectedPath, r.URL.Path)
+
+				w.Header().Set("Content-Type", "application/json")
+
+				if tt.responseStatus != 0 {
+					w.WriteHeader(tt.responseStatus)
+					if tt.responseError != nil {
+						json.NewEncoder(w).Encode(tt.responseError)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					response := StandardResponse{
+						Status:  "success",
+						Message: "Assignment updated",
+						Data: &ProbeControllerAssignment{
+							ID:     tt.assignmentID,
+							Status: tt.request.Status,
+						},
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{MonitoringKey: "test-monitoring-key"},
+			})
+			require.NoError(t, err)
+
+			result, err := client.ProbeController.UpdateAssignment(context.Background(), tt.assignmentID, tt.request)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMessage != "" {
+					assert.Contains(t, err.Error(), tt.errorMessage)
+				}
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+			}
+		})
+	}
+}
+
 // TestProbeControllerService_DeleteAssignment tests the DeleteAssignment method
 func TestProbeControllerService_DeleteAssignment(t *testing.T) {
 	assignmentID := uint(123)
@@ -471,6 +736,162 @@ func TestProbeControllerService_StoreRegionalResult(t *testing.T) {
 				if result.Success != tt.serverResponse.Success {
 					t.Errorf("Expected Success %v, got %v", tt.serverResponse.Success, result.Success)
 				}
+			}
+		})
+	}
+}
+
+// TestProbeControllerService_StoreRegionalResult_ValidationErrors tests validation error handling
+func TestProbeControllerService_StoreRegionalResult_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name           string
+		request        *ProbeControllerRegionalResultStoreRequest
+		responseStatus int
+		responseError  map[string]interface{}
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:         "nil_request_validation",
+			request:      nil,
+			expectError:  true,
+			errorMessage: "request cannot be nil",
+		},
+		{
+			name: "missing_probe_uuid",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "", // Missing/empty
+				Region:       "us-east-1",
+				Status:       "up",
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			expectError:  true,
+			errorMessage: "probe_uuid is required",
+		},
+		{
+			name: "missing_region",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "probe-123",
+				Region:       "", // Missing/empty
+				Status:       "up",
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			expectError:  true,
+			errorMessage: "region is required",
+		},
+		{
+			name: "missing_status",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "probe-123",
+				Region:       "us-east-1",
+				Status:       "", // Missing/empty
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			expectError:  true,
+			errorMessage: "status is required",
+		},
+		{
+			name: "unauthorized_401",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "probe-123",
+				Region:       "us-east-1",
+				Status:       "up",
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			responseStatus: http.StatusUnauthorized,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Unauthorized access",
+			},
+			expectError: true,
+		},
+		{
+			name: "duplicate_result_409",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "probe-123",
+				Region:       "us-east-1",
+				Status:       "up",
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			responseStatus: http.StatusConflict,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Duplicate result for this timestamp",
+			},
+			expectError: true,
+		},
+		{
+			name: "server_error_500",
+			request: &ProbeControllerRegionalResultStoreRequest{
+				ProbeUUID:    "probe-123",
+				Region:       "us-east-1",
+				Status:       "up",
+				Success:      true,
+				TTLSeconds:   3600,
+			},
+			responseStatus: http.StatusInternalServerError,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Internal server error",
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "/v1/controllers/probe/results/regional", r.URL.Path)
+
+				w.Header().Set("Content-Type", "application/json")
+
+				if tt.responseStatus != 0 {
+					w.WriteHeader(tt.responseStatus)
+					if tt.responseError != nil {
+						json.NewEncoder(w).Encode(tt.responseError)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					response := StandardResponse{
+						Status:  "success",
+						Message: "Regional result stored",
+						Data: &ProbeControllerRegionalResult{
+							ID:        1,
+							ProbeUUID: tt.request.ProbeUUID,
+							Region:    tt.request.Region,
+							Status:    tt.request.Status,
+							Success:   tt.request.Success,
+							Timestamp: time.Now(),
+						},
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{MonitoringKey: "test-monitoring-key"},
+			})
+			require.NoError(t, err)
+
+			result, err := client.ProbeController.StoreRegionalResult(context.Background(), tt.request)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMessage != "" {
+					assert.Contains(t, err.Error(), tt.errorMessage)
+				}
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
 			}
 		})
 	}
@@ -690,6 +1111,167 @@ func TestProbeControllerService_StoreConsensusResult(t *testing.T) {
 				if result.ShouldAlert != tt.serverResponse.ShouldAlert {
 					t.Errorf("Expected ShouldAlert %v, got %v", tt.serverResponse.ShouldAlert, result.ShouldAlert)
 				}
+			}
+		})
+	}
+}
+
+// TestProbeControllerService_StoreConsensusResult_ValidationErrors tests validation error handling
+func TestProbeControllerService_StoreConsensusResult_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name           string
+		request        *ProbeControllerConsensusResultStoreRequest
+		responseStatus int
+		responseError  map[string]interface{}
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:         "nil_request_validation",
+			request:      nil,
+			expectError:  true,
+			errorMessage: "request cannot be nil",
+		},
+		{
+			name: "missing_probe_id",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       0, // Missing/zero
+				ProbeUUID:     "probe-123",
+				GlobalStatus:  "up",
+				ConsensusType: "majority",
+			},
+			expectError:  true,
+			errorMessage: "probe_id is required",
+		},
+		{
+			name: "missing_probe_uuid",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       123,
+				ProbeUUID:     "", // Missing/empty
+				GlobalStatus:  "up",
+				ConsensusType: "majority",
+			},
+			expectError:  true,
+			errorMessage: "probe_uuid is required",
+		},
+		{
+			name: "missing_global_status",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       123,
+				ProbeUUID:     "probe-123",
+				GlobalStatus:  "", // Missing/empty
+				ConsensusType: "majority",
+			},
+			expectError:  true,
+			errorMessage: "global_status is required",
+		},
+		{
+			name: "missing_consensus_type",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       123,
+				ProbeUUID:     "probe-123",
+				GlobalStatus:  "up",
+				ConsensusType: "", // Missing/empty
+			},
+			expectError:  true,
+			errorMessage: "consensus_type is required",
+		},
+		{
+			name: "unauthorized_401",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       123,
+				ProbeUUID:     "probe-123",
+				GlobalStatus:  "up",
+				ConsensusType: "majority",
+			},
+			responseStatus: http.StatusUnauthorized,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Unauthorized access",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid_consensus_data_400",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:         123,
+				ProbeUUID:       "probe-123",
+				GlobalStatus:    "up",
+				ConsensusType:   "invalid-type",
+				DegradedRegions: -1, // Invalid negative value
+			},
+			responseStatus: http.StatusBadRequest,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Invalid consensus data",
+			},
+			expectError: true,
+		},
+		{
+			name: "server_error_500",
+			request: &ProbeControllerConsensusResultStoreRequest{
+				ProbeID:       123,
+				ProbeUUID:     "probe-123",
+				GlobalStatus:  "up",
+				ConsensusType: "majority",
+			},
+			responseStatus: http.StatusInternalServerError,
+			responseError: map[string]interface{}{
+				"status": "error",
+				"error":  "Internal server error",
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "POST", r.Method)
+				assert.Equal(t, "/v1/controllers/probe/results/consensus", r.URL.Path)
+
+				w.Header().Set("Content-Type", "application/json")
+
+				if tt.responseStatus != 0 {
+					w.WriteHeader(tt.responseStatus)
+					if tt.responseError != nil {
+						json.NewEncoder(w).Encode(tt.responseError)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					response := StandardResponse{
+						Status:  "success",
+						Message: "Consensus result stored",
+						Data: &ProbeControllerConsensusResult{
+							ID:           1,
+							ProbeID:      tt.request.ProbeID,
+							ProbeUUID:    tt.request.ProbeUUID,
+							GlobalStatus: tt.request.GlobalStatus,
+							CalculatedAt: time.Now(),
+						},
+					}
+					json.NewEncoder(w).Encode(response)
+				}
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{MonitoringKey: "test-monitoring-key"},
+			})
+			require.NoError(t, err)
+
+			result, err := client.ProbeController.StoreConsensusResult(context.Background(), tt.request)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMessage != "" {
+					assert.Contains(t, err.Error(), tt.errorMessage)
+				}
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
 			}
 		})
 	}
