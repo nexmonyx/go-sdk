@@ -1,7 +1,7 @@
 package nexmonyx
 
 import (
-	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -64,17 +64,20 @@ type ListOptions struct {
 }
 
 // ToQuery converts ListOptions to query parameters
+// OPTIMIZATION: Preallocate map with typical capacity and use strconv for integers
 func (lo *ListOptions) ToQuery() map[string]string {
-	params := make(map[string]string)
+	// Preallocate with typical capacity to reduce allocation overhead
+	// Typical ListOptions use ~10-15 fields
+	params := make(map[string]string, 15)
 
 	if lo.Page > 0 {
-		params["page"] = fmt.Sprintf("%d", lo.Page)
+		params["page"] = strconv.Itoa(lo.Page)
 	}
 	if lo.Limit > 0 {
-		params["limit"] = fmt.Sprintf("%d", lo.Limit)
+		params["limit"] = strconv.Itoa(lo.Limit)
 	}
 	if lo.PerPage > 0 {
-		params["per_page"] = fmt.Sprintf("%d", lo.PerPage)
+		params["per_page"] = strconv.Itoa(lo.PerPage)
 	}
 	if lo.Sort != "" {
 		params["sort"] = lo.Sort

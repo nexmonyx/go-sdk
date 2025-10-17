@@ -51,7 +51,6 @@ func NewMockAPIServer(addr string, authToken string, logf func(string, ...interf
 		nextID:      1000,
 		authEnabled: authToken != "",
 		authToken:   authToken,
-		t:           &testing{},
 	}
 
 	// Create HTTP server

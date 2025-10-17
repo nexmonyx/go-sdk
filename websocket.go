@@ -10,6 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// OPTIMIZATION: Maximum pending responses to prevent unbounded map growth
+const maxPendingResponses = 1000
+
 // WebSocketServiceImpl provides WebSocket communication capabilities for sending commands to agents
 type WebSocketServiceImpl struct {
 	client *Client
@@ -419,9 +422,13 @@ func (ws *WebSocketServiceImpl) sendCommand(ctx context.Context, serverUUID, com
 
 	// Create response channel
 	responseChan := make(chan *WSCommandResponse, 1)
-	
-	// Store pending response
+
+	// OPTIMIZATION: Check pending responses count to prevent unbounded growth
 	ws.responseMutex.Lock()
+	if len(ws.pendingResponses) >= maxPendingResponses {
+		ws.responseMutex.Unlock()
+		return nil, fmt.Errorf("too many pending commands (%d), circuit breaker activated", len(ws.pendingResponses))
+	}
 	ws.pendingResponses[correlationID] = responseChan
 	ws.responseMutex.Unlock()
 
