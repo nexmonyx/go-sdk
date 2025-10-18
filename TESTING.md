@@ -500,6 +500,599 @@ open coverage.html  # View in browser
 
 ---
 
+## 📚 Testing Examples
+
+The SDK includes comprehensive examples demonstrating various testing approaches. These examples serve as templates for testing your own code and understanding SDK testing best practices.
+
+### Example Location
+
+All examples are located in `examples/testing/` with three main categories:
+
+```
+examples/testing/
+├── unit/
+│   └── basic_test.go                    # Unit testing patterns
+├── integration/
+│   └── mock_api_test.go                 # Integration testing patterns
+├── performance/
+│   ├── benchmarking_example.go          # Benchmarking patterns
+│   ├── profiling_example.go             # Memory/CPU profiling
+│   ├── load_testing_example.go          # Load testing patterns
+│   └── examples_test.go                 # Combined example tests
+└── README.md                             # Examples guide
+```
+
+### Quick Links to Examples
+
+#### Unit Testing Examples (`examples/testing/unit/basic_test.go`)
+
+Demonstrates fundamental testing patterns:
+
+- **Client creation** - Multiple authentication methods
+- **Table-driven tests** - Testing multiple scenarios
+- **Assertions** - Using testify library
+- **Error handling** - Testing error paths
+- **Benchmarking** - Basic performance measurement
+
+**Run:** `go test -v examples/testing/unit/basic_test.go`
+
+#### Integration Testing Examples (`examples/testing/integration/mock_api_test.go`)
+
+Shows testing against mock and real APIs:
+
+- **Mock API testing** - Testing without real backend
+- **CRUD operations** - Create, Read, Update, Delete workflows
+- **Concurrent operations** - Testing parallel requests
+- **Error scenarios** - Error handling patterns
+- **Metrics submission** - Submission workflows
+
+**Run:**
+```bash
+# With mock API
+INTEGRATION_TESTS=true go test -v examples/testing/integration/mock_api_test.go
+
+# With real dev API
+INTEGRATION_TESTS=true INTEGRATION_TEST_MODE=dev \
+  INTEGRATION_TEST_API_URL=https://api-dev.example.com \
+  INTEGRATION_TEST_AUTH_TOKEN=your-token \
+  go test -v examples/testing/integration/mock_api_test.go
+```
+
+#### Performance Testing Examples (`examples/testing/performance/`)
+
+Three example files showing performance measurement:
+
+**1. Benchmarking (`benchmarking_example_test.go`)**
+- Client creation benchmarks
+- Query generation performance
+- JSON marshaling benchmarks
+- Concurrent client benchmarks
+
+**Run:** `go test -bench=. -benchmem ./examples/testing/performance/`
+
+**2. Profiling (`profiling_example_test.go`)**
+- Memory profiling techniques
+- Heap growth detection
+- GC pause measurement
+- Allocation rate tracking
+- Context memory impact
+
+**Run:** `go test -v -run TestMemory ./examples/testing/performance/`
+
+**3. Load Testing (`load_testing_example_test.go`)**
+- Concurrent load tests
+- Sustained load patterns
+- Ramp-up load testing
+- Error rate under load
+- Spike simulation
+
+**Run:** `go test -v -timeout 5m -run TestConcurrent ./examples/testing/performance/`
+
+### Using Examples as Templates
+
+Each example file includes:
+
+1. **Clear documentation** - Comments explaining what each test does
+2. **Realistic patterns** - Patterns used in production tests
+3. **Multiple approaches** - Different ways to test the same thing
+4. **Copy-paste ready** - Can be directly adapted for your code
+
+**Example workflow:**
+1. Look at relevant example file
+2. Copy the pattern that matches your need
+3. Adapt request/response types for your code
+4. Run and verify with your specific API calls
+
+### Examples Guide
+
+For complete information about all examples including:
+- Detailed explanations of each test
+- How to run all examples
+- Common patterns and best practices
+- Troubleshooting tips
+
+See: `examples/testing/README.md`
+
+### Learning Path
+
+**Beginner:** Start with `examples/testing/unit/basic_test.go`
+- Learn basic test structure
+- Understand assertions
+- See client creation patterns
+
+**Intermediate:** Move to `examples/testing/integration/mock_api_test.go`
+- Test complete workflows
+- Handle error scenarios
+- Test concurrent operations
+
+**Advanced:** Use `examples/testing/performance/`
+- Benchmark your code
+- Profile memory usage
+- Load test your implementation
+
+---
+
+## 🌍 Real-World Examples and Workflows
+
+### Complete Workflow: Setting Up Server Monitoring
+
+This example demonstrates a real-world workflow for setting up and monitoring a server:
+
+```go
+// Example: Complete server monitoring setup workflow
+func TestMonitoringSetupWorkflow(t *testing.T) {
+    ctx := context.Background()
+
+    // 1. Initialize client with JWT authentication
+    client, err := NewClient(&Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: AuthConfig{
+            Token: "eyJhbGciOiJIUzI1NiIs...", // JWT token
+        },
+    })
+    require.NoError(t, err)
+
+    // 2. Create or get organization
+    org, err := client.Organizations.Get(ctx, "org-uuid")
+    require.NoError(t, err)
+    assert.NotNil(t, org)
+
+    // 3. Register server for monitoring
+    serverReq := &ServerCreateRequest{
+        Name:           "production-web-01",
+        Environment:    "production",
+        ServerSecret:   "unique-server-secret",
+        PublicIP:       "192.168.1.100",
+        PrivateIP:      "10.0.0.100",
+        Hostname:       "web-01.prod.internal",
+        MonitoringKey:  "monitoring-key",
+    }
+
+    server, err := client.Servers.Create(ctx, serverReq)
+    require.NoError(t, err)
+    assert.Equal(t, "production-web-01", server.Name)
+
+    // 4. Configure alert rule for high CPU
+    alertReq := &AlertRuleCreateRequest{
+        Name:       "CPU Alert",
+        Condition:  "cpu_usage > 80",
+        Severity:   "critical",
+        ServerID:   server.ID,
+        Enabled:    true,
+    }
+
+    alert, err := client.Alerts.Create(ctx, alertReq)
+    require.NoError(t, err)
+    assert.Equal(t, "CPU Alert", alert.Name)
+
+    // 5. Verify server is actively monitored
+    servers, _, err := client.Servers.List(ctx, &ListOptions{
+        Search: "production-web-01",
+    })
+    require.NoError(t, err)
+    assert.Len(t, servers, 1)
+    assert.True(t, servers[0].MonitoringEnabled)
+}
+```
+
+### Complete Workflow: Testing Error Handling and Recovery
+
+This example shows comprehensive error handling testing:
+
+```go
+// Example: Error handling and recovery patterns
+func TestErrorHandlingWorkflow(t *testing.T) {
+    ctx := context.Background()
+
+    tests := []struct {
+        name            string
+        operation       func() error
+        expectedErr     string
+        errorType       string
+        shouldRetry     bool
+    }{
+        {
+            name: "handle unauthorized error",
+            operation: func() error {
+                client, _ := NewClient(&Config{
+                    BaseURL: "https://api.nexmonyx.com",
+                    Auth: AuthConfig{Token: "invalid-token"},
+                })
+                _, err := client.Users.GetMe(ctx)
+                return err
+            },
+            errorType:   "UnauthorizedError",
+            shouldRetry: false,
+        },
+        {
+            name: "handle rate limit with retry",
+            operation: func() error {
+                client, _ := NewClient(&Config{
+                    BaseURL: "https://api.nexmonyx.com",
+                    Auth: AuthConfig{Token: "valid-token"},
+                    RetryCount: 3,
+                })
+                // Simulate rate limit (429)
+                _, err := client.Servers.List(ctx, &ListOptions{})
+                return err
+            },
+            errorType:   "RateLimitError",
+            shouldRetry: true,
+        },
+        {
+            name: "handle not found error",
+            operation: func() error {
+                client, _ := NewClient(&Config{
+                    BaseURL: "https://api.nexmonyx.com",
+                    Auth: AuthConfig{Token: "valid-token"},
+                })
+                _, err := client.Servers.Get(ctx, "non-existent-uuid")
+                return err
+            },
+            errorType:   "NotFoundError",
+            shouldRetry: false,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            err := tt.operation()
+            assert.Error(t, err)
+            assert.Contains(t, err.Error(), tt.errorType)
+        })
+    }
+}
+```
+
+### Complete Workflow: Concurrent Operations Testing
+
+Testing concurrent operations with proper synchronization:
+
+```go
+// Example: Testing concurrent API operations
+func TestConcurrentOperationsWorkflow(t *testing.T) {
+    ctx := context.Background()
+
+    client, err := NewClient(&Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: AuthConfig{Token: "test-token"},
+    })
+    require.NoError(t, err)
+
+    // Test concurrent server creation and listing
+    var wg sync.WaitGroup
+    results := make(chan interface{}, 10)
+    errors := make(chan error, 10)
+
+    // Spawn 5 concurrent create operations
+    for i := 0; i < 5; i++ {
+        wg.Add(1)
+        go func(index int) {
+            defer wg.Done()
+
+            req := &ServerCreateRequest{
+                Name: fmt.Sprintf("server-%d", index),
+            }
+
+            server, err := client.Servers.Create(ctx, req)
+            if err != nil {
+                errors <- err
+                return
+            }
+            results <- server
+        }(i)
+    }
+
+    // Spawn 3 concurrent list operations
+    for i := 0; i < 3; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+
+            servers, _, err := client.Servers.List(ctx, &ListOptions{
+                Limit: 10,
+            })
+            if err != nil {
+                errors <- err
+                return
+            }
+            results <- len(servers)
+        }()
+    }
+
+    // Wait for all operations
+    wg.Wait()
+    close(results)
+    close(errors)
+
+    // Verify no errors occurred
+    for err := range errors {
+        t.Errorf("Unexpected error: %v", err)
+    }
+
+    // Verify results
+    createdCount := 0
+    for result := range results {
+        if _, ok := result.(*Server); ok {
+            createdCount++
+        }
+    }
+
+    assert.Equal(t, 5, createdCount, "Should have 5 successful creates")
+}
+```
+
+### Complete Workflow: Metrics Submission and Tracking
+
+Testing metrics submission from server agents:
+
+```go
+// Example: Metrics submission workflow
+func TestMetricsSubmissionWorkflow(t *testing.T) {
+    ctx := context.Background()
+
+    // Initialize client as monitoring agent using server credentials
+    client, err := NewClient(&Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: AuthConfig{
+            ServerUUID:   "server-uuid-123",
+            ServerSecret: "server-secret-xyz",
+        },
+    })
+    require.NoError(t, err)
+
+    // Prepare comprehensive metrics
+    metrics := &ComprehensiveMetrics{
+        CPU: &CPUMetrics{
+            Usage:      85.5,
+            UserTime:   2500,
+            SystemTime: 1200,
+            Count:      4,
+        },
+        Memory: &MemoryMetrics{
+            Total:       16000000000,
+            Used:        10000000000,
+            Available:   6000000000,
+            Buffers:     500000000,
+            Cached:      1000000000,
+        },
+        Disk: &DiskMetrics{
+            Total:       500000000000,
+            Used:        250000000000,
+            Free:        250000000000,
+            INodeUsage:  45,
+        },
+        Network: &NetworkMetrics{
+            BytesIn:     1000000000,
+            BytesOut:    500000000,
+            PacketsIn:   1000000,
+            PacketsOut:  500000,
+        },
+        Processes: &ProcessMetrics{
+            Running:     45,
+            Sleeping:    120,
+            Zombie:      2,
+        },
+    }
+
+    // Submit metrics
+    err = client.Metrics.SubmitComprehensive(ctx, metrics)
+    require.NoError(t, err)
+
+    // Verify metrics were recorded by querying recent data
+    // (In real scenario, would verify through dashboard or API query)
+}
+```
+
+### Complete Workflow: Alert Rule Management
+
+Testing complete alert rule lifecycle:
+
+```go
+// Example: Alert rule lifecycle workflow
+func TestAlertRuleLifecycleWorkflow(t *testing.T) {
+    ctx := context.Background()
+
+    client, _ := NewClient(&Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: AuthConfig{Token: "test-token"},
+    })
+
+    // 1. Create alert rule
+    createReq := &AlertRuleCreateRequest{
+        Name:       "High Memory Alert",
+        Condition:  "memory_usage > 85",
+        Severity:   "warning",
+        ServerID:   1,
+        Enabled:    true,
+    }
+
+    alert, err := client.Alerts.Create(ctx, createReq)
+    require.NoError(t, err)
+    require.NotNil(t, alert)
+
+    // 2. Update alert rule
+    updateReq := &AlertRuleUpdateRequest{
+        Name:     alert.Name,
+        Severity: "critical", // Escalate from warning
+        Enabled:  true,
+    }
+
+    updated, err := client.Alerts.Update(ctx, alert.ID, updateReq)
+    require.NoError(t, err)
+    assert.Equal(t, "critical", updated.Severity)
+
+    // 3. List all alerts
+    alerts, meta, err := client.Alerts.List(ctx, &ListOptions{
+        Page:   1,
+        Limit:  25,
+        Search: "High Memory",
+    })
+    require.NoError(t, err)
+    assert.Greater(t, meta.Total, int64(0))
+
+    // 4. Get specific alert
+    retrieved, err := client.Alerts.Get(ctx, alert.ID)
+    require.NoError(t, err)
+    assert.Equal(t, alert.ID, retrieved.ID)
+
+    // 5. Delete alert rule
+    err = client.Alerts.Delete(ctx, alert.ID)
+    require.NoError(t, err)
+
+    // 6. Verify deletion
+    _, err = client.Alerts.Get(ctx, alert.ID)
+    assert.Error(t, err)
+}
+```
+
+### Testing Pattern: Testing with Context Timeouts
+
+Demonstrates proper timeout handling in tests:
+
+```go
+// Example: Testing with context timeouts
+func TestContextTimeoutPatterns(t *testing.T) {
+    tests := []struct {
+        name    string
+        timeout time.Duration
+        shouldFail bool
+    }{
+        {
+            name:       "short timeout - should fail",
+            timeout:    100 * time.Millisecond,
+            shouldFail: true,
+        },
+        {
+            name:       "normal timeout - should succeed",
+            timeout:    5 * time.Second,
+            shouldFail: false,
+        },
+        {
+            name:       "generous timeout - should succeed",
+            timeout:    30 * time.Second,
+            shouldFail: false,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            ctx, cancel := context.WithTimeout(context.Background(), tt.timeout)
+            defer cancel()
+
+            client, _ := NewClient(&Config{
+                BaseURL: "https://api.nexmonyx.com",
+                Auth: AuthConfig{Token: "test"},
+            })
+
+            // Perform operation within timeout
+            _, _, err := client.Servers.List(ctx, &ListOptions{})
+
+            if tt.shouldFail {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
+}
+```
+
+### Testing Pattern: Table-Driven Request Validation
+
+Comprehensive input validation testing:
+
+```go
+// Example: Input validation testing
+func TestInputValidationPatterns(t *testing.T) {
+    client, _ := NewClient(&Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: AuthConfig{Token: "test"},
+    })
+
+    validationTests := []struct {
+        name      string
+        request   *ServerCreateRequest
+        shouldErr bool
+        errMsg    string
+    }{
+        {
+            name: "valid request",
+            request: &ServerCreateRequest{
+                Name:           "valid-server",
+                Environment:    "production",
+                PublicIP:       "192.168.1.1",
+                Hostname:       "server.local",
+            },
+            shouldErr: false,
+        },
+        {
+            name: "missing required name",
+            request: &ServerCreateRequest{
+                Name:        "",
+                Environment: "production",
+                PublicIP:    "192.168.1.1",
+            },
+            shouldErr: true,
+            errMsg:    "name is required",
+        },
+        {
+            name: "invalid IP format",
+            request: &ServerCreateRequest{
+                Name:     "server",
+                PublicIP: "not-an-ip",
+            },
+            shouldErr: true,
+            errMsg:    "invalid IP",
+        },
+        {
+            name: "invalid environment",
+            request: &ServerCreateRequest{
+                Name:        "server",
+                Environment: "unknown-env",
+            },
+            shouldErr: true,
+            errMsg:    "invalid environment",
+        },
+    }
+
+    for _, tt := range validationTests {
+        t.Run(tt.name, func(t *testing.T) {
+            _, err := client.Servers.Create(context.Background(), tt.request)
+
+            if tt.shouldErr {
+                assert.Error(t, err)
+                assert.Contains(t, err.Error(), tt.errMsg)
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
+}
+```
+
+---
+
 ## 🎯 Next Steps for Future Testing
 
 ### Completed ✅
@@ -546,12 +1139,94 @@ open coverage.html  # View in browser
 
 ---
 
+## 📚 Handler Testing Standards
+
+The SDK includes comprehensive documentation for handler testing (HTTP mock server testing):
+
+### New Documentation Files
+
+1. **`docs/HANDLER_TESTING_STANDARDS.md`** (Definitive Guide)
+   - Complete handler testing patterns and best practices
+   - Three handler test patterns (simple, table-driven, context-aware)
+   - Common patterns for CRUD, lists, error handling
+   - Advanced techniques (request validation, headers, response construction)
+   - Comprehensive checklist
+
+2. **`docs/HANDLER_TESTING_QUICK_REFERENCE.md`** (Quick Reference Card)
+   - Print-friendly quick reference
+   - Minimal template to copy-paste
+   - Critical settings and validations
+   - HTTP status codes and methods
+   - Common patterns at a glance
+
+### What Are Handlers?
+
+**Handlers are mock HTTP servers created with `httptest.NewServer()`** that simulate the Nexmonyx API during unit testing. They are used exclusively in test files to validate SDK service methods without making real API calls.
+
+### Key Handler Testing Principles
+
+- ✅ Use table-driven test pattern for multiple scenarios
+- ✅ Disable retries: `RetryCount: 0`
+- ✅ Create fresh server per test case
+- ✅ Validate all request aspects (method, path, headers, body)
+- ✅ Test error scenarios (400, 401, 403, 404, 409, 500)
+- ✅ Use contexts with timeouts for error cases
+
+### Example Handler Pattern
+
+```go
+func TestServiceName_MethodComprehensive(t *testing.T) {
+    tests := []struct {
+        name       string
+        request    *Request
+        mockStatus int
+        mockBody   interface{}
+        wantErr    bool
+    }{...}
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json")
+                w.WriteHeader(tt.mockStatus)
+                json.NewEncoder(w).Encode(tt.mockBody)
+            }))
+            defer server.Close()
+
+            client, _ := NewClient(&Config{
+                BaseURL:    server.URL,
+                Auth:       AuthConfig{Token: "test"},
+                RetryCount: 0,
+            })
+
+            result, err := client.Service.Method(context.Background(), tt.request)
+            // Assert...
+        })
+    }
+}
+```
+
+### Required Test Scenarios
+
+Every service method should have handler tests for:
+- ✅ Success cases (200, 201, 204)
+- ✅ Validation errors (400)
+- ✅ Authentication errors (401)
+- ✅ Permission errors (403)
+- ✅ Not found errors (404)
+- ✅ Conflict errors (409)
+- ✅ Server errors (500)
+
+---
+
 ## 📞 Getting Help
 
 ### Resources
 
+- **Handler Standards:** See `docs/HANDLER_TESTING_STANDARDS.md`
+- **Quick Reference:** See `docs/HANDLER_TESTING_QUICK_REFERENCE.md`
 - **Coverage Reports:** See `/tmp/` for latest reports
-- **Test Examples:** See `*_comprehensive_test.go` files
+- **Test Examples:** See `*_comprehensive_test.go` files and `examples/testing/`
 - **Testing Patterns:** Refer to this document
 
 ### Questions?
