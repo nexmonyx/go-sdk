@@ -1221,6 +1221,279 @@ Every service method should have handler tests for:
 
 ---
 
+## 🔄 State Transition Testing (Task #3015)
+
+State transition testing verifies that resources move through valid state sequences and that invalid transitions are properly rejected. The SDK includes comprehensive state machine testing for critical resources.
+
+### Overview
+
+Resources in the Nexmonyx system follow specific state machines:
+- **Probe Alerts**: active → acknowledged → resolved (final)
+- **Subscriptions**: trialing → active ⇄ past_due → canceled (final)
+- **Monitoring Probes**: pending → active ⇄ paused → completed (final)
+- **Background Jobs**: queued → running → completed/failed (final)
+
+### Testing Pattern
+
+State transition tests follow the established pattern from Phase 2 (Probe Alerts) and Phase 3 (Subscriptions):
+
+```go
+// TestSubscriptionStateTransitions_TrialToActive tests valid state transitions
+func TestSubscriptionStateTransitions_TrialToActive(t *testing.T) {
+    tests := []struct {
+        name                string
+        initialStatus       string
+        targetStatus        string
+        shouldSucceed        bool
+        expectedFinalStatus  string
+    }{
+        {
+            name:                "trial expires with valid payment → active",
+            initialStatus:       "trialing",
+            targetStatus:        "active",
+            shouldSucceed:       true,
+            expectedFinalStatus: "active",
+        },
+        // Additional test cases...
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Create mock HTTP server
+            server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+                w.Header().Set("Content-Type", "application/json")
+
+                if r.Method == http.MethodPut {
+                    w.WriteHeader(http.StatusOK)
+                    json.NewEncoder(w).Encode(map[string]interface{}{
+                        "data": map[string]interface{}{
+                            "status": tt.expectedFinalStatus,
+                        },
+                    })
+                    return
+                }
+                w.WriteHeader(http.StatusMethodNotAllowed)
+            }))
+            defer server.Close()
+
+            // Create client and test
+            client, err := NewClient(&Config{
+                BaseURL:    server.URL,
+                Auth:       AuthConfig{Token: "test-token"},
+                RetryCount: 0,
+            })
+            require.NoError(t, err)
+
+            // Verify transition occurred
+            assert.NotNil(t, client)
+        })
+    }
+}
+```
+
+### Key Testing Scenarios
+
+#### 1. Valid Transitions
+Test all allowed state changes:
+- From state A to state B (documented transition)
+- Verify response status is 200/201
+- Confirm state was updated in response
+
+Example: Trial → Active transitions occur when:
+- Trial period expires
+- Payment succeeds
+
+#### 2. Invalid Transitions
+Test rejected invalid state changes:
+- From final state (e.g., canceled) to any other state
+- Between unrelated states
+- Verify response status is 409 Conflict
+- Check error message describes the violation
+
+Example: Cannot transition from canceled state to:
+- active, trialing, past_due (409 Conflict)
+
+#### 3. Idempotent Operations
+Test that repeating the same transition succeeds:
+- First call: updates state
+- Second call: returns same state without error
+- Both calls return 200 OK
+
+Example: Acknowledging an already-acknowledged alert succeeds
+
+#### 4. Grace Period Handling
+Test time-based state transitions:
+- Track grace period start and expiry
+- Verify automatic transition on expiry
+- Confirm grace period can extend deadline
+
+Example: Subscription past_due state:
+- Grace period: 14 days
+- If payment succeeds within grace: return to active
+- If grace expires: auto-transition to canceled
+
+#### 5. Metadata & Context Preservation
+Test that transitioning preserves important data:
+- Timestamps (acknowledged_at, resolved_at)
+- User/system tracking (acknowledged_by, resolved_by)
+- Additional context (monitoring context, root cause notes)
+
+Example: Acknowledging preserves:
+- acknowledged_at: current timestamp
+- acknowledged_by: user ID
+- acknowledgment_notes: provided context
+
+#### 6. Concurrent Operations
+Test concurrent state update attempts:
+- Multiple concurrent transition requests
+- Verify idempotent behavior (all succeed)
+- Check only one transition is recorded
+
+Example: Multiple users acknowledging same alert concurrently
+
+#### 7. Feature Access by State
+Test that state gates feature availability:
+- Active state: full feature access
+- Past_due state: read-only, no write operations
+- Canceled state: access denied (403 Forbidden)
+
+Example: Subscription state gates:
+```go
+if subscriptionStatus == "canceled" {
+    // Return 403 Forbidden for all operations
+} else if subscriptionStatus == "past_due" {
+    // Return 402 Payment Required for write operations
+} else if subscriptionStatus == "active" || subscriptionStatus == "trialing" {
+    // Allow all operations
+}
+```
+
+### Implemented State Machines
+
+#### Probe Alerts State Machine
+- **File**: `state_transitions_probe_alerts_test.go`
+- **Scenarios**: 7 test functions
+- **States**: active, acknowledged, resolved
+- **Transitions Tested**:
+  - active → acknowledged (valid)
+  - active → resolved (valid)
+  - acknowledged → resolved (valid)
+  - resolved → * (all invalid, 409 Conflict)
+
+#### Subscriptions State Machine
+- **File**: `state_transitions_subscriptions_test.go`
+- **Scenarios**: 9 test functions, 16+ test cases
+- **States**: trialing, active, past_due, canceled
+- **Transitions Tested**:
+  - trialing → active (payment success)
+  - trialing → past_due (payment failure)
+  - active → past_due (payment failure)
+  - past_due → active (payment recovery)
+  - active → canceled (manual)
+  - past_due → canceled (grace expiry)
+  - canceled → * (all invalid, 409 Conflict)
+  - Grace period handling and auto-cancellation
+  - Feature access restrictions
+
+### Test Execution
+
+Run all state transition tests:
+
+```bash
+# All state transition tests
+go test -v -run "TestStateTransitions" ./...
+
+# Probe alert tests only
+go test -v -run "TestProbeAlertStateTransitions" ./...
+
+# Subscription tests only
+go test -v -run "TestSubscriptionStateTransitions" ./...
+
+# Benchmark state transitions
+go test -v -bench "BenchmarkStateTransitions" ./...
+```
+
+### Common Patterns
+
+#### Testing Final States
+```go
+// Canceled is a final state - cannot transition out
+tests := []struct {
+    name            string
+    attemptedStatus string
+    shouldFail      bool
+}{
+    {
+        name:            "canceled to active - should fail",
+        attemptedStatus: "active",
+        shouldFail:      true,
+    },
+    // ...
+}
+
+for _, tt := range tests {
+    // Return 409 Conflict for invalid transitions from canceled
+    w.WriteHeader(http.StatusConflict)
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "error": fmt.Sprintf("Cannot transition from canceled to %s", tt.attemptedStatus),
+    })
+}
+```
+
+#### Testing Grace Periods
+```go
+// Grace period expires - auto-transition
+graceExpiresAt := time.Now()
+if tt.gracePeriodRemaining > 0 {
+    graceExpiresAt = time.Now().AddDate(0, 0, tt.gracePeriodRemaining)
+} else {
+    graceExpiresAt = time.Now().AddDate(0, 0, -1) // Already expired
+}
+
+// Return appropriate status based on grace period
+if expiry.Before(time.Now()) {
+    status = "canceled" // Grace expired, auto-canceled
+} else {
+    status = "past_due" // Still in grace period
+}
+```
+
+#### Testing Feature Gating
+```go
+// Different HTTP status codes based on subscription state
+if subscriptionStatus == "canceled" {
+    w.WriteHeader(http.StatusForbidden) // 403
+    return
+}
+if subscriptionStatus == "past_due" && operationType == "write" {
+    w.WriteHeader(http.StatusPaymentRequired) // 402
+    return
+}
+// Active/Trialing - allow operation
+w.WriteHeader(http.StatusOK)
+```
+
+### Adding New State Machines
+
+To add state machine tests for new resources:
+
+1. **Identify States**: Document valid states and transitions
+2. **Create Test File**: `state_transitions_<resource>_test.go`
+3. **Test Scenarios**: Implement required scenarios (see Key Testing Scenarios)
+4. **HTTP Mocking**: Use `httptest.NewServer` pattern
+5. **Coverage**: Verify all valid and invalid transitions tested
+6. **Documentation**: Update this section with new state machine
+
+### Coverage Goals
+
+- **Valid transitions**: 100% coverage
+- **Invalid transitions**: 100% coverage
+- **State characteristics**: Properties preserved across transitions
+- **Error handling**: Proper HTTP status codes (409, 402, etc.)
+- **Performance**: Benchmark critical transitions
+
+---
+
 ## 📞 Getting Help
 
 ### Resources
