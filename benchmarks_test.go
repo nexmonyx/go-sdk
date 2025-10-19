@@ -538,7 +538,6 @@ func BenchmarkResourceCleanup(b *testing.B) {
 		b.ResetTimer()
 
 		for iteration := 0; iteration < b.N; iteration++ {
-			clients := make([]*Client, 0, 100)
 			wg := sync.WaitGroup{}
 
 			for i := 0; i < 100; i++ {
@@ -548,7 +547,6 @@ func BenchmarkResourceCleanup(b *testing.B) {
 						Token: "test-token",
 					},
 				})
-				clients = append(clients, c)
 				wg.Add(1)
 				go func(client *Client) {
 					defer wg.Done()
@@ -557,7 +555,6 @@ func BenchmarkResourceCleanup(b *testing.B) {
 			}
 
 			wg.Wait()
-			clients = nil
 		}
 	})
 

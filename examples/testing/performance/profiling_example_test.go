@@ -280,15 +280,3 @@ func ProfileMemoryUsage(name string) func() {
 }
 
 // Example of using the profiling helper
-func exampleProfileUsage() {
-	// Profile a specific operation
-	defer ProfileMemoryUsage("query_generation")()
-
-	for i := 0; i < 1000; i++ {
-		opts := &nexmonyx.ListOptions{
-			Page:  1,
-			Limit: 25,
-		}
-		_ = opts.ToQuery()
-	}
-}

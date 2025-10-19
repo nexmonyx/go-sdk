@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -185,79 +184,6 @@ func createTestServer(t *testing.T, env *TestEnvironment, hostname string) *nexm
 }
 
 // createTestOrganization creates a test organization via the API
-func createTestOrganization(t *testing.T, env *TestEnvironment, name string) *nexmonyx.Organization {
-	t.Helper()
-
-	// For now, just fetch an existing org from fixtures since mock doesn't support org creation
-	// In future dev API tests, this would actually create an org
-	org, err := env.Client.Organizations.Get(env.Ctx, "org-001")
-	require.NoError(t, err, "Failed to get test organization")
-	require.NotNil(t, org, "Organization should not be nil")
-
-	t.Logf("Using test organization: %s (UUID: %s)", org.Name, org.UUID)
-	return org
-}
-
-// Assertion Helpers
-
-// assertServerEqual checks if two servers are equal (ignoring timestamps)
-func assertServerEqual(t *testing.T, expected, actual *nexmonyx.Server) {
-	t.Helper()
-
-	require.NotNil(t, actual, "Actual server should not be nil")
-	require.Equal(t, expected.ServerUUID, actual.ServerUUID, "Server UUID mismatch")
-	require.Equal(t, expected.Hostname, actual.Hostname, "Server hostname mismatch")
-	require.Equal(t, expected.OrganizationID, actual.OrganizationID, "Server organization_id mismatch")
-	require.Equal(t, expected.MainIP, actual.MainIP, "Server main_ip mismatch")
-	require.Equal(t, expected.Location, actual.Location, "Server location mismatch")
-	require.Equal(t, expected.Environment, actual.Environment, "Server environment mismatch")
-	require.Equal(t, expected.Classification, actual.Classification, "Server classification mismatch")
-	require.Equal(t, expected.Status, actual.Status, "Server status mismatch")
-}
-
-// assertOrganizationEqual checks if two organizations are equal (ignoring timestamps)
-func assertOrganizationEqual(t *testing.T, expected, actual *nexmonyx.Organization) {
-	t.Helper()
-
-	require.NotNil(t, actual, "Actual organization should not be nil")
-	require.Equal(t, expected.UUID, actual.UUID, "Organization UUID mismatch")
-	require.Equal(t, expected.Name, actual.Name, "Organization name mismatch")
-	require.Equal(t, expected.Description, actual.Description, "Organization description mismatch")
-	require.Equal(t, expected.SubscriptionPlan, actual.SubscriptionPlan, "Organization subscription_plan mismatch")
-	require.Equal(t, expected.SubscriptionStatus, actual.SubscriptionStatus, "Organization subscription_status mismatch")
-}
-
-// assertAlertEqual checks if two alerts are equal (ignoring timestamps)
-func assertAlertEqual(t *testing.T, expected, actual *nexmonyx.Alert) {
-	t.Helper()
-
-	require.NotNil(t, actual, "Actual alert should not be nil")
-	require.Equal(t, expected.Name, actual.Name, "Alert name mismatch")
-	require.Equal(t, expected.Type, actual.Type, "Alert type mismatch")
-	require.Equal(t, expected.MetricName, actual.MetricName, "Alert metric_name mismatch")
-	require.Equal(t, expected.Condition, actual.Condition, "Alert condition mismatch")
-	require.Equal(t, expected.Threshold, actual.Threshold, "Alert threshold mismatch")
-	require.Equal(t, expected.Severity, actual.Severity, "Alert severity mismatch")
-	require.Equal(t, expected.Enabled, actual.Enabled, "Alert enabled mismatch")
-	require.Equal(t, expected.Status, actual.Status, "Alert status mismatch")
-}
-
-// assertValidTimestamp checks if a timestamp is valid and recent
-func assertValidTimestamp(t *testing.T, timestamp time.Time, fieldName string) {
-	t.Helper()
-
-	require.False(t, timestamp.IsZero(), "%s should not be zero time", fieldName)
-
-	now := time.Now()
-	oneYearAgo := now.AddDate(-1, 0, 0)
-	oneYearFromNow := now.AddDate(1, 0, 0)
-
-	require.True(t, timestamp.After(oneYearAgo),
-		"%s should be after one year ago (got: %s)", fieldName, timestamp)
-	require.True(t, timestamp.Before(oneYearFromNow),
-		"%s should be before one year from now (got: %s)", fieldName, timestamp)
-}
-
 // assertValidUUID checks if a string is a valid UUID format
 func assertValidUUID(t *testing.T, uuid string, fieldName string) {
 	t.Helper()
@@ -284,44 +210,6 @@ func assertPaginationValid(t *testing.T, meta *nexmonyx.PaginationMeta) {
 }
 
 // Utility Functions
-
-// waitForCondition waits for a condition to be true with timeout
-func waitForCondition(t *testing.T, condition func() bool, timeout time.Duration, message string) {
-	t.Helper()
-
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if condition() {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	require.Fail(t, fmt.Sprintf("Condition not met within timeout: %s", message))
-}
-
-// retryOperation retries an operation up to maxRetries times with exponential backoff
-func retryOperation(t *testing.T, operation func() error, maxRetries int, initialDelay time.Duration) error {
-	t.Helper()
-
-	var lastErr error
-	delay := initialDelay
-
-	for i := 0; i < maxRetries; i++ {
-		err := operation()
-		if err == nil {
-			return nil
-		}
-
-		lastErr = err
-		if i < maxRetries-1 {
-			t.Logf("Retry %d/%d failed: %v (waiting %s)", i+1, maxRetries, err, delay)
-			time.Sleep(delay)
-			delay *= 2 // Exponential backoff
-		}
-	}
-
-	return fmt.Errorf("operation failed after %d retries: %w", maxRetries, lastErr)
-}
 
 // skipIfShort skips the test if running in short mode
 func skipIfShort(t *testing.T) {

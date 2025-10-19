@@ -31,15 +31,6 @@ type MockAPIServer struct {
 	authToken   string
 }
 
-// testing.T interface for compatibility with test code
-type testing struct{}
-
-// Fake testing interface for non-test usage
-func (t *testing) Logf(format string, args ...interface{})  { log.Printf(format, args...) }
-func (t *testing) Errorf(format string, args ...interface{}) { log.Printf("ERROR: "+format, args...) }
-func (t *testing) Fatalf(format string, args ...interface{}) { log.Fatalf(format, args...) }
-func (t *testing) FailNow()                                  { os.Exit(1) }
-
 // NewMockAPIServer creates and starts a new mock API server
 func NewMockAPIServer(addr string, authToken string, logf func(string, ...interface{})) *MockAPIServer {
 	mock := &MockAPIServer{

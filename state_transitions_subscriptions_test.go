@@ -462,7 +462,7 @@ func TestSubscriptionStateTransitions_GracePeriodExpiry(t *testing.T) {
 
 				if r.Method == http.MethodGet {
 					w.WriteHeader(http.StatusOK)
-					graceExpiresAt := time.Now()
+					var graceExpiresAt time.Time
 					if tt.gracePeriodDaysRemaining > 0 {
 						graceExpiresAt = time.Now().AddDate(0, 0, tt.gracePeriodDaysRemaining)
 					} else {

@@ -94,8 +94,8 @@ func BenchmarkJSONMarshaling(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Simulate JSON marshaling of a server structure
-		_, _ = data["hostname"]
+		// Simulate map access
+		_ = data["hostname"]
 	}
 }
 

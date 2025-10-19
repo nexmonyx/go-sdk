@@ -376,31 +376,3 @@ Error Rate:        %.2f%%
 }
 
 // Example load test helper function
-func simpleLoadTest(numWorkers int, durationSecs int, operationFunc func()) LoadTestResult {
-	result := LoadTestResult{
-		Duration: time.Duration(durationSecs) * time.Second,
-	}
-
-	var wg sync.WaitGroup
-	stopTime := time.Now().Add(result.Duration)
-
-	startTime := time.Now()
-
-	for w := 0; w < numWorkers; w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for time.Now().Before(stopTime) {
-				operationFunc()
-				atomic.AddInt64(&result.TotalOperations, 1)
-				atomic.AddInt64(&result.SuccessfulOps, 1)
-			}
-		}()
-	}
-
-	wg.Wait()
-	result.Duration = time.Since(startTime)
-	result.OpsPerSecond = float64(result.TotalOperations) / result.Duration.Seconds()
-
-	return result
-}
