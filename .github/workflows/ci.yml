@@ -103,6 +103,13 @@ jobs:
             --body-file security-summary.md \
             --repo ${{ github.repository }} || echo "Could not post PR comment"
 
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace to remove any stale files from git history..."
+          git clean -fdx -e go.sum -e vendor/
+          git reset --hard HEAD
+          echo "Workspace cleaned successfully"
+
       - name: Run unit tests
         run: |
           # Run tests excluding integration tests, examples, and disabled test files
@@ -112,7 +119,8 @@ jobs:
           fi
           # Run tests with build tags to exclude problematic tests
           # Exclude examples directory to prevent 0% coverage from affecting overall metrics
-          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" $(go list ./... | grep -v '/examples') || echo "Some tests failed but continuing CI"
+          # Note: Removed error masking to ensure build failures are visible
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" $(go list ./... | grep -v '/examples')
           if [ -f coverage.out ]; then
             echo "Generating coverage reports..."
             go tool cover -func=coverage.out -o coverage.txt || echo "Coverage text report generation failed"
