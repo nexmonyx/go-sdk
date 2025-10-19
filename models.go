@@ -3631,3 +3631,113 @@ type UsagePatternsResponse struct {
 	Patterns       []UsagePattern `json:"patterns"`
 	PatternCount   int            `json:"pattern_count"`
 }
+
+// Organization-Level Health Check Types (Task 307)
+
+// CreateHealthCheckDefinitionRequest represents a request to create an organization-level health check definition
+type CreateHealthCheckDefinitionRequest struct {
+	CheckType       string                 `json:"check_type" validate:"required"`
+	CheckName       string                 `json:"check_name" validate:"required"`
+	Description     string                 `json:"description,omitempty"`
+	Enabled         bool                   `json:"enabled"`
+	IntervalSeconds int                    `json:"interval_seconds" validate:"min=10"`
+	TimeoutSeconds  int                    `json:"timeout_seconds" validate:"min=1"`
+	TargetName      string                 `json:"target_name" validate:"required"`
+	TargetConfig    map[string]interface{} `json:"target_config"`
+	Thresholds      map[string]interface{} `json:"thresholds"`
+}
+
+// HealthCheckDefinitionResponse represents an organization-level health check definition
+type HealthCheckDefinitionResponse struct {
+	ID              uint64                 `json:"id"`
+	OrganizationID  uint64                 `json:"organization_id"`
+	CheckType       string                 `json:"check_type"`
+	CheckName       string                 `json:"check_name"`
+	Description     string                 `json:"description"`
+	Enabled         bool                   `json:"enabled"`
+	IntervalSeconds int                    `json:"interval_seconds"`
+	TimeoutSeconds  int                    `json:"timeout_seconds"`
+	TargetName      string                 `json:"target_name"`
+	TargetConfig    map[string]interface{} `json:"target_config"`
+	Thresholds      map[string]interface{} `json:"thresholds"`
+	CreatedAt       string                 `json:"created_at"`
+	UpdatedAt       string                 `json:"updated_at"`
+}
+
+// ListHealthCheckDefinitionsResponse represents a list of health check definitions
+type ListHealthCheckDefinitionsResponse struct {
+	Status      string                         `json:"status"`
+	Message     string                         `json:"message"`
+	Definitions []HealthCheckDefinitionResponse `json:"definitions"`
+	Total       int64                          `json:"total"`
+}
+
+// SubmitHealthCheckResultRequest represents a request to submit a health check result
+type SubmitHealthCheckResultRequest struct {
+	DefinitionID        uint64                 `json:"definition_id" validate:"required"`
+	Status              string                 `json:"status" validate:"required"`
+	Score               int                    `json:"score" validate:"min=0,max=100"`
+	ResponseTimeMs      int64                  `json:"response_time_ms,omitempty"`
+	Message             string                 `json:"message,omitempty"`
+	Details             map[string]interface{} `json:"details,omitempty"`
+	ConsecutiveFailures int                    `json:"consecutive_failures,omitempty"`
+}
+
+// HealthCheckResultResponse represents a health check result
+type HealthCheckResultResponse struct {
+	ID                  uint64                 `json:"id"`
+	OrganizationID      uint64                 `json:"organization_id"`
+	DefinitionID        uint64                 `json:"definition_id"`
+	Status              string                 `json:"status"`
+	Score               int                    `json:"score"`
+	ResponseTimeMs      int64                  `json:"response_time_ms"`
+	Message             string                 `json:"message"`
+	Details             map[string]interface{} `json:"details"`
+	ExecutionTimeMs     int64                  `json:"execution_time_ms"`
+	ConsecutiveFailures int                    `json:"consecutive_failures"`
+	CreatedAt           string                 `json:"created_at"`
+}
+
+// HealthStatusAggregateResponse represents aggregated health status for an organization
+type HealthStatusAggregateResponse struct {
+	Status              string `json:"status"`
+	Message             string `json:"message"`
+	OrganizationID      uint64 `json:"organization_id"`
+	DatabaseStatus      string `json:"database_status"`
+	DatabaseScore       int    `json:"database_score"`
+	APIStatus           string `json:"api_status"`
+	APIScore            int    `json:"api_score"`
+	ResourceStatus      string `json:"resource_status"`
+	ResourceScore       int    `json:"resource_score"`
+	MicroserviceStatus  string `json:"microservice_status"`
+	MicroserviceScore   int    `json:"microservice_score"`
+	OverallStatus       string `json:"overall_status"`
+	OverallScore        int    `json:"overall_score"`
+	HealthyCheckCount   int    `json:"healthy_check_count"`
+	WarningCheckCount   int    `json:"warning_check_count"`
+	CriticalCheckCount  int    `json:"critical_check_count"`
+	UptimePercent       float64 `json:"uptime_percent"`
+}
+
+// HealthAlertResponse represents a health alert
+type HealthAlertResponse struct {
+	ID             uint64  `json:"id"`
+	OrganizationID uint64  `json:"organization_id"`
+	DefinitionID   uint64  `json:"definition_id"`
+	Status         string  `json:"status"`
+	Title          string  `json:"title"`
+	Description    string  `json:"description"`
+	Severity       string  `json:"severity"`
+	Acknowledged   bool    `json:"acknowledged"`
+	AcknowledgedAt *string `json:"acknowledged_at,omitempty"`
+	ResolvedAt     *string `json:"resolved_at,omitempty"`
+	CreatedAt      string  `json:"created_at"`
+}
+
+// ListHealthAlertsResponse represents a list of health alerts
+type ListHealthAlertsResponse struct {
+	Status  string                  `json:"status"`
+	Message string                  `json:"message"`
+	Alerts  []HealthAlertResponse   `json:"alerts"`
+	Total   int64                   `json:"total"`
+}

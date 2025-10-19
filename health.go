@@ -219,6 +219,160 @@ func (s *HealthService) GetHistory(ctx context.Context, opts *HealthCheckHistory
 	return nil, nil, fmt.Errorf("unexpected response type")
 }
 
+// Organization-Level Health Check Methods (Task 307)
+
+// CreateHealthCheckDefinition creates a new organization-level health check definition
+func (s *HealthService) CreateHealthCheckDefinition(ctx context.Context, req *CreateHealthCheckDefinitionRequest) (*HealthCheckDefinitionResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HealthCheckDefinitionResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/health/definitions",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if def, ok := resp.Data.(*HealthCheckDefinitionResponse); ok {
+		return def, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// ListHealthCheckDefinitions retrieves all organization-level health check definitions
+func (s *HealthService) ListHealthCheckDefinitions(ctx context.Context) (*ListHealthCheckDefinitionsResponse, error) {
+	var resp StandardResponse
+	resp.Data = &ListHealthCheckDefinitionsResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/definitions",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if list, ok := resp.Data.(*ListHealthCheckDefinitionsResponse); ok {
+		return list, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetHealthCheckDefinition retrieves a specific health check definition by ID
+func (s *HealthService) GetHealthCheckDefinition(ctx context.Context, id uint64) (*HealthCheckDefinitionResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HealthCheckDefinitionResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/health/definitions/%d", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if def, ok := resp.Data.(*HealthCheckDefinitionResponse); ok {
+		return def, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// UpdateHealthCheckDefinition updates an existing health check definition
+func (s *HealthService) UpdateHealthCheckDefinition(ctx context.Context, id uint64, req *CreateHealthCheckDefinitionRequest) (*HealthCheckDefinitionResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HealthCheckDefinitionResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/health/definitions/%d", id),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if def, ok := resp.Data.(*HealthCheckDefinitionResponse); ok {
+		return def, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// DeleteHealthCheckDefinition removes a health check definition
+func (s *HealthService) DeleteHealthCheckDefinition(ctx context.Context, id uint64) error {
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/health/definitions/%d", id),
+	})
+	return err
+}
+
+// SubmitHealthCheckResult submits a health check result for a defined health check
+func (s *HealthService) SubmitHealthCheckResult(ctx context.Context, req *SubmitHealthCheckResultRequest) (*HealthCheckResultResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HealthCheckResultResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/health/results",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if result, ok := resp.Data.(*HealthCheckResultResponse); ok {
+		return result, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetOrganizationHealthStatus retrieves aggregated health status for the organization
+func (s *HealthService) GetOrganizationHealthStatus(ctx context.Context) (*HealthStatusAggregateResponse, error) {
+	var resp StandardResponse
+	resp.Data = &HealthStatusAggregateResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/status",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if status, ok := resp.Data.(*HealthStatusAggregateResponse); ok {
+		return status, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// ListHealthAlerts retrieves all health alerts for the organization
+func (s *HealthService) ListHealthAlerts(ctx context.Context) (*ListHealthAlertsResponse, error) {
+	var resp StandardResponse
+	resp.Data = &ListHealthAlertsResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/alerts",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if alerts, ok := resp.Data.(*ListHealthAlertsResponse); ok {
+		return alerts, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
 // HealthStatus represents the basic health status
 type HealthStatus struct {
 	Status    string      `json:"status"`

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.5] - 2025-10-19
+
+### Added
+- **Organization-Level Health Check Management** (Task #307)
+  - `CreateHealthCheckDefinition()` - Create organization-level health check definitions
+  - `ListHealthCheckDefinitions()` - List all health check definitions
+  - `GetHealthCheckDefinition()` - Retrieve specific health check definition
+  - `UpdateHealthCheckDefinition()` - Update existing health check definition
+  - `DeleteHealthCheckDefinition()` - Remove health check definition
+  - `SubmitHealthCheckResult()` - Submit health check result for tracking
+  - `GetOrganizationHealthStatus()` - Retrieve aggregated health status
+  - `ListHealthAlerts()` - List organization health alerts
+  - New request/response types: `CreateHealthCheckDefinitionRequest`, `HealthCheckDefinitionResponse`, `ListHealthCheckDefinitionsResponse`, `SubmitHealthCheckResultRequest`, `HealthCheckResultResponse`, `HealthStatusAggregateResponse`, `HealthAlertResponse`, `ListHealthAlertsResponse`
+  - Full organization-level health check workflow support with proper scoping and error handling
+
+## [Unreleased]
+
 ### Added
 - **Comprehensive Testing Infrastructure** (Task #3001, #3017)
   - Mock API server for integration testing (`tests/integration/mock_api_server.go`)
