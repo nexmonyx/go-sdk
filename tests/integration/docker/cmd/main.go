@@ -73,13 +73,13 @@ func (m *MockAPIServer) registerRoutes(mux *http.ServeMux) {
 	// Health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+		m.writeJSON(w, map[string]string{"status": "healthy"})
 	})
 
 	// Ready check endpoint
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+		m.writeJSON(w, map[string]string{"status": "ready"})
 	})
 
 	// Servers endpoints
@@ -127,6 +127,14 @@ func (m *MockAPIServer) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// writeJSON writes a JSON response to the ResponseWriter.
+// It logs any encoding errors but cannot change the response status once headers are sent.
+func (m *MockAPIServer) writeJSON(w http.ResponseWriter, data interface{}) {
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("Failed to encode JSON response: %v", err)
+	}
+}
+
 // handleServers handles GET /api/v1/servers
 func (m *MockAPIServer) handleServers(w http.ResponseWriter, r *http.Request) {
 	m.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +147,7 @@ func (m *MockAPIServer) handleServers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": servers})
+		m.writeJSON(w, map[string]interface{}{"data": servers})
 	}))(w, r)
 }
 
@@ -158,7 +166,7 @@ func (m *MockAPIServer) handleServerDetail(w http.ResponseWriter, r *http.Reques
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(server)
+		m.writeJSON(w, server)
 	}))(w, r)
 }
 
@@ -174,7 +182,7 @@ func (m *MockAPIServer) handleOrganizations(w http.ResponseWriter, r *http.Reque
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": orgs})
+		m.writeJSON(w, map[string]interface{}{"data": orgs})
 	}))(w, r)
 }
 
@@ -193,7 +201,7 @@ func (m *MockAPIServer) handleOrgDetail(w http.ResponseWriter, r *http.Request) 
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(org)
+		m.writeJSON(w, org)
 	}))(w, r)
 }
 
@@ -209,7 +217,7 @@ func (m *MockAPIServer) handleAlerts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": alerts})
+		m.writeJSON(w, map[string]interface{}{"data": alerts})
 	}))(w, r)
 }
 
@@ -228,7 +236,7 @@ func (m *MockAPIServer) handleAlertDetail(w http.ResponseWriter, r *http.Request
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(alert)
+		m.writeJSON(w, alert)
 	}))(w, r)
 }
 
@@ -244,7 +252,7 @@ func (m *MockAPIServer) handleUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": users})
+		m.writeJSON(w, map[string]interface{}{"data": users})
 	}))(w, r)
 }
 
@@ -263,7 +271,7 @@ func (m *MockAPIServer) handleUserDetail(w http.ResponseWriter, r *http.Request)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(user)
+		m.writeJSON(w, user)
 	}))(w, r)
 }
 
@@ -279,7 +287,7 @@ func (m *MockAPIServer) handleProbes(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": probes})
+		m.writeJSON(w, map[string]interface{}{"data": probes})
 	}))(w, r)
 }
 
@@ -298,7 +306,7 @@ func (m *MockAPIServer) handleProbeDetail(w http.ResponseWriter, r *http.Request
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(probe)
+		m.writeJSON(w, probe)
 	}))(w, r)
 }
 
@@ -306,7 +314,7 @@ func (m *MockAPIServer) handleProbeDetail(w http.ResponseWriter, r *http.Request
 func (m *MockAPIServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	m.requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"data": []interface{}{}})
+		m.writeJSON(w, map[string]interface{}{"data": []interface{}{}})
 	}))(w, r)
 }
 
@@ -320,7 +328,7 @@ func (m *MockAPIServer) handleMetricsSubmit(w http.ResponseWriter, r *http.Reque
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(map[string]interface{}{"status": "accepted"})
+		m.writeJSON(w, map[string]interface{}{"status": "accepted"})
 	}))(w, r)
 }
 
