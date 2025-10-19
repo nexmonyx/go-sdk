@@ -1,11 +1,268 @@
 {
 	"Golang errors": {},
-	"Issues": [],
+	"Issues": [
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/helpers.go",
+			"code": "152: \n153: \tdata, err := os.ReadFile(fixturePath)\n154: \trequire.NoError(t, err, \"Failed to read fixture file %s\", filename)\n",
+			"line": "153",
+			"column": "15",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/mock_api_server.go",
+			"code": "1500: \tw.WriteHeader(status)\n1501: \tjson.NewEncoder(w).Encode(data)\n1502: }\n",
+			"line": "1501",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "322: \t\tw.WriteHeader(http.StatusAccepted)\n323: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"status\": \"accepted\"})\n324: \t}))(w, r)\n",
+			"line": "323",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "308: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n309: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": []interface{}{}})\n310: \t}))(w, r)\n",
+			"line": "309",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "300: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n301: \t\tjson.NewEncoder(w).Encode(probe)\n302: \t}))(w, r)\n",
+			"line": "301",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "281: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n282: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": probes})\n283: \t}))(w, r)\n",
+			"line": "282",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "265: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n266: \t\tjson.NewEncoder(w).Encode(user)\n267: \t}))(w, r)\n",
+			"line": "266",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "246: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n247: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": users})\n248: \t}))(w, r)\n",
+			"line": "247",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "230: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n231: \t\tjson.NewEncoder(w).Encode(alert)\n232: \t}))(w, r)\n",
+			"line": "231",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "211: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n212: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": alerts})\n213: \t}))(w, r)\n",
+			"line": "212",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "195: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n196: \t\tjson.NewEncoder(w).Encode(org)\n197: \t}))(w, r)\n",
+			"line": "196",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "176: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n177: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": orgs})\n178: \t}))(w, r)\n",
+			"line": "177",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "160: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n161: \t\tjson.NewEncoder(w).Encode(server)\n162: \t}))(w, r)\n",
+			"line": "161",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "141: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n142: \t\tjson.NewEncoder(w).Encode(map[string]interface{}{\"data\": servers})\n143: \t}))(w, r)\n",
+			"line": "142",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "81: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n82: \t\tjson.NewEncoder(w).Encode(map[string]string{\"status\": \"ready\"})\n83: \t})\n",
+			"line": "82",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/docker/cmd/main.go",
+			"code": "75: \t\tw.Header().Set(\"Content-Type\", \"application/json\")\n76: \t\tjson.NewEncoder(w).Encode(map[string]string{\"status\": \"healthy\"})\n77: \t})\n",
+			"line": "76",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
 	"Stats": {
-		"files": 66,
-		"lines": 21713,
+		"files": 231,
+		"lines": 83316,
 		"nosec": 3,
-		"found": 0
+		"found": 16
 	},
 	"GosecVersion": "dev"
 }

@@ -251,3 +251,105 @@ func (s *AlertsService) ListChannels(ctx context.Context, opts *ListOptions) ([]
 
 	return channels, resp.Meta, nil
 }
+
+// CreateChannel creates a new alert notification channel
+func (s *AlertsService) CreateChannel(ctx context.Context, channel *AlertChannel) (*AlertChannel, error) {
+	var resp StandardResponse
+	resp.Data = &AlertChannel{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/alerts/channels",
+		Body:   channel,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if created, ok := resp.Data.(*AlertChannel); ok {
+		return created, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetChannel retrieves an alert notification channel by ID
+func (s *AlertsService) GetChannel(ctx context.Context, id string) (*AlertChannel, error) {
+	var resp StandardResponse
+	resp.Data = &AlertChannel{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/alerts/channels/%s", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if channel, ok := resp.Data.(*AlertChannel); ok {
+		return channel, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// UpdateChannel updates an existing alert notification channel
+func (s *AlertsService) UpdateChannel(ctx context.Context, id string, channel *AlertChannel) (*AlertChannel, error) {
+	var resp StandardResponse
+	resp.Data = &AlertChannel{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/alerts/channels/%s", id),
+		Body:   channel,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if updated, ok := resp.Data.(*AlertChannel); ok {
+		return updated, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// DeleteChannel deletes an alert notification channel
+func (s *AlertsService) DeleteChannel(ctx context.Context, id string) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/alerts/channels/%s", id),
+		Result: &resp,
+	})
+	return err
+}
+
+// TestChannel tests an alert notification channel configuration
+func (s *AlertsService) TestChannel(ctx context.Context, id string) (*ChannelTestResult, error) {
+	var resp StandardResponse
+	resp.Data = &ChannelTestResult{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/alerts/channels/%s/test", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if result, ok := resp.Data.(*ChannelTestResult); ok {
+		return result, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// ChannelTestResult represents the result of testing an alert notification channel
+type ChannelTestResult struct {
+	Success bool                   `json:"success"`
+	Message string                 `json:"message"`
+	Errors  []string               `json:"errors,omitempty"`
+	Details map[string]interface{} `json:"details,omitempty"`
+}
