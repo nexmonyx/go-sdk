@@ -373,6 +373,48 @@ func (s *HealthService) ListHealthAlerts(ctx context.Context) (*ListHealthAlerts
 	return nil, fmt.Errorf("unexpected response type")
 }
 
+// Cross-Controller Health Monitoring Methods
+
+// GetAllControllerHealthStatus retrieves health status for all monitored controllers
+func (s *HealthService) GetAllControllerHealthStatus(ctx context.Context) (*ControllerHealthStatusResponse, error) {
+	var resp StandardResponse
+	resp.Data = &ControllerHealthStatusResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/controllers/status",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if status, ok := resp.Data.(*ControllerHealthStatusResponse); ok {
+		return status, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetControllerHealthStatus retrieves health status for a specific controller
+func (s *HealthService) GetControllerHealthStatus(ctx context.Context, controllerName string) (*ControllerHealthDetailResponse, error) {
+	var resp StandardResponse
+	resp.Data = &ControllerHealthDetailResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/health/controllers/%s/status", controllerName),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if detail, ok := resp.Data.(*ControllerHealthDetailResponse); ok {
+		return detail, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
 // HealthStatus represents the basic health status
 type HealthStatus struct {
 	Status    string      `json:"status"`
@@ -510,4 +552,33 @@ type UpdateHealthCheckRequest struct {
 	RetryInterval    *int                   `json:"retry_interval_seconds,omitempty"`
 	CheckData        map[string]interface{} `json:"check_data,omitempty"`
 	Threshold        map[string]interface{} `json:"threshold,omitempty"`
+}
+
+// Cross-Controller Health Response Types
+
+// ControllerHealthStatusResponse represents the response for all controller health statuses
+type ControllerHealthStatusResponse struct {
+	Controllers map[string]ControllerStatus `json:"controllers"`
+	Total       int                         `json:"total"`
+	Timestamp   string                      `json:"timestamp"`
+}
+
+// ControllerStatus represents the health status of a single controller
+type ControllerStatus struct {
+	Status      string            `json:"status"`
+	Message     string            `json:"message"`
+	Details     map[string]string `json:"details"`
+	LastUpdated string            `json:"last_updated"`
+	Duration    string            `json:"duration"`
+}
+
+// ControllerHealthDetailResponse represents detailed health information for a specific controller
+type ControllerHealthDetailResponse struct {
+	ControllerName string            `json:"controller_name"`
+	Status         string            `json:"status"`
+	Message        string            `json:"message"`
+	Details        map[string]string `json:"details"`
+	LastUpdated    string            `json:"last_updated"`
+	Duration       string            `json:"duration"`
+	ResponseTimeMs int64             `json:"response_time_ms"`
 }
