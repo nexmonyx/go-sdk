@@ -16,24 +16,6 @@ jobs:
     name: Integration Tests (Mock Mode)
     runs-on: ubuntu-latest
 
-    # Services for integration testing
-    services:
-      mock-api:
-        image: nexmonyx/mock-api:latest
-        ports:
-          - 8080:8080
-        env:
-          API_PORT: "8080"
-          API_HOST: "0.0.0.0"
-          AUTH_TOKEN: "test-token"
-          API_LOG_LEVEL: "info"
-        options: >-
-          --health-cmd "curl -f http://localhost:8080/health || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 5
-          --health-start-period 10s
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,6 +40,33 @@ jobs:
         run: |
           go mod download
           go mod verify
+
+      - name: Build mock API Docker image
+        run: |
+          echo "Building mock API Docker image..."
+          docker build -f tests/integration/docker/Dockerfile \
+            -t nexmonyx-mock-api:local .
+
+      - name: Start mock API container
+        run: |
+          echo "Starting mock API container..."
+          docker run -d \
+            --name mock-api \
+            -p 8080:8080 \
+            -e API_PORT=8080 \
+            -e API_HOST=0.0.0.0 \
+            -e AUTH_TOKEN=test-token \
+            -e API_LOG_LEVEL=info \
+            --health-cmd="curl -f http://localhost:8080/health || exit 1" \
+            --health-interval=5s \
+            --health-timeout=3s \
+            --health-retries=5 \
+            --health-start-period=10s \
+            nexmonyx-mock-api:local
+
+          echo "Waiting for container to start..."
+          sleep 2
+          docker ps -a
 
       - name: Wait for services to be ready
         run: |
@@ -118,6 +127,14 @@ jobs:
             integration-coverage.out
             integration-coverage-summary.md
           retention-days: 7
+
+      - name: Stop and remove mock API container
+        if: always()
+        run: |
+          echo "Stopping and removing mock API container..."
+          docker stop mock-api || true
+          docker rm mock-api || true
+          echo "Container cleanup complete"
 
       - name: Check integration test results
         if: always()
