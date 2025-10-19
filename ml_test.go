@@ -205,6 +205,7 @@ func TestMLService_AcceptGroupSuggestion(t *testing.T) {
 		assert.NotEmpty(t, r.Header.Get("Authorization"))
 
 		groupID := uint(100)
+		now := CustomTime{Time: time.Now()}
 		response := StandardResponse{
 			Status:  "success",
 			Message: "Group suggestion accepted and group created",
@@ -213,6 +214,8 @@ func TestMLService_AcceptGroupSuggestion(t *testing.T) {
 				GroupName:      "Production Web Servers",
 				Accepted:       true,
 				CreatedGroupID: &groupID,
+				CreatedAt:      now,
+				UpdatedAt:      now,
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -365,13 +368,16 @@ func TestMLService_ToggleModel(t *testing.T) {
 		assert.Equal(t, "/v1/ml/models/1/toggle", r.URL.Path)
 		assert.NotEmpty(t, r.Header.Get("Authorization"))
 
+		now := CustomTime{Time: time.Now()}
 		response := StandardResponse{
 			Status:  "success",
 			Message: "Model toggled successfully",
 			Data: &MLModel{
-				ID:      1,
-				Name:    "Tag Prediction Model",
-				Enabled: false,
+				ID:        1,
+				Name:      "Tag Prediction Model",
+				Enabled:   false,
+				CreatedAt: now,
+				UpdatedAt: now,
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")

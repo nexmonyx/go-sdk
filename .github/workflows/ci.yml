@@ -120,7 +120,8 @@ jobs:
           # Run tests with build tags to exclude problematic tests
           # Exclude examples directory to prevent 0% coverage from affecting overall metrics
           # Note: Removed error masking to ensure build failures are visible
-          go test -v -race -coverprofile=coverage.out -covermode=atomic -tags="!integration" $(go list ./... | grep -v '/examples')
+          # Set timeout to 20m to allow for slower tests with race detector
+          go test -v -race -coverprofile=coverage.out -covermode=atomic -timeout 20m -tags="!integration" $(go list ./... | grep -v '/examples')
           if [ -f coverage.out ]; then
             echo "Generating coverage reports..."
             go tool cover -func=coverage.out -o coverage.txt || echo "Coverage text report generation failed"

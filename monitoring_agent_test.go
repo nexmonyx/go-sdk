@@ -296,8 +296,10 @@ func TestMonitoringServiceMethods(t *testing.T) {
 	}
 
 	// Test method signatures by calling with mock data (will fail at network level, but validates signature)
-	ctx := context.Background()
-	
+	// Use context with timeout to prevent hanging on network retry logic
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	// Test GetAssignedProbes method signature
 	_, err = client.Monitoring.GetAssignedProbes(ctx, "us-east-1")
 	// We expect this to fail due to network/auth, but not due to method signature
