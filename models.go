@@ -3741,3 +3741,100 @@ type ListHealthAlertsResponse struct {
 	Alerts  []HealthAlertResponse   `json:"alerts"`
 	Total   int64                   `json:"total"`
 }
+
+// Health Aggregation Types (for health-controller SDK migration)
+
+// SystemHealthOverview represents comprehensive system-wide health metrics
+type SystemHealthOverview struct {
+	OverallStatus      string              `json:"overall_status"`
+	OverallScore       float64             `json:"overall_score"`
+	TotalServices      int                 `json:"total_services"`
+	HealthyServices    int                 `json:"healthy_services"`
+	WarningServices    int                 `json:"warning_services"`
+	CriticalServices   int                 `json:"critical_services"`
+	UnknownServices    int                 `json:"unknown_services"`
+	ServiceBreakdown   []ServiceBreakdown  `json:"service_breakdown"`
+	CategoryBreakdown  []CategoryBreakdown `json:"category_breakdown"`
+	RecentTrends       []ServiceTrend      `json:"recent_trends"`
+	AlertSummary       AlertSummary        `json:"alert_summary"`
+	RecentIncidents    []IncidentLog       `json:"recent_incidents"`
+	Timestamp          string              `json:"timestamp"`
+}
+
+// ServiceBreakdown represents health metrics for a specific service
+type ServiceBreakdown struct {
+	ServiceName      string  `json:"service_name"`
+	Status           string  `json:"status"`
+	Score            float64 `json:"score"`
+	CheckCount       int     `json:"check_count"`
+	LastCheckTime    string  `json:"last_check_time"`
+	ResponseTime     float64 `json:"avg_response_time_ms"`
+	UptimePercentage float64 `json:"uptime_percentage"`
+}
+
+// CategoryBreakdown represents health metrics grouped by category
+type CategoryBreakdown struct {
+	Category        string  `json:"category"`
+	HealthyCount    int     `json:"healthy_count"`
+	WarningCount    int     `json:"warning_count"`
+	CriticalCount   int     `json:"critical_count"`
+	TotalCount      int     `json:"total_count"`
+	AverageScore    float64 `json:"average_score"`
+}
+
+// ServiceTrend represents historical performance trends for a service
+type ServiceTrend struct {
+	ServiceName      string  `json:"service_name"`
+	TrendDirection   string  `json:"trend_direction"`
+	ScoreChange      float64 `json:"score_change"`
+	PeriodHours      int     `json:"period_hours"`
+}
+
+// AlertSummary represents summary of active alerts
+type AlertSummary struct {
+	TotalAlerts      int `json:"total_alerts"`
+	CriticalAlerts   int `json:"critical_alerts"`
+	WarningAlerts    int `json:"warning_alerts"`
+	UnacknowledgedAlerts int `json:"unacknowledged_alerts"`
+}
+
+// IncidentLog represents a health incident
+type IncidentLog struct {
+	ServiceName  string `json:"service_name"`
+	IncidentType string `json:"incident_type"`
+	Severity     string `json:"severity"`
+	StartTime    string `json:"start_time"`
+	EndTime      string `json:"end_time,omitempty"`
+	Duration     string `json:"duration,omitempty"`
+	Resolved     bool   `json:"resolved"`
+}
+
+// HealthMetricsHistory represents historical health metrics for a service
+type HealthMetricsHistory struct {
+	ServiceName string              `json:"service_name"`
+	StartTime   string              `json:"start_time"`
+	EndTime     string              `json:"end_time"`
+	Granularity string              `json:"granularity"`
+	DataPoints  []HealthMetricPoint `json:"data_points"`
+}
+
+// HealthMetricPoint represents a single health metric data point
+type HealthMetricPoint struct {
+	Timestamp       string  `json:"timestamp"`
+	HealthyCount    int     `json:"healthy_count"`
+	WarningCount    int     `json:"warning_count"`
+	CriticalCount   int     `json:"critical_count"`
+	UnknownCount    int     `json:"unknown_count"`
+	TotalChecks     int     `json:"total_checks"`
+	AvgResponseTime float64 `json:"avg_response_time_ms"`
+	Availability    float64 `json:"availability_percentage"`
+	ErrorRate       float64 `json:"error_rate_percentage"`
+}
+
+// ServiceHealthScore represents the health score for a service
+type ServiceHealthScore struct {
+	ServiceName    string            `json:"service_name"`
+	Score          float64           `json:"score"`
+	Timestamp      string            `json:"timestamp"`
+	Interpretation map[string]string `json:"score_interpretation"`
+}

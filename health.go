@@ -415,6 +415,78 @@ func (s *HealthService) GetControllerHealthStatus(ctx context.Context, controlle
 	return nil, fmt.Errorf("unexpected response type")
 }
 
+// GetSystemHealthOverview retrieves comprehensive system-wide health metrics
+func (s *HealthService) GetSystemHealthOverview(ctx context.Context) (*SystemHealthOverview, error) {
+	var resp StandardResponse
+	resp.Data = &SystemHealthOverview{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/system/overview",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if overview, ok := resp.Data.(*SystemHealthOverview); ok {
+		return overview, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetServiceHealthHistory retrieves historical health metrics for a specific service
+func (s *HealthService) GetServiceHealthHistory(ctx context.Context, serviceName string, startTime, endTime, granularity string) (*HealthMetricsHistory, error) {
+	var resp StandardResponse
+	resp.Data = &HealthMetricsHistory{}
+
+	query := make(map[string]string)
+	if startTime != "" {
+		query["start_time"] = startTime
+	}
+	if endTime != "" {
+		query["end_time"] = endTime
+	}
+	if granularity != "" {
+		query["granularity"] = granularity
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/health/services/%s/history", serviceName),
+		Query:  query,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if history, ok := resp.Data.(*HealthMetricsHistory); ok {
+		return history, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetServiceHealthScore retrieves the health score (0-100) for a specific service
+func (s *HealthService) GetServiceHealthScore(ctx context.Context, serviceName string) (*ServiceHealthScore, error) {
+	var resp StandardResponse
+	resp.Data = &ServiceHealthScore{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/health/services/%s/score", serviceName),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if score, ok := resp.Data.(*ServiceHealthScore); ok {
+		return score, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
 // HealthStatus represents the basic health status
 type HealthStatus struct {
 	Status    string      `json:"status"`
