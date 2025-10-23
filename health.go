@@ -654,3 +654,163 @@ type ControllerHealthDetailResponse struct {
 	Duration       string            `json:"duration"`
 	ResponseTimeMs int64             `json:"response_time_ms"`
 }
+
+// Health Controller Specific Methods
+
+// GetHealthControllerInfo retrieves basic information about the health controller service
+func (s *HealthService) GetHealthControllerInfo(ctx context.Context) (*ControllerHealthInfo, error) {
+	var resp StandardResponse
+	resp.Data = &ControllerHealthInfo{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/health/info",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if info, ok := resp.Data.(*ControllerHealthInfo); ok {
+		return info, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetHealthControllerStatus retrieves the current status of the health controller
+func (s *HealthService) GetHealthControllerStatus(ctx context.Context) (*ControllerStatus, error) {
+	var resp StandardResponse
+	resp.Data = &ControllerStatus{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/admin/health-controller/status",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if status, ok := resp.Data.(*ControllerStatus); ok {
+		return status, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetHealthControllerLeaderStatus retrieves the current leader election status for health controller
+func (s *HealthService) GetHealthControllerLeaderStatus(ctx context.Context) (map[string]interface{}, error) {
+	var resp StandardResponse
+	var leaderStatus map[string]interface{}
+	resp.Data = &leaderStatus
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/admin/health-controller/leader-status",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return leaderStatus, nil
+}
+
+// GetAdminSystemHealthStatus retrieves comprehensive system health status with pagination
+func (s *HealthService) GetAdminSystemHealthStatus(ctx context.Context, opts *SystemHealthStatusOptions) ([]SystemHealthResult, *PaginationMeta, error) {
+	var resp PaginatedResponse
+	resp.Data = &[]SystemHealthResult{}
+
+	query := make(map[string]string)
+	if opts != nil {
+		if opts.Status != "" {
+			query["status"] = opts.Status
+		}
+		if opts.Category != "" {
+			query["category"] = opts.Category
+		}
+		if opts.ListOptions.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", opts.ListOptions.Page)
+		}
+		if opts.ListOptions.Limit > 0 {
+			query["limit"] = fmt.Sprintf("%d", opts.ListOptions.Limit)
+		}
+		if opts.ListOptions.Sort != "" {
+			query["sort"] = opts.ListOptions.Sort
+		}
+		if opts.ListOptions.Order != "" {
+			query["order"] = opts.ListOptions.Order
+		}
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/admin/health/system-status",
+		Query:  query,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if results, ok := resp.Data.(*[]SystemHealthResult); ok {
+		return *results, resp.Meta, nil
+	}
+	return nil, nil, fmt.Errorf("unexpected response type")
+}
+
+// TriggerManualHealthCheck manually triggers a health check or group of health checks
+func (s *HealthService) TriggerManualHealthCheck(ctx context.Context, req *TriggerHealthCheckRequest) (*TriggerHealthCheckResponse, error) {
+	var resp StandardResponse
+	resp.Data = &TriggerHealthCheckResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/admin/health/trigger-check",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if result, ok := resp.Data.(*TriggerHealthCheckResponse); ok {
+		return result, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// Health Controller Types
+
+
+
+// SystemHealthResult represents a single health check result
+type SystemHealthResult struct {
+	CheckName    string                 `json:"check_name"`
+	Category     string                 `json:"category"`
+	Status       string                 `json:"status"`
+	Message      string                 `json:"message,omitempty"`
+	ResponseTime int64                  `json:"response_time_ms"`
+	LastChecked  *CustomTime            `json:"last_checked"`
+	Details      map[string]interface{} `json:"details,omitempty"`
+}
+
+// SystemHealthStatusOptions represents options for querying system health status
+type SystemHealthStatusOptions struct {
+	Status      string      `json:"status,omitempty"`
+	Category    string      `json:"category,omitempty"`
+	ListOptions ListOptions `json:"list_options,omitempty"`
+}
+
+// TriggerHealthCheckRequest represents a request to trigger health checks
+type TriggerHealthCheckRequest struct {
+	CheckName string            `json:"check_name,omitempty"`
+	Category  string            `json:"category,omitempty"`
+	Timeout   int               `json:"timeout,omitempty"`
+	Options   map[string]string `json:"options,omitempty"`
+}
+
+// TriggerHealthCheckResponse represents the response from triggering health checks
+type TriggerHealthCheckResponse struct {
+	TriggeredChecks int                  `json:"triggered_checks"`
+	Results         []SystemHealthResult `json:"results"`
+}
