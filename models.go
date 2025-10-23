@@ -1386,6 +1386,8 @@ const (
 	APIKeyTypeUser APIKeyType = "user"
 	// APIKeyTypeAdmin represents admin keys with elevated permissions
 	APIKeyTypeAdmin APIKeyType = "admin"
+	// APIKeyTypeController represents controller/microservice keys
+	APIKeyTypeController APIKeyType = "controller"
 	// APIKeyTypeMonitoringAgent represents keys for monitoring agents
 	APIKeyTypeMonitoringAgent APIKeyType = "monitoring_agent"
 	// APIKeyTypeSystem represents keys for system-to-system communication
@@ -1624,6 +1626,17 @@ func NewAdminAPIKey(name, description string, capabilities []string, orgID uint)
 		Name:           name,
 		Description:    description,
 		Type:           APIKeyTypeAdmin,
+		Capabilities:   capabilities,
+		OrganizationID: orgID,
+	}
+}
+
+// NewControllerKey creates a new controller API key request for microservices
+func NewControllerKey(name, description string, capabilities []string, orgID uint) *CreateUnifiedAPIKeyRequest {
+	return &CreateUnifiedAPIKeyRequest{
+		Name:           name,
+		Description:    description,
+		Type:           APIKeyTypeController,
 		Capabilities:   capabilities,
 		OrganizationID: orgID,
 	}

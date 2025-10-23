@@ -143,6 +143,30 @@ func (s *APIKeysService) RevokeUnified(ctx context.Context, keyID string) error 
 	return err
 }
 
+// EnableUnified enables a disabled API key
+func (s *APIKeysService) EnableUnified(ctx context.Context, keyID string) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v2/admin/api-keys/%s/enable", keyID),
+		Result: &resp,
+	})
+	return err
+}
+
+// DisableUnified disables an active API key without revoking it
+func (s *APIKeysService) DisableUnified(ctx context.Context, keyID string) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v2/admin/api-keys/%s/disable", keyID),
+		Result: &resp,
+	})
+	return err
+}
+
 // RegenerateUnified regenerates a unified API key
 func (s *APIKeysService) RegenerateUnified(ctx context.Context, keyID string) (*CreateUnifiedAPIKeyResponse, error) {
 	var resp StandardResponse
