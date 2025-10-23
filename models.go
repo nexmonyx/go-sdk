@@ -424,6 +424,140 @@ type AlertThreshold struct {
 	Severity string  `json:"severity"` // critical, warning, info
 }
 
+// AlertState represents the current state of an alert
+type AlertState string
+
+// Alert state constants
+const (
+	AlertStatePending  AlertState = "pending"
+	AlertStateFiring   AlertState = "firing"
+	AlertStateResolved AlertState = "resolved"
+	AlertStateSilenced AlertState = "silenced"
+)
+
+// AlertSeverity represents the severity level of an alert
+type AlertSeverity string
+
+// Alert severity constants
+const (
+	AlertSeverityInfo     AlertSeverity = "info"
+	AlertSeverityWarning  AlertSeverity = "warning"
+	AlertSeverityCritical AlertSeverity = "critical"
+)
+
+// AlertInstance represents an active or historical alert
+type AlertInstance struct {
+	GormModel
+	RuleID   uint `json:"rule_id"`
+	ServerID uint `json:"server_id"`
+
+	// Alert state
+	State          AlertState    `json:"state"`
+	Severity       AlertSeverity `json:"severity"`
+	StartedAt      time.Time     `json:"started_at"`
+	LastEvaluated  time.Time     `json:"last_evaluated"`
+	ResolvedAt     *time.Time    `json:"resolved_at,omitempty"`
+	AcknowledgedAt *time.Time    `json:"acknowledged_at,omitempty"`
+
+	// Alert details
+	MetricValue    float64                `json:"metric_value"`
+	ThresholdValue float64                `json:"threshold_value"`
+	Message        string                 `json:"message"`
+	Details        map[string]interface{} `json:"details,omitempty"`
+
+	// Notification tracking
+	NotificationsSent  int        `json:"notifications_sent"`
+	LastNotificationAt *time.Time `json:"last_notification_at,omitempty"`
+	NextNotificationAt *time.Time `json:"next_notification_at,omitempty"`
+	EscalationLevel    int        `json:"escalation_level"`
+
+	// External tracking
+	ExternalID     string `json:"external_id,omitempty"`
+	ExternalStatus string `json:"external_status,omitempty"`
+
+	// Silencing
+	SilencedUntil *time.Time `json:"silenced_until,omitempty"`
+	SilencedByID  *uint      `json:"silenced_by_id,omitempty"`
+	SilenceReason string     `json:"silence_reason,omitempty"`
+
+	// Acknowledgment
+	AcknowledgedByID *uint  `json:"acknowledged_by_id,omitempty"`
+	AckComment       string `json:"ack_comment,omitempty"`
+}
+
+// AlertSilence represents a silence rule for alerts
+type AlertSilence struct {
+	GormModel
+	OrganizationID uint `json:"organization_id"`
+
+	// Silence scope
+	RuleID   *uint             `json:"rule_id,omitempty"`
+	ServerID *uint             `json:"server_id,omitempty"`
+	Tags     map[string]string `json:"tags,omitempty"`
+
+	// Silence configuration
+	StartsAt time.Time `json:"starts_at"`
+	EndsAt   time.Time `json:"ends_at"`
+	Comment  string    `json:"comment"`
+
+	// Audit
+	CreatedByID uint `json:"created_by_id"`
+	Active      bool `json:"active"`
+}
+
+// ContactType represents the type of contact
+type ContactType string
+
+// Contact type constants
+const (
+	ContactTypeUser     ContactType = "user"
+	ContactTypeExternal ContactType = "external"
+)
+
+// NotificationChannelType represents available notification channels
+type NotificationChannelType string
+
+// Notification channel constants
+const (
+	NotificationChannelEmail     NotificationChannelType = "email"
+	NotificationChannelSlack     NotificationChannelType = "slack"
+	NotificationChannelPagerDuty NotificationChannelType = "pagerduty"
+	NotificationChannelWebhook   NotificationChannelType = "webhook"
+	NotificationChannelSMS       NotificationChannelType = "sms"
+)
+
+// QuietHours defines when a contact should not receive notifications
+type QuietHours struct {
+	Enabled   bool   `json:"enabled"`
+	StartTime string `json:"start_time"` // Format: "HH:MM"
+	EndTime   string `json:"end_time"`   // Format: "HH:MM"
+	Days      []int  `json:"days"`       // 0=Sunday, 1=Monday, etc.
+	Timezone  string `json:"timezone"`
+}
+
+// Contact represents a person or system that can receive alerts
+type Contact struct {
+	GormModel
+	OrganizationID uint        `json:"organization_id"`
+	Name           string      `json:"name"`
+	Type           ContactType `json:"type"`
+	UserID         *uint       `json:"user_id,omitempty"`
+
+	// Contact methods
+	Email       string `json:"email,omitempty"`
+	Phone       string `json:"phone,omitempty"`
+	SlackUserID string `json:"slack_user_id,omitempty"`
+
+	// Preferences
+	Timezone   string      `json:"timezone"`
+	Language   string      `json:"language"`
+	Active     bool        `json:"active"`
+	QuietHours *QuietHours `json:"quiet_hours,omitempty"`
+
+	// Rate limiting
+	MaxAlertsPerHour int `json:"max_alerts_per_hour"`
+}
+
 // Metric represents a metric data point
 type Metric struct {
 	ServerID   uint                   `json:"server_id"`
