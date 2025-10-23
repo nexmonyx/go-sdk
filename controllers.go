@@ -5,99 +5,161 @@ import (
 	"fmt"
 )
 
-// ControllersService handles communication with controller-related endpoints
-// This service provides methods for controller health monitoring, heartbeat functionality,
-// and controller registration with the Nexmonyx API.
-
-// SendHeartbeat sends a heartbeat from a controller to the API
-func (s *ControllersService) SendHeartbeat(ctx context.Context, req *ControllerHeartbeatRequest) error {
-	if req.ControllerName == "" {
-		return fmt.Errorf("controller name is required")
-	}
-	
+// SubmitControllerHeartbeat submits a heartbeat for a controller
+func (s *ControllersService) SubmitControllerHeartbeat(ctx context.Context, controllerName string, req *ControllerHeartbeatRequest) error {
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v1/controllers/%s/heartbeat", req.ControllerName),
+		Path:   fmt.Sprintf("/v1/controllers/%s/heartbeat", controllerName),
 		Body:   req,
 	})
 	return err
 }
 
-// RegisterController registers a new controller with the API
-func (s *ControllersService) RegisterController(ctx context.Context, controllerID, version string) error {
-	req := map[string]interface{}{
-		"controller_id": controllerID,
-		"version":       version,
-	}
-
-	_, err := s.client.Do(ctx, &Request{
-		Method: "POST",
-		Path:   "/v1/controllers/register",
-		Body:   req,
-	})
-	return err
-}
-
-// GetControllerStatus retrieves the status of a specific controller
-func (s *ControllersService) GetControllerStatus(ctx context.Context, controllerID string) (*ControllerHealthInfo, error) {
+// GetControllersSummary retrieves a summary of all controllers
+func (s *ControllersService) GetControllersSummary(ctx context.Context) (*ControllersSummaryResponse, error) {
 	var resp StandardResponse
-	resp.Data = &ControllerHealthInfo{}
+	resp.Data = &ControllersSummaryResponse{}
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/v1/controllers/%s/status", controllerID),
+		Path:   "/v1/controllers/summary",
 		Result: &resp,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if status, ok := resp.Data.(*ControllerHealthInfo); ok {
+	if summary, ok := resp.Data.(*ControllersSummaryResponse); ok {
+		return summary, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// GetControllerStatus retrieves the status of a specific controller
+func (s *ControllersService) GetControllerStatus(ctx context.Context, controllerName string) (*ControllerStatusResponse, error) {
+	var resp StandardResponse
+	resp.Data = &ControllerStatusResponse{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/controllers/%s/status", controllerName),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if status, ok := resp.Data.(*ControllerStatusResponse); ok {
 		return status, nil
 	}
 	return nil, fmt.Errorf("unexpected response type")
 }
 
-// ListControllers retrieves a list of all registered controllers
-func (s *ControllersService) ListControllers(ctx context.Context) ([]ControllerHealthInfo, error) {
+// DeleteController deletes a controller record (admin only)
+func (s *ControllersService) DeleteController(ctx context.Context, controllerName string) error {
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/controllers/%s", controllerName),
+	})
+	return err
+}
+
+// GetAlertControllerStatus retrieves the alert controller status
+func (s *ControllersService) GetAlertControllerStatus(ctx context.Context) (*AlertControllerStatusResponse, error) {
 	var resp StandardResponse
-	var controllers []ControllerHealthInfo
-	resp.Data = &controllers
+	resp.Data = &AlertControllerStatusResponse{}
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "GET",
-		Path:   "/v1/controllers",
+		Path:   "/v1/controllers/alerts/status",
 		Result: &resp,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if data, ok := resp.Data.(*[]ControllerHealthInfo); ok {
-		return *data, nil
+	if status, ok := resp.Data.(*AlertControllerStatusResponse); ok {
+		return status, nil
 	}
 	return nil, fmt.Errorf("unexpected response type")
 }
 
-// UpdateControllerStatus updates the status of a specific controller
-func (s *ControllersService) UpdateControllerStatus(ctx context.Context, controllerID string, status string) error {
-	req := map[string]interface{}{
-		"status": status,
+// GetAlertControllerLeaderStatus retrieves the alert controller leader election status
+func (s *ControllersService) GetAlertControllerLeaderStatus(ctx context.Context) (map[string]interface{}, error) {
+	var resp StandardResponse
+	var leaderStatus map[string]interface{}
+	resp.Data = &leaderStatus
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/controllers/alerts/leader/status",
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	_, err := s.client.Do(ctx, &Request{
-		Method: "PUT",
-		Path:   fmt.Sprintf("/v1/controllers/%s/status", controllerID),
-		Body:   req,
-	})
-	return err
+	return leaderStatus, nil
 }
 
-// DeregisterController removes a controller from the API registry
-func (s *ControllersService) DeregisterController(ctx context.Context, controllerID string) error {
-	_, err := s.client.Do(ctx, &Request{
-		Method: "DELETE",
-		Path:   fmt.Sprintf("/v1/controllers/%s", controllerID),
-	})
-	return err
+// Controller Management Types
+
+// ControllersSummaryResponse represents the summary of all controllers
+type ControllersSummaryResponse struct {
+	TotalControllers   int                              `json:"total_controllers"`
+	ActiveControllers  int                              `json:"active_controllers"`
+	HealthyControllers int                              `json:"healthy_controllers"`
+	Controllers        map[string]ControllerSummaryInfo `json:"controllers"`
+	LastUpdated        *CustomTime                      `json:"last_updated"`
+}
+
+// ControllerSummaryInfo represents summary information for a single controller
+type ControllerSummaryInfo struct {
+	Name          string      `json:"name"`
+	Status        string      `json:"status"`
+	Version       string      `json:"version"`
+	IsLeader      bool        `json:"is_leader"`
+	LastSeen      *CustomTime `json:"last_seen"`
+	InstanceCount int         `json:"instance_count,omitempty"`
+}
+
+// ControllerStatusResponse represents detailed status for a specific controller
+type ControllerStatusResponse struct {
+	ControllerName string                 `json:"controller_name"`
+	Status         string                 `json:"status"`
+	Version        string                 `json:"version"`
+	IsLeader       bool                   `json:"is_leader"`
+	Instances      []ControllerInstance   `json:"instances"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	LastUpdated    *CustomTime            `json:"last_updated"`
+}
+
+// ControllerInstance represents a single instance of a controller
+type ControllerInstance struct {
+	Hostname       string                 `json:"hostname"`
+	Version        string                 `json:"version"`
+	Status         string                 `json:"status"`
+	IsLeader       bool                   `json:"is_leader"`
+	LastHeartbeat  *CustomTime            `json:"last_heartbeat"`
+	ProcessedItems int64                  `json:"processed_items,omitempty"`
+	ErrorCount     int64                  `json:"error_count,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AlertControllerStatusResponse represents the alert controller status
+type AlertControllerStatusResponse struct {
+	Service            string      `json:"service"`
+	Version            string      `json:"version"`
+	Status             string      `json:"status"`
+	IsLeader           bool        `json:"is_leader"`
+	ActiveRules        int         `json:"active_rules"`
+	ActiveInstances    int         `json:"active_instances"`
+	ProcessedAlerts    int64       `json:"processed_alerts"`
+	NotificationsSent  int64       `json:"notifications_sent"`
+	LastProcessedAt    *CustomTime `json:"last_processed_at,omitempty"`
+	QueueDepth         int         `json:"queue_depth,omitempty"`
+	ProcessingRate     float64     `json:"processing_rate,omitempty"`
+	ErrorCount         int64       `json:"error_count"`
+	HealthChecksPassed int         `json:"health_checks_passed"`
+	HealthChecksFailed int         `json:"health_checks_failed"`
 }
