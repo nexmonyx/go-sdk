@@ -233,3 +233,59 @@ func (s *OrganizationsService) GetBilling(ctx context.Context, id string) (map[s
 
 	return billing, nil
 }
+
+// V2 Organization Infrastructure Methods
+
+// GetAgentEndpoint retrieves the UUID-based agent ingestion endpoint for an organization
+func (s *OrganizationsService) GetAgentEndpoint(ctx context.Context, id string) (map[string]interface{}, error) {
+	var resp StandardResponse
+	var endpoint map[string]interface{}
+	resp.Data = &endpoint
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v2/organizations/%s/agent-endpoint", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return endpoint, nil
+}
+
+// GetInfrastructureStatus retrieves the infrastructure provisioning status for an organization
+func (s *OrganizationsService) GetInfrastructureStatus(ctx context.Context, id string) (map[string]interface{}, error) {
+	var resp StandardResponse
+	var status map[string]interface{}
+	resp.Data = &status
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v2/organizations/%s/infrastructure-status", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return status, nil
+}
+
+// TriggerInfrastructureProvisioning triggers infrastructure provisioning for an organization
+func (s *OrganizationsService) TriggerInfrastructureProvisioning(ctx context.Context, id string) (map[string]interface{}, error) {
+	var resp StandardResponse
+	var result map[string]interface{}
+	resp.Data = &result
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v2/organizations/%s/trigger-provisioning", id),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
