@@ -43,9 +43,9 @@ func TestProbesService_CreateComprehensive(t *testing.T) {
 				"data": map[string]interface{}{
 					"probe": map[string]interface{}{
 						"id":           1,
-						"probe_uuid":   "probe-uuid-123",
+						"uuid":         "probe-uuid-123",
 						"name":         "Production API Health Check",
-						"type":         "http",
+						"probe_type":   "http",
 						"target":       "https://api.example.com/health",
 						"interval":     60,
 						"timeout":      10,
@@ -81,9 +81,9 @@ func TestProbesService_CreateComprehensive(t *testing.T) {
 				"data": map[string]interface{}{
 					"probe": map[string]interface{}{
 						"id":         2,
-						"probe_uuid": "probe-uuid-456",
+						"uuid":       "probe-uuid-456",
 						"name":       "Database TCP Check",
-						"type":       "tcp",
+						"probe_type": "tcp",
 						"target":     "db.example.com:5432",
 						"interval":   30,
 						"timeout":    5,
@@ -258,7 +258,7 @@ func TestProbesService_ListComprehensive(t *testing.T) {
 				"meta": map[string]interface{}{
 					"current_page": 1,
 					"per_page":     25,
-					"total":        2,
+					"total_items":  2,
 					"total_pages":  1,
 				},
 			},
@@ -287,7 +287,7 @@ func TestProbesService_ListComprehensive(t *testing.T) {
 				"meta": map[string]interface{}{
 					"current_page": 1,
 					"per_page":     10,
-					"total":        1,
+					"total_items":  1,
 					"total_pages":  1,
 				},
 			},
@@ -307,7 +307,7 @@ func TestProbesService_ListComprehensive(t *testing.T) {
 				"meta": map[string]interface{}{
 					"current_page": 1,
 					"per_page":     25,
-					"total":        0,
+					"total_items":  0,
 					"total_pages":  0,
 				},
 			},
