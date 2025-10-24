@@ -412,6 +412,48 @@ func (s *AlertsService) ResolveInstance(ctx context.Context, id string) error {
 	return err
 }
 
+// CreateInstance creates a new alert instance
+func (s *AlertsService) CreateInstance(ctx context.Context, req *CreateAlertInstanceRequest) (*AlertInstance, error) {
+	var resp StandardResponse
+	resp.Data = &AlertInstance{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/alerts/instances",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if instance, ok := resp.Data.(*AlertInstance); ok {
+		return instance, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
+// UpdateInstance updates an existing alert instance
+func (s *AlertsService) UpdateInstance(ctx context.Context, id string, req *UpdateAlertInstanceRequest) (*AlertInstance, error) {
+	var resp StandardResponse
+	resp.Data = &AlertInstance{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/alerts/instances/%s", id),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if instance, ok := resp.Data.(*AlertInstance); ok {
+		return instance, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
+}
+
 // SilenceInstance silences an alert instance for a specified duration
 func (s *AlertsService) SilenceInstance(ctx context.Context, id string, duration int) error {
 	var resp StandardResponse

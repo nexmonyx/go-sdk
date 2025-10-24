@@ -56,6 +56,25 @@ func (s *ServersService) List(ctx context.Context, opts *ListOptions) ([]*Server
 	return servers, resp.Meta, nil
 }
 
+// ListInScope retrieves servers matching alert rule scope filters
+func (s *ServersService) ListInScope(ctx context.Context, filters *ScopeFilters) ([]*Server, error) {
+	var resp StandardResponse
+	var servers []*Server
+	resp.Data = &servers
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/servers/in-scope",
+		Body:   filters,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return servers, nil
+}
+
 // CreateServer registers a new server (deprecated - use RegisterWithKey instead)
 // This method is deprecated as server creation now requires registration keys
 func (s *ServersService) Create(ctx context.Context, server *Server) (*Server, error) {

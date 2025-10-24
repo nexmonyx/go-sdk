@@ -1369,3 +1369,345 @@ func TestAlertChannelJSON(t *testing.T) {
 	assert.Equal(t, channel.Type, decoded.Type)
 	assert.Equal(t, channel.Enabled, decoded.Enabled)
 }
+
+// TestAlertsService_CreateInstance tests the CreateInstance method
+func TestAlertsService_CreateInstance(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *CreateAlertInstanceRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *AlertInstance)
+	}{
+		{
+			name: "successful create",
+			request: &CreateAlertInstanceRequest{
+				OrganizationID: 1,
+				RuleID:         10,
+				ServerID:       100,
+				State:          "firing",
+				Severity:       "critical",
+				Value:          95.5,
+				Message:        "CPU usage exceeds threshold",
+				Metadata: map[string]interface{}{
+					"threshold": 80.0,
+					"duration":  300,
+				},
+			},
+			mockStatus: http.StatusCreated,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Alert instance created successfully",
+				Data: &AlertInstance{
+					GormModel: GormModel{
+						ID: 1,
+					},
+					RuleID:         10,
+					ServerID:       100,
+					State:          "firing",
+					Severity:       "critical",
+					MetricValue:    95.5,
+					ThresholdValue: 80.0,
+					Message:        "CPU usage exceeds threshold",
+					Details: map[string]interface{}{
+						"threshold": 80.0,
+						"duration":  300,
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, instance *AlertInstance) {
+				assert.NotNil(t, instance)
+				assert.Equal(t, uint(1), instance.ID)
+				assert.Equal(t, uint(10), instance.RuleID)
+				assert.Equal(t, uint(100), instance.ServerID)
+				assert.Equal(t, AlertState("firing"), instance.State)
+				assert.Equal(t, AlertSeverity("critical"), instance.Severity)
+				assert.Equal(t, 95.5, instance.MetricValue)
+				assert.Equal(t, "CPU usage exceeds threshold", instance.Message)
+			},
+		},
+		{
+			name: "validation error - missing required fields",
+			request: &CreateAlertInstanceRequest{
+				OrganizationID: 1,
+				// Missing RuleID, ServerID, State, Severity
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Validation failed",
+				Error:   "RuleID, ServerID, State, and Severity are required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "unauthorized",
+			request: &CreateAlertInstanceRequest{
+				OrganizationID: 1,
+				RuleID:         10,
+				ServerID:       100,
+				State:          "firing",
+				Severity:       "warning",
+				Value:          75.0,
+				Message:        "Memory usage high",
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+		{
+			name: "server not found",
+			request: &CreateAlertInstanceRequest{
+				OrganizationID: 1,
+				RuleID:         10,
+				ServerID:       999999, // Non-existent server
+				State:          "firing",
+				Severity:       "warning",
+				Value:          75.0,
+				Message:        "Test alert",
+			},
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Server not found",
+			},
+			wantErr: true,
+		},
+		{
+			name: "internal server error",
+			request: &CreateAlertInstanceRequest{
+				OrganizationID: 1,
+				RuleID:         10,
+				ServerID:       100,
+				State:          "firing",
+				Severity:       "info",
+				Value:          50.0,
+				Message:        "Test alert",
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Internal server error",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mock server
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Verify method and path
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "/v1/alerts/instances", r.URL.Path)
+
+				// Write response
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			// Create client
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth: AuthConfig{
+					APIKey:    "test-key",
+					APISecret: "test-secret",
+				},
+			})
+			require.NoError(t, err)
+
+			// Call CreateInstance
+			instance, err := client.Alerts.CreateInstance(context.Background(), tt.request)
+
+			// Check error expectation
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, instance)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, instance)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, instance)
+				}
+			}
+		})
+	}
+}
+
+// TestAlertsService_UpdateInstance tests the UpdateInstance method
+func TestAlertsService_UpdateInstance(t *testing.T) {
+	tests := []struct {
+		name        string
+		instanceID  string
+		request     *UpdateAlertInstanceRequest
+		mockStatus  int
+		mockBody    interface{}
+		wantErr     bool
+		checkFunc   func(*testing.T, *AlertInstance)
+	}{
+		{
+			name:       "successful state update",
+			instanceID: "123",
+			request: &UpdateAlertInstanceRequest{
+				State:   strPtr("acknowledged"),
+				Message: strPtr("Alert acknowledged by on-call engineer"),
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Alert instance updated successfully",
+				Data: &AlertInstance{
+					GormModel: GormModel{
+						ID: 123,
+					},
+					State:   "acknowledged",
+					Message: "Alert acknowledged by on-call engineer",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, instance *AlertInstance) {
+				assert.NotNil(t, instance)
+				assert.Equal(t, uint(123), instance.ID)
+				assert.Equal(t, AlertState("acknowledged"), instance.State)
+				assert.Equal(t, "Alert acknowledged by on-call engineer", instance.Message)
+			},
+		},
+		{
+			name:       "successful value update",
+			instanceID: "123",
+			request: &UpdateAlertInstanceRequest{
+				Value:   float64Ptr(85.5),
+				Message: strPtr("Updated metric value"),
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Alert instance updated successfully",
+				Data: &AlertInstance{
+					GormModel: GormModel{
+						ID: 123,
+					},
+					MetricValue: 85.5,
+					Message:     "Updated metric value",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, instance *AlertInstance) {
+				assert.NotNil(t, instance)
+				assert.Equal(t, 85.5, instance.MetricValue)
+				assert.Equal(t, "Updated metric value", instance.Message)
+			},
+		},
+		{
+			name:       "instance not found",
+			instanceID: "999999",
+			request: &UpdateAlertInstanceRequest{
+				State: strPtr("resolved"),
+			},
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Alert instance not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "validation error - invalid state",
+			instanceID: "123",
+			request: &UpdateAlertInstanceRequest{
+				State: strPtr("invalid_state"),
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Validation failed",
+				Error:   "Invalid state transition",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "unauthorized",
+			instanceID: "123",
+			request: &UpdateAlertInstanceRequest{
+				State: strPtr("resolved"),
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+		{
+			name:       "internal server error",
+			instanceID: "123",
+			request: &UpdateAlertInstanceRequest{
+				Message: strPtr("Update message"),
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Internal server error",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mock server
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Verify method and path
+				assert.Equal(t, http.MethodPut, r.Method)
+				assert.Contains(t, r.URL.Path, "/v1/alerts/instances/")
+
+				// Write response
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			// Create client
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth: AuthConfig{
+					APIKey:    "test-key",
+					APISecret: "test-secret",
+				},
+			})
+			require.NoError(t, err)
+
+			// Call UpdateInstance
+			instance, err := client.Alerts.UpdateInstance(context.Background(), tt.instanceID, tt.request)
+
+			// Check error expectation
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, instance)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, instance)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, instance)
+				}
+			}
+		})
+	}
+}
+
+// Helper functions for creating pointers in tests
+func strPtr(s string) *string {
+	return &s
+}
+
+func float64Ptr(f float64) *float64 {
+	return &f
+}

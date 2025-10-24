@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestServersService_GetByUUID tests retrieving a server by UUID
@@ -1873,6 +1876,145 @@ func TestServersService_UpdateDetails(t *testing.T) {
 	}
 }
 
+// TestServersService_UpdateDetails_DebugMode tests UpdateDetails with debug logging
+func TestServersService_UpdateDetails_DebugMode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(StandardResponse{
+			Status:  "success",
+			Message: "Server details updated",
+			Data: &Server{
+				ServerUUID: "test-uuid",
+				Hostname:   "debug-test-server",
+			},
+		})
+	}))
+	defer server.Close()
+
+	client, _ := NewClient(&Config{
+		BaseURL: server.URL,
+		Debug:   true, // Enable debug mode to cover debug logging
+		Auth: AuthConfig{
+			ServerUUID:   "test-uuid",
+			ServerSecret: "test-secret",
+		},
+	})
+
+	t.Run("with comprehensive hardware details and debug", func(t *testing.T) {
+		req := &ServerDetailsUpdateRequest{
+			Hostname:     "debug-server",
+			OS:           "Ubuntu",
+			OSVersion:    "22.04",
+			OSArch:       "x86_64",
+			CPUModel:     "Intel Xeon",
+			CPUCores:     16,
+			MemoryTotal:  32768,
+			StorageTotal: 1000000,
+			Hardware: &HardwareDetails{
+				CPU: []ServerCPUInfo{
+					{
+						Manufacturer:  "Intel",
+						ModelName:     "Xeon E5-2680 v4",
+						PhysicalCores: 16,
+						LogicalCores:  32,
+					},
+					{
+						Manufacturer:  "Intel",
+						ModelName:     "Xeon E5-2680 v4",
+						PhysicalCores: 16,
+						LogicalCores:  32,
+					},
+				},
+				Memory: &ServerMemoryInfo{
+					TotalSize:  34359738368,
+					MemoryType: "DDR4",
+				},
+				Network: []ServerNetworkInterfaceInfo{
+					{
+						Name:         "eth0",
+						HardwareAddr: "00:11:22:33:44:55",
+						SpeedMbps:    10000,
+					},
+					{
+						Name:         "eth1",
+						HardwareAddr: "00:11:22:33:44:66",
+						SpeedMbps:    10000,
+					},
+				},
+				Disks: []ServerDiskInfo{
+					{
+						Device:    "/dev/sda",
+						DiskModel: "Samsung SSD",
+						Type:      "SSD",
+						Size:      512000000000,
+					},
+					{
+						Device:    "/dev/sdb",
+						DiskModel: "WD Blue",
+						Type:      "HDD",
+						Size:      2000000000000,
+					},
+				},
+			},
+		}
+
+		result, err := client.Servers.UpdateDetails(context.Background(), "test-uuid", req)
+		if err != nil {
+			t.Fatalf("UpdateDetails() error = %v", err)
+		}
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+		if result.Hostname != "debug-test-server" {
+			t.Errorf("Expected hostname 'debug-test-server', got '%s'", result.Hostname)
+		}
+	})
+
+	t.Run("without hardware details and debug", func(t *testing.T) {
+		req := &ServerDetailsUpdateRequest{
+			Hostname:  "simple-server",
+			OS:        "CentOS",
+			OSVersion: "7",
+		}
+
+		result, err := client.Servers.UpdateDetails(context.Background(), "test-uuid", req)
+		if err != nil {
+			t.Fatalf("UpdateDetails() error = %v", err)
+		}
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+	})
+
+	t.Run("with error and debug", func(t *testing.T) {
+		errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(StandardResponse{
+				Status:  "error",
+				Message: "Internal error",
+			})
+		}))
+		defer errorServer.Close()
+
+		errorClient, _ := NewClient(&Config{
+			BaseURL: errorServer.URL,
+			Debug:   true,
+			Auth: AuthConfig{
+				ServerUUID:   "test-uuid",
+				ServerSecret: "test-secret",
+			},
+		})
+
+		_, err := errorClient.Servers.UpdateDetails(context.Background(), "test-uuid", &ServerDetailsUpdateRequest{
+			Hostname: "error-server",
+		})
+		if err == nil {
+			t.Error("Expected error, got nil")
+		}
+	})
+}
+
 // TestServersService_UpdateInfo tests updating server info
 func TestServersService_UpdateInfo(t *testing.T) {
 	t.Run("successful update", func(t *testing.T) {
@@ -2600,4 +2742,225 @@ func TestServersService_RegisterServerQuick(t *testing.T) {
 			t.Errorf("Expected error to contain 'not supported', got '%s'", err.Error())
 		}
 	})
+}
+
+// TestServersService_ListInScope tests the ListInScope method
+func TestServersService_ListInScope(t *testing.T) {
+	tests := []struct {
+		name       string
+		filters    *ScopeFilters
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, []*Server)
+	}{
+		{
+			name: "successful filter - production servers",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Environment:    stringPtr("production"),
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Servers retrieved successfully",
+				Data: []*Server{
+					{
+						GormModel: GormModel{
+							ID: 100,
+						},
+						Hostname:    "prod-web-01",
+						Environment: "production",
+					},
+					{
+						GormModel: GormModel{
+							ID: 101,
+						},
+						Hostname:    "prod-web-02",
+						Environment: "production",
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, servers []*Server) {
+				assert.NotNil(t, servers)
+				assert.Equal(t, 2, len(servers))
+				assert.Equal(t, "prod-web-01", servers[0].Hostname)
+				assert.Equal(t, "production", servers[0].Environment)
+			},
+		},
+		{
+			name: "successful filter - by tags",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Tags:           []string{"web", "nginx"},
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Servers retrieved successfully",
+				Data: []*Server{
+					{
+						GormModel: GormModel{
+							ID: 200,
+						},
+						Hostname: "web-server-01",
+						Tags:     []string{"web", "nginx"},
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, servers []*Server) {
+				assert.NotNil(t, servers)
+				assert.Equal(t, 1, len(servers))
+				assert.Equal(t, "web-server-01", servers[0].Hostname)
+			},
+		},
+		{
+			name: "successful filter - multiple criteria",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Environment:    stringPtr("staging"),
+				Classification: stringPtr("database"),
+				Location:       stringPtr("us-east-1"),
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Servers retrieved successfully",
+				Data: []*Server{
+					{
+						GormModel: GormModel{
+							ID: 300,
+						},
+						Hostname:       "staging-db-01",
+						Environment:    "staging",
+						Classification: "database",
+						Location:       "us-east-1",
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, servers []*Server) {
+				assert.NotNil(t, servers)
+				assert.Equal(t, 1, len(servers))
+				assert.Equal(t, "staging-db-01", servers[0].Hostname)
+				assert.Equal(t, "staging", servers[0].Environment)
+				assert.Equal(t, "database", servers[0].Classification)
+			},
+		},
+		{
+			name: "empty results - no matching servers",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Environment:    stringPtr("nonexistent"),
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "No servers match the filters",
+				Data:    []*Server{},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, servers []*Server) {
+				assert.NotNil(t, servers)
+				assert.Equal(t, 0, len(servers))
+			},
+		},
+		{
+			name: "unauthorized",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Environment:    stringPtr("production"),
+			},
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+		{
+			name: "forbidden - access denied",
+			filters: &ScopeFilters{
+				OrganizationID: 999,
+				Environment:    stringPtr("production"),
+			},
+			mockStatus: http.StatusForbidden,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Access denied to this organization",
+			},
+			wantErr: true,
+		},
+		{
+			name: "validation error - invalid filters",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Tags:           []string{},
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Validation failed",
+				Error:   "At least one filter criterion required",
+			},
+			wantErr: true,
+		},
+		{
+			name: "internal server error",
+			filters: &ScopeFilters{
+				OrganizationID: 1,
+				Environment:    stringPtr("production"),
+			},
+			mockStatus: http.StatusInternalServerError,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Internal server error",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mock server
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Verify method and path
+				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "/v1/servers/in-scope", r.URL.Path)
+
+				// Write response
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			// Create client
+			client, err := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth: AuthConfig{
+					APIKey:    "test-key",
+					APISecret: "test-secret",
+				},
+			})
+			require.NoError(t, err)
+
+			// Call ListInScope
+			servers, err := client.Servers.ListInScope(context.Background(), tt.filters)
+
+			// Check error expectation
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, servers)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, servers)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, servers)
+				}
+			}
+		})
+	}
 }

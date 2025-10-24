@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2025-01-24
+
+### Added
+- **Alert Instance Management** (Task #2779 - Phase 2: SDK Enhancement)
+  - `Alerts.CreateInstance()` - Create new alert instances when rule conditions are met
+  - `Alerts.UpdateInstance()` - Update alert instance state and values
+  - `Servers.ListInScope()` - Get servers matching alert rule filters (tags, environment, classification, location)
+  - New request types: `CreateAlertInstanceRequest`, `UpdateAlertInstanceRequest`, `ScopeFilters`
+  - Comprehensive unit tests for all new methods (>80% coverage)
+  - Support for alert-controller API-first refactoring to eliminate database violations
+
+### Notes
+- These methods enable alert-controller Phase 3 (API endpoints) and Phase 4 (controller refactoring)
+- Part of eliminating 6 direct database access violations in alert-controller
+- Backward compatible - no breaking changes to existing SDK methods
+
 ## [2.8.5] - 2025-10-19
 
 ### Added

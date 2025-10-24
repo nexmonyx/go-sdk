@@ -228,6 +228,16 @@ type ServerUpdateRequest struct {
 	Classification string `json:"classification,omitempty"`
 }
 
+// ScopeFilters represents filters for matching servers in alert rule scope
+type ScopeFilters struct {
+	OrganizationID uint     `json:"organization_id"`
+	Tags           []string `json:"tags,omitempty"`           // Server must have ALL these tags
+	Environment    *string  `json:"environment,omitempty"`    // e.g., "production", "staging"
+	Classification *string  `json:"classification,omitempty"` // e.g., "web", "database"
+	Location       *string  `json:"location,omitempty"`       // e.g., "us-east-1", "eu-west-1"
+	AgentVersion   *string  `json:"agent_version,omitempty"`  // Specific agent version
+}
+
 // HardwareDetails represents detailed hardware information for server updates
 type HardwareDetails struct {
 	CPU     []ServerCPUInfo              `json:"cpu,omitempty"`
@@ -503,6 +513,26 @@ type AlertSilence struct {
 	// Audit
 	CreatedByID uint `json:"created_by_id"`
 	Active      bool `json:"active"`
+}
+
+// CreateAlertInstanceRequest represents the request to create an alert instance
+type CreateAlertInstanceRequest struct {
+	OrganizationID uint                   `json:"organization_id"`
+	RuleID         uint                   `json:"rule_id"`
+	ServerID       uint                   `json:"server_id"`
+	State          string                 `json:"state"`     // firing, acknowledged, resolved
+	Severity       string                 `json:"severity"`  // info, warning, critical
+	Value          float64                `json:"value"`
+	Message        string                 `json:"message"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UpdateAlertInstanceRequest represents the request to update an alert instance
+type UpdateAlertInstanceRequest struct {
+	State    *string                `json:"state,omitempty"`    // State transition
+	Value    *float64               `json:"value,omitempty"`    // Updated metric value
+	Message  *string                `json:"message,omitempty"`  // Updated message
+	Metadata map[string]interface{} `json:"metadata,omitempty"` // Additional context
 }
 
 // ContactType represents the type of contact
