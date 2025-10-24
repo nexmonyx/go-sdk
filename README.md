@@ -211,6 +211,7 @@ The SDK is organized into service clients for different API domains:
 | **Public** | Public endpoints and statistics | Public | Stats, Newsletter, Testimonials |
 | **Distros** | OS distribution icons and metadata | JWT, Public | List, Search, Popular |
 | **AgentDownload** | Agent binary downloads | Public, Server | Download, Version, Platform |
+| **AgentDiscovery** | Dynamic ingestor URL discovery for load balancing | Server Credentials | Discover Ingestor, Failover URLs, TTL |
 | **Controllers** | Microservice health and status | JWT | Heartbeat, Status, Summary |
 | **Admin** | Administrative operations | JWT Admin | Users, Organizations, Jobs |
 
@@ -237,7 +238,7 @@ When working with the Nexmonyx SDK, use this decision tree to select the appropr
    └── No Auth → Public, System, AgentDownload, StatusPages (public)
 
 3. What is your use case?
-   ├── Building an Agent → Servers, Metrics, AgentDownload
+   ├── Building an Agent → Servers, Metrics, AgentDownload, AgentDiscovery
    ├── Building a Dashboard → Users, Organizations, Servers, Monitoring, Tags
    ├── Managing Infrastructure → VMs, Servers, Organizations, Tags
    ├── Organizing Servers → Tags (namespaces, inheritance, bulk operations)
@@ -662,6 +663,53 @@ diskMetrics, err := client.Servers.GetDiskMetrics(ctx, "server-uuid", timeRange)
 
 // Get ZFS metrics (if applicable)
 zfsMetrics, err := client.Servers.GetZFSMetrics(ctx, "server-uuid", timeRange)
+```
+
+### Agent Discovery
+
+The Agent Discovery service provides dynamic ingestor URL discovery for agents, enabling load balancing, failover, and geographic routing.
+
+```go
+// Discover ingestor URL for agent
+// Requires Server-UUID and Server-Secret authentication
+client, err := nexmonyx.NewClient(&nexmonyx.Config{
+    BaseURL: "https://api.nexmonyx.com",
+    Auth: nexmonyx.AuthConfig{
+        ServerUUID:   "550e8400-e29b-41d4-a716-446655440000",
+        ServerSecret: "your-server-secret",
+    },
+})
+if err != nil {
+    log.Fatalf("Failed to create client: %v", err)
+}
+
+ctx := context.Background()
+discovery, err := client.AgentDiscovery.Discover(ctx)
+if err != nil {
+    log.Fatalf("Discovery failed: %v", err)
+}
+
+// Use discovery response for agent connection
+log.Printf("Primary ingestor: %s", discovery.IngestorURL)
+log.Printf("Fallback URLs: %v", discovery.FallbackURLs)
+log.Printf("Cache TTL: %d seconds", discovery.TTLSeconds)
+log.Printf("Refresh interval: %d seconds", discovery.CheckIntervalSeconds)
+
+// Optional fields (load balancing and routing)
+if discovery.AssignedPod != "" {
+    log.Printf("Assigned to pod: %s", discovery.AssignedPod)
+}
+if discovery.AssignedRegion != "" {
+    log.Printf("Assigned region: %s", discovery.AssignedRegion)
+}
+log.Printf("Organization tier: %s", discovery.OrganizationTier)
+
+// Typical agent workflow with discovery
+// 1. Call Discover() on startup
+// 2. Connect to IngestorURL
+// 3. If connection fails, try FallbackURLs
+// 4. Cache discovery response for TTLSeconds
+// 5. Re-query every CheckIntervalSeconds
 ```
 
 ### Tags
