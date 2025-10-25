@@ -669,6 +669,12 @@ zfsMetrics, err := client.Servers.GetZFSMetrics(ctx, "server-uuid", timeRange)
 
 The Agent Discovery service provides dynamic ingestor URL discovery for agents, enabling load balancing, failover, and geographic routing.
 
+**Status:** ✅ Production-Ready (Implemented in Task #2776)
+**Implementation:** `pkg/linuxagent/discovery/` in main repository
+**Documentation:** `docs/operations/agent-discovery.md`, `docs/troubleshooting/agent-discovery.md`
+
+#### Basic Discovery
+
 ```go
 // Discover ingestor URL for agent
 // Requires Server-UUID and Server-Secret authentication
@@ -703,14 +709,283 @@ if discovery.AssignedRegion != "" {
     log.Printf("Assigned region: %s", discovery.AssignedRegion)
 }
 log.Printf("Organization tier: %s", discovery.OrganizationTier)
-
-// Typical agent workflow with discovery
-// 1. Call Discover() on startup
-// 2. Connect to IngestorURL
-// 3. If connection fails, try FallbackURLs
-// 4. Cache discovery response for TTLSeconds
-// 5. Re-query every CheckIntervalSeconds
 ```
+
+#### Production-Ready Discovery with 4-Layer Fallback
+
+The Linux Agent implements a robust 4-layer fallback strategy for high availability:
+
+```go
+package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+    "log"
+    "os"
+    "path/filepath"
+    "time"
+
+    "github.com/supporttools/nexmonyx-go-sdk"
+)
+
+// DiscoveryCache persists discovery results to disk
+type DiscoveryCache struct {
+    IngestorURL string    `json:"ingestor_url"`
+    TTLSeconds  int       `json:"ttl_seconds"`
+    CachedAt    time.Time `json:"cached_at"`
+}
+
+// DiscoverIngestorURL implements production-ready 4-layer fallback
+func DiscoverIngestorURL(ctx context.Context, serverUUID, serverSecret, region string) (string, error) {
+    // Layer 1: API Discovery (primary method)
+    if url, err := tryAPIDiscovery(ctx, serverUUID, serverSecret); err == nil {
+        log.Println("✓ Layer 1: API Discovery successful")
+        return url, nil
+    } else {
+        log.Printf("✗ Layer 1: API Discovery failed: %v", err)
+    }
+
+    // Layer 2: Disk Cache (fast local fallback)
+    if url, err := tryDiskCache(); err == nil {
+        log.Println("✓ Layer 2: Disk Cache hit")
+        return url, nil
+    } else {
+        log.Printf("✗ Layer 2: Disk Cache miss/expired: %v", err)
+    }
+
+    // Layer 3: Template URL (region-based fallback)
+    if region != "" {
+        url := fmt.Sprintf("wss://%s.ingestor.nexmonyx.com", region)
+        log.Printf("✓ Layer 3: Template URL: %s", url)
+        return url, nil
+    }
+    log.Println("✗ Layer 3: No region configured")
+
+    // Layer 4: Emergency Gateway (last resort)
+    url := "wss://gateway.nexmonyx.com"
+    log.Printf("✓ Layer 4: Emergency Gateway: %s", url)
+    return url, nil
+}
+
+// tryAPIDiscovery attempts to discover via API
+func tryAPIDiscovery(ctx context.Context, serverUUID, serverSecret string) (string, error) {
+    client, err := nexmonyx.NewClient(&nexmonyx.Config{
+        BaseURL: "https://api.nexmonyx.com",
+        Auth: nexmonyx.AuthConfig{
+            ServerUUID:   serverUUID,
+            ServerSecret: serverSecret,
+        },
+    })
+    if err != nil {
+        return "", fmt.Errorf("client creation failed: %w", err)
+    }
+
+    discovery, err := client.AgentDiscovery.Discover(ctx)
+    if err != nil {
+        return "", fmt.Errorf("discovery API failed: %w", err)
+    }
+
+    // Cache successful discovery
+    if err := saveToDiskCache(discovery); err != nil {
+        log.Printf("Warning: Failed to cache discovery: %v", err)
+    }
+
+    return discovery.IngestorURL, nil
+}
+
+// tryDiskCache loads cached discovery from disk
+func tryDiskCache() (string, error) {
+    cacheFile := filepath.Join(os.Getenv("HOME"), ".config", "nexmonyx", "discovery_cache.json")
+
+    data, err := os.ReadFile(cacheFile)
+    if err != nil {
+        return "", fmt.Errorf("cache read failed: %w", err)
+    }
+
+    var cache DiscoveryCache
+    if err := json.Unmarshal(data, &cache); err != nil {
+        return "", fmt.Errorf("cache unmarshal failed: %w", err)
+    }
+
+    // Check if cache is still valid (TTL not expired)
+    if time.Since(cache.CachedAt) > time.Duration(cache.TTLSeconds)*time.Second {
+        return "", fmt.Errorf("cache expired")
+    }
+
+    return cache.IngestorURL, nil
+}
+
+// saveToDiskCache saves discovery to disk cache (atomic write)
+func saveToDiskCache(discovery *nexmonyx.DiscoveryResponse) error {
+    cacheDir := filepath.Join(os.Getenv("HOME"), ".config", "nexmonyx")
+    if err := os.MkdirAll(cacheDir, 0755); err != nil {
+        return err
+    }
+
+    cache := DiscoveryCache{
+        IngestorURL: discovery.IngestorURL,
+        TTLSeconds:  discovery.TTLSeconds,
+        CachedAt:    time.Now(),
+    }
+
+    data, err := json.MarshalIndent(cache, "", "  ")
+    if err != nil {
+        return err
+    }
+
+    // Atomic write: write to temp file, then rename
+    cacheFile := filepath.Join(cacheDir, "discovery_cache.json")
+    tempFile := cacheFile + ".tmp"
+
+    if err := os.WriteFile(tempFile, data, 0644); err != nil {
+        return err
+    }
+
+    return os.Rename(tempFile, cacheFile)
+}
+```
+
+#### Periodic Discovery Refresh
+
+Agents should periodically re-query discovery to detect ingestor URL changes:
+
+```go
+// StartDiscoveryRefresh runs periodic discovery checks in background
+func StartDiscoveryRefresh(ctx context.Context, client *nexmonyx.Client, interval time.Duration) {
+    ticker := time.NewTicker(interval)
+    defer ticker.Stop()
+
+    var currentURL string
+
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            discovery, err := client.AgentDiscovery.Discover(ctx)
+            if err != nil {
+                log.Printf("Discovery refresh failed: %v", err)
+                continue
+            }
+
+            // Detect URL change
+            if currentURL != "" && discovery.IngestorURL != currentURL {
+                log.Printf("Ingestor URL changed: %s -> %s", currentURL, discovery.IngestorURL)
+                // Trigger graceful reconnection here
+                // reconnectToIngestor(discovery.IngestorURL)
+            }
+
+            currentURL = discovery.IngestorURL
+            saveToDiskCache(discovery)
+        }
+    }
+}
+
+// Usage in agent main loop
+func main() {
+    ctx := context.Background()
+
+    // Initial discovery
+    url, err := DiscoverIngestorURL(ctx, serverUUID, serverSecret, region)
+    if err != nil {
+        log.Fatalf("All discovery layers failed: %v", err)
+    }
+
+    // Connect to WebSocket
+    // ws := connectToIngestor(url)
+
+    // Start periodic refresh (every 5 minutes)
+    go StartDiscoveryRefresh(ctx, client, 5*time.Minute)
+
+    // Main agent loop
+    // ...
+}
+```
+
+#### Error Handling Best Practices
+
+```go
+// Robust discovery with comprehensive error handling
+discovery, err := client.AgentDiscovery.Discover(ctx)
+if err != nil {
+    // Check for specific error types
+    if nexerr, ok := err.(*nexmonyx.APIError); ok {
+        switch nexerr.StatusCode {
+        case 401:
+            log.Fatalf("Authentication failed: Invalid server credentials")
+        case 403:
+            log.Fatalf("Server or organization is disabled")
+        case 429:
+            log.Printf("Rate limited - backing off")
+            time.Sleep(60 * time.Second)
+            // Retry discovery
+        case 503:
+            log.Printf("Discovery service unavailable - using cache")
+            // Fall back to cached URL
+        default:
+            log.Printf("Discovery API error: %v", nexerr)
+        }
+    }
+
+    // Fall through to fallback layers
+    return tryFallbackLayers()
+}
+
+// Validate discovery response
+if discovery.IngestorURL == "" {
+    return fmt.Errorf("invalid discovery response: empty IngestorURL")
+}
+
+// Success - use primary URL
+return discovery.IngestorURL, nil
+```
+
+#### Discovery Workflow
+
+```
+┌─────────────────────────────────────────────────────┐
+│ Agent Startup                                        │
+│                                                       │
+│ ┌──► Layer 1: API Discovery (/v1/agents/discovery) │
+│ │         │                                          │
+│ │         ├──► Success → Cache → Connect            │
+│ │         │                                          │
+│ │         └──► Failure                               │
+│ │              │                                      │
+│ ├──► Layer 2: Disk Cache (~/.config/nexmonyx/)     │
+│ │         │                                          │
+│ │         ├──► Valid → Connect                       │
+│ │         │                                          │
+│ │         └──► Expired/Missing                       │
+│ │              │                                      │
+│ ├──► Layer 3: Template URL (wss://{region}...)      │
+│ │         │                                          │
+│ │         ├──► Region configured → Connect           │
+│ │         │                                          │
+│ │         └──► No region                             │
+│ │              │                                      │
+│ └──► Layer 4: Emergency Gateway (wss://gateway...)  │
+│           │                                          │
+│           └──► Connect                                │
+│                                                       │
+│ ┌──► Every 5 minutes: Re-query Layer 1              │
+│ │         │                                          │
+│ │         ├──► Same URL → No action                  │
+│ │         │                                          │
+│ │         └──► URL changed → Graceful reconnect      │
+│ │                                                     │
+│ └──────────────────────────────────────────────────┘
+```
+
+#### Related Documentation
+
+For complete operational and troubleshooting documentation, see:
+- **Operations Guide:** `docs/operations/agent-discovery.md` - Monitoring, alerting, load balancing
+- **Migration Guide:** `docs/migration/static-to-dynamic-discovery.md` - Production rollout procedures
+- **Troubleshooting:** `docs/troubleshooting/agent-discovery.md` - Layer-by-layer diagnostics
+- **Architecture:** `docs/design/architecture/agent-discovery-api.md` - Complete design specification
 
 ### Tags
 
@@ -5068,6 +5343,144 @@ fmt.Printf("CPU: %.1f%%, Memory: %.1f%%, Disk: %.1f%%\n",
     sysMetrics.Memory.UsagePercent,
     sysMetrics.Disk.UsagePercent)
 ```
+
+#### Organization Health Controller
+
+The Health service provides organization-level health monitoring capabilities including health check definitions, result submission, status aggregation, and alerting.
+
+```go
+// Create a health check definition for database monitoring
+createReq := &nexmonyx.CreateHealthCheckDefinitionRequest{
+    CheckType:       "database",
+    CheckName:       "Primary Database Health Check",
+    IntervalSeconds: 60,
+    TimeoutSeconds:  30,
+    TargetName:      "postgres-primary",
+    TargetConfig: map[string]interface{}{
+        "connection_string": "postgresql://localhost:5432/mydb",
+        "query_timeout":     "5s",
+    },
+    Thresholds: map[string]interface{}{
+        "max_response_time_ms": 1000,
+        "max_error_rate":       0.05,
+    },
+    Enabled: true,
+}
+
+definition, err := client.Health.CreateHealthCheckDefinition(ctx, createReq)
+if err != nil {
+    log.Fatalf("Failed to create health check definition: %v", err)
+}
+fmt.Printf("Created health check definition ID: %d\n", definition.ID)
+
+// List all health check definitions for the organization
+definitions, err := client.Health.ListHealthCheckDefinitions(ctx)
+if err != nil {
+    log.Fatalf("Failed to list definitions: %v", err)
+}
+
+fmt.Printf("Found %d health check definitions:\n", len(definitions))
+for _, def := range definitions {
+    fmt.Printf("  - %s (%s): %s (interval: %ds)\n",
+        def.CheckName,
+        def.CheckType,
+        map[bool]string{true: "enabled", false: "disabled"}[def.Enabled],
+        def.IntervalSeconds)
+}
+
+// Get specific health check definition
+definition, err = client.Health.GetHealthCheckDefinition(ctx, definition.ID)
+if err != nil {
+    log.Fatalf("Failed to get definition: %v", err)
+}
+fmt.Printf("Definition %d: %s (timeout: %ds)\n",
+    definition.ID, definition.CheckName, definition.TimeoutSeconds)
+
+// Update health check definition
+updateReq := &nexmonyx.UpdateHealthCheckDefinitionRequest{
+    CheckName:       "Updated Primary Database Check",
+    IntervalSeconds: 120,  // Changed from 60 to 120 seconds
+    Enabled:         true,
+}
+
+updated, err := client.Health.UpdateHealthCheckDefinition(ctx, definition.ID, updateReq)
+if err != nil {
+    log.Fatalf("Failed to update definition: %v", err)
+}
+fmt.Printf("Updated definition interval to %d seconds\n", updated.IntervalSeconds)
+
+// Submit health check result
+resultReq := &nexmonyx.SubmitHealthCheckResultRequest{
+    DefinitionID:     definition.ID,
+    Status:           "healthy",
+    Score:            100,
+    ResponseTimeMs:   250,
+    Message:          "Database connection successful",
+    Details: map[string]interface{}{
+        "active_connections": 45,
+        "max_connections":    100,
+        "query_latency_ms":   25,
+    },
+}
+
+result, err := client.Health.SubmitHealthCheckResult(ctx, resultReq)
+if err != nil {
+    log.Fatalf("Failed to submit result: %v", err)
+}
+fmt.Printf("Submitted health check result ID: %d (status: %s, score: %d)\n",
+    result.ID, result.Status, result.Score)
+
+// Get organization health status (aggregated across all health checks)
+healthStatus, err := client.Health.GetOrganizationHealthStatus(ctx)
+if err != nil {
+    log.Fatalf("Failed to get organization health status: %v", err)
+}
+
+fmt.Printf("Organization Health Status: %s\n", healthStatus.OverallStatus)
+fmt.Printf("Database Health: %s (score: %d)\n",
+    healthStatus.DatabaseStatus, healthStatus.DatabaseScore)
+fmt.Printf("API Health: %s (score: %d)\n",
+    healthStatus.APIStatus, healthStatus.APIScore)
+fmt.Printf("Resource Health: %s (score: %d)\n",
+    healthStatus.ResourceStatus, healthStatus.ResourceScore)
+fmt.Printf("Last Updated: %s\n", healthStatus.LastUpdated)
+
+// List health alerts for the organization
+alerts, err := client.Health.ListHealthAlerts(ctx)
+if err != nil {
+    log.Fatalf("Failed to list alerts: %v", err)
+}
+
+fmt.Printf("Found %d active health alerts:\n", alerts.Total)
+for _, alert := range alerts.Alerts {
+    fmt.Printf("  - [%s] %s: %s\n",
+        alert.Severity, alert.Title, alert.Description)
+    if alert.AcknowledgedAt != "" {
+        fmt.Printf("    Acknowledged by %s at %s\n",
+            alert.AcknowledgedBy, alert.AcknowledgedAt)
+    }
+    if alert.ResolvedAt != "" {
+        fmt.Printf("    Resolved by %s at %s\n",
+            alert.ResolvedBy, alert.ResolvedAt)
+    }
+}
+
+// Delete health check definition (when no longer needed)
+err = client.Health.DeleteHealthCheckDefinition(ctx, definition.ID)
+if err != nil {
+    log.Fatalf("Failed to delete definition: %v", err)
+}
+fmt.Println("Health check definition deleted successfully")
+```
+
+**Use Cases:**
+- Monitor database, API, and resource health across your organization
+- Define custom health checks with configurable intervals and thresholds
+- Submit health check results from monitoring agents
+- Get aggregated organization health status at a glance
+- Track and manage health alerts with acknowledgment and resolution workflows
+
+**Authentication:** All health controller methods require valid JWT token or API key authentication.
 
 ### Terms of Service
 
