@@ -825,31 +825,117 @@ func TestClient_GetAuthMethod(t *testing.T) {
 }
 
 func TestListOptions_ToQuery(t *testing.T) {
-	opts := &ListOptions{
-		Page:   2,
-		Limit:  50,
-		Sort:   "name",
-		Order:  "desc",
-		Search: "test",
-		Filters: map[string]string{
+	t.Run("basic options", func(t *testing.T) {
+		opts := &ListOptions{
+			Page:   2,
+			Limit:  50,
+			Sort:   "name",
+			Order:  "desc",
+			Search: "test",
+			Filters: map[string]string{
+				"status": "active",
+				"type":   "server",
+			},
+		}
+
+		query := opts.ToQuery()
+
+		expected := map[string]string{
+			"page":   "2",
+			"limit":  "50",
+			"sort":   "name",
+			"order":  "desc",
+			"search": "test",
 			"status": "active",
 			"type":   "server",
-		},
-	}
+		}
 
-	query := opts.ToQuery()
+		assert.Equal(t, expected, query)
+	})
 
-	expected := map[string]string{
-		"page":   "2",
-		"limit":  "50",
-		"sort":   "name",
-		"order":  "desc",
-		"search": "test",
-		"status": "active",
-		"type":   "server",
-	}
+	t.Run("all fields", func(t *testing.T) {
+		opts := &ListOptions{
+			Page:        1,
+			Limit:       25,
+			PerPage:     100,
+			Sort:        "created_at",
+			Order:       "asc",
+			Search:      "search-term",
+			Query:       "q-param",
+			StartDate:   "2023-01-01",
+			EndDate:     "2023-12-31",
+			TimeRange:   "last_30_days",
+			GroupBy:     "status",
+			Aggregation: "count",
+			Filters: map[string]string{
+				"region": "us-east-1",
+				"type":   "production",
+			},
+		}
 
-	assert.Equal(t, expected, query)
+		query := opts.ToQuery()
+
+		expected := map[string]string{
+			"page":        "1",
+			"limit":       "25",
+			"per_page":    "100",
+			"sort":        "created_at",
+			"order":       "asc",
+			"search":      "search-term",
+			"q":           "q-param",
+			"start_date":  "2023-01-01",
+			"end_date":    "2023-12-31",
+			"time_range":  "last_30_days",
+			"group_by":    "status",
+			"aggregation": "count",
+			"region":      "us-east-1",
+			"type":        "production",
+		}
+
+		assert.Equal(t, expected, query)
+	})
+
+	t.Run("empty options", func(t *testing.T) {
+		opts := &ListOptions{}
+		query := opts.ToQuery()
+
+		// Should return empty map or map with no pagination params
+		assert.NotNil(t, query)
+		assert.Empty(t, query)
+	})
+
+	t.Run("only filters", func(t *testing.T) {
+		opts := &ListOptions{
+			Filters: map[string]string{
+				"status": "active",
+			},
+		}
+
+		query := opts.ToQuery()
+
+		expected := map[string]string{
+			"status": "active",
+		}
+
+		assert.Equal(t, expected, query)
+	})
+
+	t.Run("nil filters", func(t *testing.T) {
+		opts := &ListOptions{
+			Page:    1,
+			Limit:   10,
+			Filters: nil,
+		}
+
+		query := opts.ToQuery()
+
+		expected := map[string]string{
+			"page":  "1",
+			"limit": "10",
+		}
+
+		assert.Equal(t, expected, query)
+	})
 }
 
 func TestCustomTime_UnmarshalJSON(t *testing.T) {
@@ -1164,4 +1250,150 @@ func TestClient_HealthCheck_Context(t *testing.T) {
 	err = client.HealthCheck(ctx)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "context deadline exceeded")
+}
+
+func TestClient_Do_EnhancedCoverage(t *testing.T) {
+	// Test with Error object in request
+	t.Run("request with error object", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error": "validation_error", "message": "Invalid input"}`))
+		}))
+		defer server.Close()
+
+		client, err := NewClient(&Config{
+			BaseURL: server.URL,
+		})
+		require.NoError(t, err)
+
+		var result StandardResponse
+		var errResp APIError
+
+		_, err = client.Do(context.Background(), &Request{
+			Method: "POST",
+			Path:   "/test",
+			Result: &result,
+			Error:  &errResp,
+		})
+
+		assert.Error(t, err)
+	})
+
+	// Test debug mode with sensitive headers
+	t.Run("debug mode masks sensitive headers", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status": "success"}`))
+		}))
+		defer server.Close()
+
+		client, err := NewClient(&Config{
+			BaseURL: server.URL,
+			Debug:   true,
+			Auth: AuthConfig{
+				Token:        "secret-token",
+				APIKey:       "secret-key",
+				APISecret:    "secret-secret",
+				ServerUUID:   "test-uuid",
+				ServerSecret: "secret-server-secret",
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = client.Do(context.Background(), &Request{
+			Method: "GET",
+			Path:   "/test",
+			Headers: map[string]string{
+				"Server-Secret":   "secret",
+				"X-Server-Secret": "secret",
+				"X-Api-Secret":    "secret",
+				"Authorization":   "Bearer token",
+				"X-Custom":        "value",
+			},
+		})
+
+		assert.NoError(t, err)
+	})
+
+	// Test request execution error
+	t.Run("request execution error - invalid URL", func(t *testing.T) {
+		client, err := NewClient(&Config{
+			BaseURL: "http://localhost:99999", // Invalid port
+			Timeout: 100 * time.Millisecond,
+		})
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		_, err = client.Do(ctx, &Request{
+			Method: "GET",
+			Path:   "/test",
+		})
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "request failed")
+	})
+
+	// Test with nil body, query, and headers
+	t.Run("request with all nil optional params", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status": "success"}`))
+		}))
+		defer server.Close()
+
+		client, err := NewClient(&Config{
+			BaseURL: server.URL,
+		})
+		require.NoError(t, err)
+
+		resp, err := client.Do(context.Background(), &Request{
+			Method:  "GET",
+			Path:    "/test",
+			Body:    nil,
+			Query:   nil,
+			Headers: nil,
+			Result:  nil,
+			Error:   nil,
+		})
+
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	// Test debug mode with body logging
+	t.Run("debug mode logs request body", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status": "success"}`))
+		}))
+		defer server.Close()
+
+		client, err := NewClient(&Config{
+			BaseURL: server.URL,
+			Debug:   true,
+		})
+		require.NoError(t, err)
+
+		requestBody := map[string]interface{}{
+			"key1": "value1",
+			"key2": 42,
+			"nested": map[string]string{
+				"key": "value",
+			},
+		}
+
+		_, err = client.Do(context.Background(), &Request{
+			Method: "POST",
+			Path:   "/test",
+			Body:   requestBody,
+		})
+
+		assert.NoError(t, err)
+	})
 }

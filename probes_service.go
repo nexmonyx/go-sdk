@@ -80,37 +80,92 @@ func (s *ProbesService) Create(ctx context.Context, req *ProbeCreateRequest) (*M
 
 // List returns all probes
 func (s *ProbesService) List(ctx context.Context, opts *ListOptions) ([]*MonitoringProbe, *PaginationMeta, error) {
-	return s.client.Monitoring.ListProbes(ctx, opts)
+	var resp PaginatedResponse
+	var probes []*MonitoringProbe
+	resp.Data = &probes
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v2/probes",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return probes, resp.Meta, nil
 }
 
 // Get retrieves a probe by UUID
 func (s *ProbesService) Get(ctx context.Context, uuid string) (*MonitoringProbe, error) {
-	return s.client.Monitoring.GetProbe(ctx, uuid)
+	var resp StandardResponse
+	resp.Data = &MonitoringProbe{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v2/probes/%s", uuid),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if probe, ok := resp.Data.(*MonitoringProbe); ok {
+		return probe, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
 }
 
 // Update updates a probe
 func (s *ProbesService) Update(ctx context.Context, uuid string, req *ProbeUpdateRequest) (*MonitoringProbe, error) {
-	probe := &MonitoringProbe{}
+	// Build update request body
+	body := make(map[string]interface{})
 
 	if req.Name != nil {
-		probe.Name = *req.Name
+		body["name"] = *req.Name
 	}
 	if req.Enabled != nil {
-		probe.Enabled = *req.Enabled
+		body["enabled"] = *req.Enabled
 	}
 	if req.Interval != nil {
-		probe.Interval = *req.Interval
+		body["frequency"] = *req.Interval
 	}
 	if req.Configuration != nil {
-		probe.Config = req.Configuration
+		body["config"] = req.Configuration
 	}
 
-	return s.client.Monitoring.UpdateProbe(ctx, uuid, probe)
+	var resp StandardResponse
+	resp.Data = &MonitoringProbe{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PATCH",
+		Path:   fmt.Sprintf("/v2/probes/%s", uuid),
+		Body:   body,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if probe, ok := resp.Data.(*MonitoringProbe); ok {
+		return probe, nil
+	}
+	return nil, fmt.Errorf("unexpected response type")
 }
 
 // Delete removes a probe
 func (s *ProbesService) Delete(ctx context.Context, uuid string) error {
-	return s.client.Monitoring.DeleteProbe(ctx, uuid)
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v2/probes/%s", uuid),
+	})
+	return err
 }
 
 // GetHealth returns the health status of a probe

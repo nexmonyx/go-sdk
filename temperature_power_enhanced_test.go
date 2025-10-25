@@ -314,3 +314,150 @@ func TestPowerMetrics_CalculateTotalPower(t *testing.T) {
 	total := metrics.CalculateTotalPower()
 	assert.InDelta(t, 661.0, total, 0.1)
 }
+
+// TestTemperatureMetrics_GetMaxTemperature tests the GetMaxTemperature helper method
+func TestTemperatureMetrics_GetMaxTemperature(t *testing.T) {
+	tests := []struct {
+		name             string
+		sensors          []nexmonyx.TemperatureSensorData
+		expectedTemp     float64
+		expectedSensor   string
+		emptyCollection  bool
+	}{
+		{
+			name: "SingleSensor",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 55.0},
+			},
+			expectedTemp:   55.0,
+			expectedSensor: "CPU Core 0",
+		},
+		{
+			name: "MultipleSensorsMaxAtBeginning",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 85.0},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 65.0},
+				{SensorID: "disk_0", SensorName: "Disk sda", Temperature: 45.0},
+			},
+			expectedTemp:   85.0,
+			expectedSensor: "CPU Core 0",
+		},
+		{
+			name: "MultipleSensorsMaxInMiddle",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 65.0},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 92.0},
+				{SensorID: "disk_0", SensorName: "Disk sda", Temperature: 45.0},
+			},
+			expectedTemp:   92.0,
+			expectedSensor: "CPU Core 1",
+		},
+		{
+			name: "MultipleSensorsMaxAtEnd",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 65.0},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 72.0},
+				{SensorID: "disk_0", SensorName: "Disk sda", Temperature: 88.0},
+			},
+			expectedTemp:   88.0,
+			expectedSensor: "Disk sda",
+		},
+		{
+			name: "AllSensorsEqualTemp",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 50.0},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 50.0},
+				{SensorID: "cpu_2", SensorName: "CPU Core 2", Temperature: 50.0},
+			},
+			expectedTemp:   50.0,
+			expectedSensor: "CPU Core 0",
+		},
+		{
+			name: "NegativeTemperatures",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "external_0", SensorName: "External Sensor 1", Temperature: -10.0},
+				{SensorID: "external_1", SensorName: "External Sensor 2", Temperature: -5.0},
+				{SensorID: "external_2", SensorName: "External Sensor 3", Temperature: -15.0},
+			},
+			expectedTemp:   -5.0,
+			expectedSensor: "External Sensor 2",
+		},
+		{
+			name: "MixedPositiveNegativeTemperatures",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "sensor_0", SensorName: "Sensor 0", Temperature: -10.0},
+				{SensorID: "sensor_1", SensorName: "Sensor 1", Temperature: 0.0},
+				{SensorID: "sensor_2", SensorName: "Sensor 2", Temperature: 25.0},
+			},
+			expectedTemp:   25.0,
+			expectedSensor: "Sensor 2",
+		},
+		{
+			name: "ZeroTemperatures",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "sensor_0", SensorName: "Sensor 0", Temperature: 0.0},
+				{SensorID: "sensor_1", SensorName: "Sensor 1", Temperature: 0.0},
+			},
+			expectedTemp:   0.0,
+			expectedSensor: "Sensor 0",
+		},
+		{
+			name: "VeryHighTemperatures",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 95.5},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 105.0},
+				{SensorID: "cpu_2", SensorName: "CPU Core 2", Temperature: 98.2},
+			},
+			expectedTemp:   105.0,
+			expectedSensor: "CPU Core 1",
+		},
+		{
+			name: "ManySensors",
+			sensors: []nexmonyx.TemperatureSensorData{
+				{SensorID: "cpu_0", SensorName: "CPU Core 0", Temperature: 55.0},
+				{SensorID: "cpu_1", SensorName: "CPU Core 1", Temperature: 58.0},
+				{SensorID: "cpu_2", SensorName: "CPU Core 2", Temperature: 52.0},
+				{SensorID: "cpu_3", SensorName: "CPU Core 3", Temperature: 60.0},
+				{SensorID: "disk_0", SensorName: "Disk sda", Temperature: 42.0},
+				{SensorID: "disk_1", SensorName: "Disk sdb", Temperature: 45.0},
+				{SensorID: "system_0", SensorName: "Motherboard", Temperature: 48.0},
+				{SensorID: "gpu_0", SensorName: "GPU", Temperature: 75.0},
+			},
+			expectedTemp:   75.0,
+			expectedSensor: "GPU",
+		},
+		{
+			name:            "EmptyMetrics",
+			sensors:         []nexmonyx.TemperatureSensorData{},
+			expectedTemp:    0.0,
+			expectedSensor:  "",
+			emptyCollection: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := nexmonyx.NewTemperatureMetrics()
+			for _, sensor := range tt.sensors {
+				metrics.AddTemperatureSensor(sensor)
+			}
+
+			maxTemp, maxSensorName := metrics.GetMaxTemperature()
+
+			assert.Equal(t, tt.expectedTemp, maxTemp, "Temperature should match expected value")
+			assert.Equal(t, tt.expectedSensor, maxSensorName, "Sensor name should match expected value")
+		})
+	}
+}
+
+// TestTemperatureMetrics_GetMaxTemperature_NilSensors tests edge case with nil sensors
+func TestTemperatureMetrics_GetMaxTemperature_NilSensors(t *testing.T) {
+	metrics := &nexmonyx.TemperatureMetrics{
+		Sensors: nil,
+	}
+
+	maxTemp, maxSensorName := metrics.GetMaxTemperature()
+
+	assert.Equal(t, 0.0, maxTemp)
+	assert.Equal(t, "", maxSensorName)
+}

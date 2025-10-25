@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -206,17 +207,25 @@ func TestListMonitoringAgentKeysOptions_ToQuery(t *testing.T) {
 }
 
 func TestMonitoringAgentKeysService_NetworkError(t *testing.T) {
-	client, _ := NewClient(&Config{BaseURL: "http://invalid-server:9999"})
+	// Disable retries to prevent test timeout
+	client, _ := NewClient(&Config{
+		BaseURL:    "http://invalid-server:9999",
+		RetryCount: 0, // Critical: no retries for network error tests
+	})
 
-	_, err := client.MonitoringAgentKeys.CreateAdmin(context.Background(), &CreateMonitoringAgentKeyRequest{})
+	// Use context with timeout to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	_, err := client.MonitoringAgentKeys.CreateAdmin(ctx, &CreateMonitoringAgentKeyRequest{})
 	assert.Error(t, err)
 
-	_, err = client.MonitoringAgentKeys.Create(context.Background(), "org-123", &CreateMonitoringAgentKeyRequest{})
+	_, err = client.MonitoringAgentKeys.Create(ctx, "org-123", &CreateMonitoringAgentKeyRequest{})
 	assert.Error(t, err)
 
-	_, _, err = client.MonitoringAgentKeys.List(context.Background(), "org-123", nil)
+	_, _, err = client.MonitoringAgentKeys.List(ctx, "org-123", nil)
 	assert.Error(t, err)
 
-	err = client.MonitoringAgentKeys.Revoke(context.Background(), "org-123", "key-456")
+	err = client.MonitoringAgentKeys.Revoke(ctx, "org-123", "key-456")
 	assert.Error(t, err)
 }

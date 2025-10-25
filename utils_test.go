@@ -362,6 +362,87 @@ func TestValidateDiskUsageAggregate(t *testing.T) {
 
 		assert.False(t, ValidateDiskUsageAggregate(aggregate))
 	})
+
+	t.Run("inconsistent usage percentage calculation", func(t *testing.T) {
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      1000000000,
+			UsedBytes:       750000000,
+			FreeBytes:       250000000,
+			UsedPercent:     50.0, // Should be 75.0, off by more than tolerance (1%)
+			FilesystemCount: 1,
+			CalculatedAt:    time.Now().UTC().Format(time.RFC3339),
+		}
+
+		assert.False(t, ValidateDiskUsageAggregate(aggregate))
+	})
+
+	t.Run("empty timestamp allowed", func(t *testing.T) {
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      1000000000,
+			UsedBytes:       750000000,
+			FreeBytes:       250000000,
+			UsedPercent:     75.0,
+			FilesystemCount: 1,
+			CalculatedAt:    "", // Empty timestamp should be allowed
+		}
+
+		assert.True(t, ValidateDiskUsageAggregate(aggregate))
+	})
+
+	t.Run("negative usage percentage", func(t *testing.T) {
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      1000000000,
+			UsedBytes:       750000000,
+			FreeBytes:       250000000,
+			UsedPercent:     -5.0, // Invalid negative percentage
+			FilesystemCount: 1,
+			CalculatedAt:    time.Now().UTC().Format(time.RFC3339),
+		}
+
+		assert.False(t, ValidateDiskUsageAggregate(aggregate))
+	})
+
+	t.Run("zero total bytes with zero usage", func(t *testing.T) {
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      0,
+			UsedBytes:       0,
+			FreeBytes:       0,
+			UsedPercent:     0,
+			FilesystemCount: 0,
+			CalculatedAt:    time.Now().UTC().Format(time.RFC3339),
+		}
+
+		assert.True(t, ValidateDiskUsageAggregate(aggregate))
+	})
+
+	t.Run("zero total bytes with invalid percentage over 100", func(t *testing.T) {
+		// This test covers the range check that happens when TotalBytes is 0
+		// (which skips the percentage consistency check)
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      0,
+			UsedBytes:       0,
+			FreeBytes:       0,
+			UsedPercent:     150.0, // Invalid: > 100
+			FilesystemCount: 0,
+			CalculatedAt:    time.Now().UTC().Format(time.RFC3339),
+		}
+
+		assert.False(t, ValidateDiskUsageAggregate(aggregate))
+	})
+
+	t.Run("zero total bytes with invalid negative percentage", func(t *testing.T) {
+		// This test covers the range check for negative percentages when TotalBytes is 0
+		aggregate := &DiskUsageAggregate{
+			TotalBytes:      0,
+			UsedBytes:       0,
+			FreeBytes:       0,
+			UsedPercent:     -10.0, // Invalid: < 0
+			FilesystemCount: 0,
+			CalculatedAt:    time.Now().UTC().Format(time.RFC3339),
+		}
+
+		assert.False(t, ValidateDiskUsageAggregate(aggregate))
+	})
 }
 
 func TestComprehensiveMetricsRequestSerialization(t *testing.T) {
@@ -493,7 +574,7 @@ func TestDiskUsageAggregateEdgeCases(t *testing.T) {
 		result := AggregateDiskUsage(disks)
 		assert.Equal(t, uint64(0), result.TotalBytes)
 		assert.Equal(t, float64(0), result.UsedPercent)
-		assert.Equal(t, 1, result.FilesystemCount)
+		assert.Equal(t, 0, result.FilesystemCount) // Zero-sized disks are skipped, so count should be 0
 	})
 
 	t.Run("large filesystem sizes", func(t *testing.T) {
@@ -541,5 +622,164 @@ func TestDiskUsageAggregateEdgeCases(t *testing.T) {
 		assert.Len(t, result.CriticalMounts, 2)
 		assert.Contains(t, result.CriticalMounts, "/critical1")
 		assert.Contains(t, result.CriticalMounts, "/critical2")
+	})
+
+	t.Run("negative byte values are treated as zero", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "/dev/sda1",
+				Mountpoint:   "/",
+				Filesystem:   "ext4",
+				TotalBytes:   1000000000,
+				UsedBytes:    -100000, // Negative value - should be treated as 0
+				FreeBytes:    1000000000,
+				UsagePercent: 0,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Equal(t, uint64(1000000000), result.TotalBytes)
+		assert.Equal(t, uint64(0), result.UsedBytes) // Negative treated as zero
+		assert.Equal(t, 1, result.FilesystemCount)
+	})
+
+	t.Run("all filesystems excluded by type", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "tmpfs",
+				Mountpoint:   "/tmp",
+				Filesystem:   "tmpfs",
+				TotalBytes:   1000000000,
+				UsedBytes:    500000000,
+				FreeBytes:    500000000,
+				UsagePercent: 50.0,
+			},
+			{
+				Device:       "proc",
+				Mountpoint:   "/proc",
+				Filesystem:   "proc",
+				TotalBytes:   0,
+				UsedBytes:    0,
+				FreeBytes:    0,
+				UsagePercent: 0,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Equal(t, uint64(0), result.TotalBytes)
+		assert.Equal(t, 0, result.FilesystemCount)
+		assert.Equal(t, "", result.LargestMount)
+		assert.Empty(t, result.CriticalMounts)
+	})
+
+	t.Run("all filesystems excluded by mount prefix", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "overlay",
+				Mountpoint:   "/var/lib/docker/overlay2/abc123",
+				Filesystem:   "overlay",
+				TotalBytes:   5000000000,
+				UsedBytes:    3000000000,
+				FreeBytes:    2000000000,
+				UsagePercent: 60.0,
+			},
+			{
+				Device:       "/dev/loop0",
+				Mountpoint:   "/snap/core/123",
+				Filesystem:   "squashfs",
+				TotalBytes:   200000000,
+				UsedBytes:    200000000,
+				FreeBytes:    0,
+				UsagePercent: 100.0,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Equal(t, uint64(0), result.TotalBytes)
+		assert.Equal(t, 0, result.FilesystemCount)
+		assert.Empty(t, result.CriticalMounts)
+	})
+
+	t.Run("mixed included filesystem types", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "/dev/sda1",
+				Mountpoint:   "/",
+				Filesystem:   "ext4",
+				TotalBytes:   1000000000,
+				UsedBytes:    400000000,
+				FreeBytes:    600000000,
+				UsagePercent: 40.0,
+			},
+			{
+				Device:       "/dev/sdb1",
+				Mountpoint:   "/data",
+				Filesystem:   "xfs",
+				TotalBytes:   2000000000,
+				UsedBytes:    800000000,
+				FreeBytes:    1200000000,
+				UsagePercent: 40.0,
+			},
+			{
+				Device:       "/dev/sdc1",
+				Mountpoint:   "/backup",
+				Filesystem:   "btrfs",
+				TotalBytes:   5000000000,
+				UsedBytes:    2500000000,
+				FreeBytes:    2500000000,
+				UsagePercent: 50.0,
+			},
+			{
+				Device:       "nfs-server:/export",
+				Mountpoint:   "/mnt/nfs",
+				Filesystem:   "nfs4",
+				TotalBytes:   10000000000,
+				UsedBytes:    3000000000,
+				FreeBytes:    7000000000,
+				UsagePercent: 30.0,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Equal(t, uint64(18000000000), result.TotalBytes)
+		assert.Equal(t, uint64(6700000000), result.UsedBytes)
+		assert.Equal(t, 4, result.FilesystemCount)
+		assert.Equal(t, "/mnt/nfs", result.LargestMount) // Largest by capacity
+		assert.InDelta(t, 37.22, result.UsedPercent, 0.1)
+	})
+
+	t.Run("critical threshold exactly at 90 percent", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "/dev/sda1",
+				Mountpoint:   "/exactly90",
+				Filesystem:   "ext4",
+				TotalBytes:   1000000000,
+				UsedBytes:    900000000,
+				FreeBytes:    100000000,
+				UsagePercent: 90.0,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Empty(t, result.CriticalMounts) // 90.0 is not > 90.0, so not critical
+	})
+
+	t.Run("critical threshold just above 90 percent", func(t *testing.T) {
+		disks := []DiskMetrics{
+			{
+				Device:       "/dev/sda1",
+				Mountpoint:   "/justover90",
+				Filesystem:   "ext4",
+				TotalBytes:   1000000000,
+				UsedBytes:    901000000,
+				FreeBytes:    99000000,
+				UsagePercent: 90.1,
+			},
+		}
+
+		result := AggregateDiskUsage(disks)
+		assert.Len(t, result.CriticalMounts, 1)
+		assert.Contains(t, result.CriticalMounts, "/justover90")
 	})
 }
