@@ -12,7 +12,7 @@ import (
 
 const (
 	// Version is the current version of the SDK
-	Version = "2.12.0"
+	Version = "2.13.0"
 
 	defaultTimeout = 30 * time.Second
 	defaultBaseURL = "https://api.nexmonyx.com"
@@ -84,6 +84,7 @@ type Client struct {
 	ProbeController       *ProbeControllerService
 	Database              *DatabaseService
 	AgentDiscovery        *AgentDiscoveryService
+	AccessRules           *AccessRulesService
 }
 
 // Config holds the configuration for the client
@@ -285,6 +286,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.ProbeController = &ProbeControllerService{client: client}
 	client.Database = &DatabaseService{client: client}
 	client.AgentDiscovery = &AgentDiscoveryService{client: client}
+	client.AccessRules = &AccessRulesService{client: client}
 
 	// Note: WebSocket service requires separate initialization via NewWebSocketService()
 	// to ensure proper server credentials validation and connection management
