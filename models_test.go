@@ -272,7 +272,7 @@ func TestUser_JSON(t *testing.T) {
 		LastName:         "Doe",
 		DisplayName:      "John Doe",
 		PhoneNumber:      "+1234567890",
-		Auth0ID:          "auth0|123",
+		AuthProvider:     "native",
 		LastLogin:        &now,
 		EmailVerified:    true,
 		TwoFactorEnabled: false,

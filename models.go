@@ -121,7 +121,7 @@ type User struct {
 	PhoneNumber    string `json:"phone_number,omitempty"`
 
 	// Authentication
-	Auth0ID          string      `json:"auth0_id,omitempty"`
+	AuthProvider     string      `json:"auth_provider,omitempty"`
 	LastLogin        *CustomTime `json:"last_login,omitempty"`
 	EmailVerified    bool        `json:"email_verified"`
 	TwoFactorEnabled bool        `json:"two_factor_enabled"`
