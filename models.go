@@ -3598,6 +3598,23 @@ type ChannelDeliveryInfo struct {
 	ProviderStatus string      `json:"provider_status,omitempty"`
 }
 
+// NotificationChannel represents a notification channel configuration for an organization
+type NotificationChannel struct {
+	ID             uint                   `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"` // email, slack, pagerduty, webhook, sms
+	Config         map[string]interface{} `json:"config"`
+	IsEnabled      bool                   `json:"is_enabled"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	UpdatedAt      CustomTime             `json:"updated_at"`
+}
+
+// ChannelTestRequest represents a request to test a notification channel
+type ChannelTestRequest struct {
+	TestMessage string `json:"test_message,omitempty"`
+}
+
 // ============================================================================
 // Cluster Models
 // ============================================================================

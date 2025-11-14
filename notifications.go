@@ -2,6 +2,7 @@ package nexmonyx
 
 import (
 	"context"
+	"fmt"
 )
 
 // NotificationsService handles operations related to notifications
@@ -85,4 +86,70 @@ func (s *NotificationsService) SendQuotaAlert(ctx context.Context, orgID uint, s
 	}
 
 	return s.SendNotification(ctx, req)
+}
+
+// CreateChannel creates a new notification channel for an organization
+func (s *NotificationsService) CreateChannel(ctx context.Context, orgID uint, channel *NotificationChannel) (*NotificationChannel, error) {
+	var resp StandardResponse
+	resp.Data = &NotificationChannel{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/organizations/%d/channels", orgID),
+		Body:   channel,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if ch, ok := resp.Data.(*NotificationChannel); ok {
+		return ch, nil
+	}
+	return nil, ErrUnexpectedResponse
+}
+
+// TestChannel tests a notification channel's connectivity and configuration
+func (s *NotificationsService) TestChannel(ctx context.Context, orgID uint, channelID uint, testReq *ChannelTestRequest) (*ChannelTestResult, error) {
+	var resp StandardResponse
+	resp.Data = &ChannelTestResult{}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/organizations/%d/channels/%d/test", orgID, channelID),
+		Body:   testReq,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if result, ok := resp.Data.(*ChannelTestResult); ok {
+		return result, nil
+	}
+	return nil, ErrUnexpectedResponse
+}
+
+// ListChannels retrieves all notification channels for an organization
+func (s *NotificationsService) ListChannels(ctx context.Context, orgID uint, opts *ListOptions) ([]*NotificationChannel, *PaginationMeta, error) {
+	var resp PaginatedResponse
+	var channels []*NotificationChannel
+	resp.Data = &channels
+
+	req := &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/organizations/%d/channels", orgID),
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return channels, resp.Meta, nil
 }
