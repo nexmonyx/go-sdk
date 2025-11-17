@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -666,6 +668,141 @@ func TestAlertsService_DeleteComprehensive(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+// TestAlertsService_ConcurrentOperations tests concurrent operations on alerts
+func TestAlertsService_ConcurrentOperations(t *testing.T) {
+	tests := []struct {
+		name              string
+		concurrencyLevel  int
+		operationsPerGoro int
+		operation         string
+		mockStatus        int
+		mockBody          interface{}
+	}{
+		{
+			name:              "concurrent List - low concurrency",
+			concurrencyLevel:  10,
+			operationsPerGoro: 5,
+			operation:         "list",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": []map[string]interface{}{
+					{
+						"id":   1,
+						"name": "CPU Alert",
+						"type": "metric",
+					},
+				},
+				"meta": map[string]interface{}{"total": 1},
+			},
+		},
+		{
+			name:              "concurrent Get - medium concurrency",
+			concurrencyLevel:  50,
+			operationsPerGoro: 2,
+			operation:         "get",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"id":   1,
+					"name": "CPU Alert",
+					"type": "metric",
+				},
+			},
+		},
+		{
+			name:              "concurrent Create - medium concurrency",
+			concurrencyLevel:  30,
+			operationsPerGoro: 2,
+			operation:         "create",
+			mockStatus:        http.StatusCreated,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"id":   2,
+					"name": "New Alert",
+					"type": "metric",
+				},
+			},
+		},
+		{
+			name:              "high concurrency stress - mixed operations",
+			concurrencyLevel:  100,
+			operationsPerGoro: 1,
+			operation:         "list",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   []map[string]interface{}{},
+				"meta":   map[string]interface{}{"total": 0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			successCount := int64(0)
+			errorCount := int64(0)
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			var wg sync.WaitGroup
+			startTime := time.Now()
+
+			for i := 0; i < tt.concurrencyLevel; i++ {
+				wg.Add(1)
+				go func(id int) {
+					defer wg.Done()
+
+					for j := 0; j < tt.operationsPerGoro; j++ {
+						var apiErr error
+
+						switch tt.operation {
+						case "list":
+							_, _, apiErr = client.Alerts.List(context.Background(), nil)
+						case "get":
+							_, apiErr = client.Alerts.Get(context.Background(), "alert-1")
+						case "create":
+							_, apiErr = client.Alerts.Create(context.Background(), &Alert{Name: "Test Alert", OrganizationID: 1})
+						case "update":
+							_, apiErr = client.Alerts.Update(context.Background(), "alert-1", &Alert{Name: "Updated"})
+						}
+
+						if apiErr != nil {
+							atomic.AddInt64(&errorCount, 1)
+						} else {
+							atomic.AddInt64(&successCount, 1)
+						}
+					}
+				}(i)
+			}
+
+			wg.Wait()
+			duration := time.Since(startTime)
+
+			totalOps := int64(tt.concurrencyLevel * tt.operationsPerGoro)
+			assert.Equal(t, totalOps, successCount+errorCount, "Total operations should equal success + error count")
+			assert.Equal(t, int64(0), errorCount, "Expected no errors in concurrent operations")
+			assert.Equal(t, totalOps, successCount, "All operations should succeed")
+
+			t.Logf("Completed %d operations in %v (%.2f ops/sec)",
+				totalOps, duration, float64(totalOps)/duration.Seconds())
 		})
 	}
 }

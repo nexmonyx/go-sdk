@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -999,6 +1001,156 @@ func TestProbesService_NetworkErrors(t *testing.T) {
 			} else {
 				assert.NoError(t, apiErr)
 			}
+		})
+	}
+}
+
+// TestProbesService_ConcurrentOperations tests concurrent operations on monitoring probes
+func TestProbesService_ConcurrentOperations(t *testing.T) {
+	tests := []struct {
+		name              string
+		concurrencyLevel  int
+		operationsPerGoro int
+		operation         string
+		mockStatus        int
+		mockBody          interface{}
+	}{
+		{
+			name:              "concurrent List - low concurrency",
+			concurrencyLevel:  10,
+			operationsPerGoro: 5,
+			operation:         "list",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": []map[string]interface{}{
+					{
+						"uuid":      "probe-1",
+						"name":      "Test Probe",
+						"type":      "http",
+						"frequency": 60,
+						"enabled":   true,
+					},
+				},
+				"meta": map[string]interface{}{"total_items": 1},
+			},
+		},
+		{
+			name:              "concurrent Get - medium concurrency",
+			concurrencyLevel:  50,
+			operationsPerGoro: 2,
+			operation:         "get",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"uuid":      "probe-1",
+					"name":      "Test Probe",
+					"type":      "http",
+					"frequency": 60,
+					"enabled":   true,
+				},
+			},
+		},
+		{
+			name:              "concurrent Create - medium concurrency",
+			concurrencyLevel:  30,
+			operationsPerGoro: 2,
+			operation:         "create",
+			mockStatus:        http.StatusCreated,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"uuid":      "probe-2",
+					"name":      "New Probe",
+					"type":      "http",
+					"frequency": 60,
+					"enabled":   true,
+				},
+			},
+		},
+		{
+			name:              "high concurrency stress - mixed operations",
+			concurrencyLevel:  100,
+			operationsPerGoro: 1,
+			operation:         "list",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   []map[string]interface{}{},
+				"meta":   map[string]interface{}{"total_items": 0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			successCount := int64(0)
+			errorCount := int64(0)
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			var wg sync.WaitGroup
+			startTime := time.Now()
+
+			for i := 0; i < tt.concurrencyLevel; i++ {
+				wg.Add(1)
+				go func(id int) {
+					defer wg.Done()
+
+					for j := 0; j < tt.operationsPerGoro; j++ {
+						var apiErr error
+
+						switch tt.operation {
+						case "list":
+							_, _, apiErr = client.Probes.List(context.Background(), nil)
+						case "get":
+							_, apiErr = client.Probes.Get(context.Background(), "probe-1")
+						case "create":
+							req := &ProbeCreateRequest{
+								Name:       "Test Probe",
+								Type:       "http",
+								Target:     "https://example.com",
+								Interval:   60,
+								RegionCode: "us-east-1",
+								Enabled:    true,
+							}
+							_, apiErr = client.Probes.Create(context.Background(), req)
+						case "update":
+							req := &ProbeUpdateRequest{Name: stringPtr("Updated Probe")}
+							_, apiErr = client.Probes.Update(context.Background(), "probe-1", req)
+						}
+
+						if apiErr != nil {
+							atomic.AddInt64(&errorCount, 1)
+						} else {
+							atomic.AddInt64(&successCount, 1)
+						}
+					}
+				}(i)
+			}
+
+			wg.Wait()
+			duration := time.Since(startTime)
+
+			totalOps := int64(tt.concurrencyLevel * tt.operationsPerGoro)
+			assert.Equal(t, totalOps, successCount+errorCount, "Total operations should equal success + error count")
+			assert.Equal(t, int64(0), errorCount, "Expected no errors in concurrent operations")
+			assert.Equal(t, totalOps, successCount, "All operations should succeed")
+
+			t.Logf("Completed %d operations in %v (%.2f ops/sec)",
+				totalOps, duration, float64(totalOps)/duration.Seconds())
 		})
 	}
 }

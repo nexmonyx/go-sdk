@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -758,6 +760,153 @@ func TestBillingService_NetworkErrors(t *testing.T) {
 			} else {
 				assert.NoError(t, apiErr)
 			}
+		})
+	}
+}
+
+// TestBillingService_ConcurrentOperations tests concurrent operations on billing resources
+func TestBillingService_ConcurrentOperations(t *testing.T) {
+	tests := []struct {
+		name              string
+		concurrencyLevel  int
+		operationsPerGoro int
+		operation         string
+		mockStatus        int
+		mockBody          interface{}
+	}{
+		{
+			name:              "concurrent GetBillingInfo - low concurrency",
+			concurrencyLevel:  10,
+			operationsPerGoro: 5,
+			operation:         "get_billing_info",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"organization_id":     123,
+					"stripe_customer_id":  "cus_123",
+					"current_balance":     150.50,
+					"credits":             25.00,
+					"billing_cycle":       "monthly",
+					"next_billing_date":   "2024-02-01T00:00:00Z",
+				},
+			},
+		},
+		{
+			name:              "concurrent GetSubscription - medium concurrency",
+			concurrencyLevel:  50,
+			operationsPerGoro: 2,
+			operation:         "get_subscription",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"id":              "sub_123",
+					"organization_id": 123,
+					"plan_id":         "plan_premium",
+					"plan_name":       "Premium Plan",
+					"status":          "active",
+					"quantity":        1,
+				},
+			},
+		},
+		{
+			name:              "concurrent ListInvoices - medium concurrency",
+			concurrencyLevel:  30,
+			operationsPerGoro: 2,
+			operation:         "list_invoices",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": []map[string]interface{}{
+					{
+						"id":             "inv_1",
+						"invoice_number": "INV-001",
+						"status":         "paid",
+						"amount":         99.99,
+					},
+				},
+				"meta": map[string]interface{}{"total_items": 1},
+			},
+		},
+		{
+			name:              "high concurrency stress - mixed operations",
+			concurrencyLevel:  100,
+			operationsPerGoro: 1,
+			operation:         "get_billing_info",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": map[string]interface{}{
+					"organization_id": 123,
+					"current_balance": 0.00,
+					"credits":         0.00,
+					"billing_cycle":   "monthly",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			successCount := int64(0)
+			errorCount := int64(0)
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			var wg sync.WaitGroup
+			startTime := time.Now()
+
+			for i := 0; i < tt.concurrencyLevel; i++ {
+				wg.Add(1)
+				go func(id int) {
+					defer wg.Done()
+
+					for j := 0; j < tt.operationsPerGoro; j++ {
+						var apiErr error
+
+						switch tt.operation {
+						case "get_billing_info":
+							_, apiErr = client.Billing.GetBillingInfo(context.Background(), "org-123")
+						case "get_subscription":
+							_, apiErr = client.Billing.GetSubscription(context.Background(), "org-123")
+						case "list_invoices":
+							_, _, apiErr = client.Billing.ListInvoices(context.Background(), "org-123", nil)
+						case "update_payment":
+							pm := &PaymentMethod{Type: "card"}
+							apiErr = client.Billing.UpdatePaymentMethod(context.Background(), "org-123", pm)
+						}
+
+						if apiErr != nil {
+							atomic.AddInt64(&errorCount, 1)
+						} else {
+							atomic.AddInt64(&successCount, 1)
+						}
+					}
+				}(i)
+			}
+
+			wg.Wait()
+			duration := time.Since(startTime)
+
+			totalOps := int64(tt.concurrencyLevel * tt.operationsPerGoro)
+			assert.Equal(t, totalOps, successCount+errorCount, "Total operations should equal success + error count")
+			assert.Equal(t, int64(0), errorCount, "Expected no errors in concurrent operations")
+			assert.Equal(t, totalOps, successCount, "All operations should succeed")
+
+			t.Logf("Completed %d operations in %v (%.2f ops/sec)",
+				totalOps, duration, float64(totalOps)/duration.Seconds())
 		})
 	}
 }

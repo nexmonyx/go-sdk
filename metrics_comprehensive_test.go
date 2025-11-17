@@ -3,10 +3,12 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
-	"net"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2206,6 +2208,136 @@ func TestMetricsService_SubmitComprehensiveToTimescale(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, lastRequest)
 			}
+		})
+	}
+}
+
+// TestMetricsService_ConcurrentOperations tests concurrent operations on metrics
+func TestMetricsService_ConcurrentOperations(t *testing.T) {
+	tests := []struct {
+		name              string
+		concurrencyLevel  int
+		operationsPerGoro int
+		operation         string
+		mockStatus        int
+		mockBody          interface{}
+	}{
+		{
+			name:              "concurrent Get - low concurrency",
+			concurrencyLevel:  10,
+			operationsPerGoro: 5,
+			operation:         "get",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data": []map[string]interface{}{
+					{
+						"server_uuid": "srv-1",
+						"name":        "cpu.usage",
+						"value":       45.5,
+					},
+				},
+				"meta": map[string]interface{}{"total": 1},
+			},
+		},
+		{
+			name:              "concurrent Submit - medium concurrency",
+			concurrencyLevel:  50,
+			operationsPerGoro: 2,
+			operation:         "submit",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status":  "success",
+				"message": "Metrics submitted",
+			},
+		},
+		{
+			name:              "concurrent Query - medium concurrency",
+			concurrencyLevel:  30,
+			operationsPerGoro: 2,
+			operation:         "query",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   []map[string]interface{}{},
+			},
+		},
+		{
+			name:              "high concurrency stress - mixed operations",
+			concurrencyLevel:  100,
+			operationsPerGoro: 1,
+			operation:         "get",
+			mockStatus:        http.StatusOK,
+			mockBody: map[string]interface{}{
+				"status": "success",
+				"data":   []map[string]interface{}{},
+				"meta":   map[string]interface{}{"total": 0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			successCount := int64(0)
+			errorCount := int64(0)
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, err := NewClient(&Config{
+				BaseURL:    server.URL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+			})
+			require.NoError(t, err)
+
+			var wg sync.WaitGroup
+			startTime := time.Now()
+
+			for i := 0; i < tt.concurrencyLevel; i++ {
+				wg.Add(1)
+				go func(id int) {
+					defer wg.Done()
+
+					for j := 0; j < tt.operationsPerGoro; j++ {
+						var apiErr error
+
+						switch tt.operation {
+						case "get":
+							_, _, apiErr = client.Metrics.Get(context.Background(), "srv-1", nil)
+						case "submit":
+							metrics := []*Metric{{Name: "cpu.usage", Value: 50.0, Timestamp: time.Now()}}
+							apiErr = client.Metrics.Submit(context.Background(), "srv-1", metrics)
+						case "query":
+							query := &MetricsQuery{ServerUUIDs: []string{"srv-1"}}
+							_, apiErr = client.Metrics.Query(context.Background(), query)
+						case "aggregate":
+							agg := &MetricsAggregation{Function: "avg"}
+							_, apiErr = client.Metrics.GetAggregated(context.Background(), agg)
+						}
+
+						if apiErr != nil {
+							atomic.AddInt64(&errorCount, 1)
+						} else {
+							atomic.AddInt64(&successCount, 1)
+						}
+					}
+				}(i)
+			}
+
+			wg.Wait()
+			duration := time.Since(startTime)
+
+			totalOps := int64(tt.concurrencyLevel * tt.operationsPerGoro)
+			assert.Equal(t, totalOps, successCount+errorCount, "Total operations should equal success + error count")
+			assert.Equal(t, int64(0), errorCount, "Expected no errors in concurrent operations")
+			assert.Equal(t, totalOps, successCount, "All operations should succeed")
+
+			t.Logf("Completed %d operations in %v (%.2f ops/sec)",
+				totalOps, duration, float64(totalOps)/duration.Seconds())
 		})
 	}
 }
