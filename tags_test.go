@@ -32,6 +32,8 @@ func TestTagsService_ListTags(t *testing.T) {
 				Key:            "environment",
 				Value:          "production",
 				Source:         "manual",
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		response := StandardResponse{
@@ -84,6 +86,8 @@ func TestTagsService_CreateTag(t *testing.T) {
 				Namespace:      req.Namespace,
 				Key:            req.Key,
 				Value:          req.Value,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -112,16 +116,17 @@ func TestTagsService_CreateTag(t *testing.T) {
 func TestTagsService_GetServerTags(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/v1/servers/server-uuid-123/tags", r.URL.Path)
+		assert.Equal(t, "/v1/server/server-uuid-123/tags", r.URL.Path)
 
 		tags := []ServerTag{
 			{
-				ID:        1,
-				TagID:     10,
-				Namespace: "env",
-				Key:       "environment",
-				Value:     "production",
-				Source:    "manual",
+				ID:         1,
+				TagID:      10,
+				Namespace:  "env",
+				Key:        "environment",
+				Value:      "production",
+				Source:     "manual",
+				AssignedAt: CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		response := StandardResponse{
@@ -259,12 +264,20 @@ func TestTagsService_ListNamespaces(t *testing.T) {
 				Namespace:   "env",
 				Description: "Environment tags",
 				Type:        "system",
+				CreatedAt:   CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:   CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		response := StandardResponse{
 			Status:  "success",
 			Message: "Namespaces retrieved successfully",
-			Data:    namespaces,
+			Data: struct {
+				Namespaces []TagNamespace `json:"namespaces"`
+				Total      int            `json:"total"`
+			}{
+				Namespaces: namespaces,
+				Total:      len(namespaces),
+			},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -281,7 +294,7 @@ func TestTagsService_ListNamespaces(t *testing.T) {
 	namespaces, total, err := client.Tags.ListNamespaces(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Len(t, namespaces, 1)
-	assert.Equal(t, 0, total) // No pagination in response
+	assert.Equal(t, 1, total)
 }
 
 func TestTagsService_SetNamespacePermissions(t *testing.T) {
@@ -343,6 +356,8 @@ func TestTagsService_CreateInheritanceRule(t *testing.T) {
 				Name:           req.Name,
 				SourceType:     req.SourceType,
 				TargetType:     req.TargetType,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -383,6 +398,8 @@ func TestTagsService_SetOrganizationTag(t *testing.T) {
 				ID:             1,
 				OrganizationID: 100,
 				InheritToAll:   req.InheritToAll,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -416,12 +433,20 @@ func TestTagsService_ListOrganizationTags(t *testing.T) {
 				ID:             1,
 				OrganizationID: 100,
 				InheritToAll:   true,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		response := StandardResponse{
 			Status:  "success",
 			Message: "Organization tags retrieved successfully",
-			Data:    orgTags,
+			Data: struct {
+				Tags  []OrganizationTag `json:"tags"`
+				Total int               `json:"total"`
+			}{
+				Tags:  orgTags,
+				Total: len(orgTags),
+			},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -438,7 +463,7 @@ func TestTagsService_ListOrganizationTags(t *testing.T) {
 	orgTags, total, err := client.Tags.ListOrganizationTags(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Len(t, orgTags, 1)
-	assert.Equal(t, 0, total)
+	assert.Equal(t, 1, total)
 }
 
 func TestTagsService_RemoveOrganizationTag(t *testing.T) {
@@ -477,6 +502,8 @@ func TestTagsService_CreateServerRelationship(t *testing.T) {
 				OrganizationID: 100,
 				RelationType:   req.RelationType,
 				InheritTags:    req.InheritTags,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -513,12 +540,20 @@ func TestTagsService_ListServerRelationships(t *testing.T) {
 				OrganizationID: 100,
 				RelationType:   "vm_host",
 				InheritTags:    true,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
 			},
 		}
 		response := StandardResponse{
 			Status:  "success",
 			Message: "Server relationships retrieved successfully",
-			Data:    relationships,
+			Data: struct {
+				Relationships []ServerParentRelationship `json:"relationships"`
+				Total         int                        `json:"total"`
+			}{
+				Relationships: relationships,
+				Total:         len(relationships),
+			},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -535,7 +570,7 @@ func TestTagsService_ListServerRelationships(t *testing.T) {
 	rels, total, err := client.Tags.ListServerRelationships(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Len(t, rels, 1)
-	assert.Equal(t, 0, total)
+	assert.Equal(t, 1, total)
 }
 
 func TestTagsService_DeleteServerRelationship(t *testing.T) {
