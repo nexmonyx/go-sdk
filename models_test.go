@@ -1702,6 +1702,737 @@ func TestMonitoringAgent_JSON(t *testing.T) {
 }
 
 // ============================================================================
+// Constructor Function Tests
+// ============================================================================
+
+// TestConstructor_NewUserAPIKey tests the NewUserAPIKey constructor
+func TestConstructor_NewUserAPIKey(t *testing.T) {
+	req := NewUserAPIKey("Test Key", "Test Description", []string{"read", "write"})
+
+	if req.Name != "Test Key" {
+		t.Errorf("Name = %s, want Test Key", req.Name)
+	}
+	if req.Description != "Test Description" {
+		t.Errorf("Description = %s, want Test Description", req.Description)
+	}
+	if req.Type != APIKeyTypeUser {
+		t.Errorf("Type = %s, want %s", req.Type, APIKeyTypeUser)
+	}
+	if len(req.Capabilities) != 2 {
+		t.Errorf("Capabilities length = %d, want 2", len(req.Capabilities))
+	}
+}
+
+// TestConstructor_NewAdminAPIKey tests the NewAdminAPIKey constructor
+func TestConstructor_NewAdminAPIKey(t *testing.T) {
+	req := NewAdminAPIKey("Admin Key", "Admin Description", []string{"*"}, 123)
+
+	if req.Name != "Admin Key" {
+		t.Errorf("Name = %s, want Admin Key", req.Name)
+	}
+	if req.Type != APIKeyTypeAdmin {
+		t.Errorf("Type = %s, want %s", req.Type, APIKeyTypeAdmin)
+	}
+	if req.OrganizationID != 123 {
+		t.Errorf("OrganizationID = %d, want 123", req.OrganizationID)
+	}
+	if len(req.Capabilities) != 1 || req.Capabilities[0] != "*" {
+		t.Errorf("Capabilities = %v, want [*]", req.Capabilities)
+	}
+}
+
+// TestConstructor_NewControllerKey tests the NewControllerKey constructor
+func TestConstructor_NewControllerKey(t *testing.T) {
+	req := NewControllerKey("Controller Key", "Controller Desc", []string{"controller:read"}, 456)
+
+	if req.Name != "Controller Key" {
+		t.Errorf("Name = %s, want Controller Key", req.Name)
+	}
+	if req.Type != APIKeyTypeController {
+		t.Errorf("Type = %s, want %s", req.Type, APIKeyTypeController)
+	}
+	if req.OrganizationID != 456 {
+		t.Errorf("OrganizationID = %d, want 456", req.OrganizationID)
+	}
+}
+
+// TestConstructor_NewMonitoringAgentKey tests the NewMonitoringAgentKey constructor
+func TestConstructor_NewMonitoringAgentKey(t *testing.T) {
+	req := NewMonitoringAgentKey("Agent Key", "Agent Desc", "test-namespace", "public", "us-east-1", []string{"scope1", "scope2"})
+
+	if req.Name != "Agent Key" {
+		t.Errorf("Name = %s, want Agent Key", req.Name)
+	}
+	if req.Type != APIKeyTypeMonitoringAgent {
+		t.Errorf("Type = %s, want %s", req.Type, APIKeyTypeMonitoringAgent)
+	}
+	if req.NamespaceName != "test-namespace" {
+		t.Errorf("NamespaceName = %s, want test-namespace", req.NamespaceName)
+	}
+	if req.AgentType != "public" {
+		t.Errorf("AgentType = %s, want public", req.AgentType)
+	}
+	if req.RegionCode != "us-east-1" {
+		t.Errorf("RegionCode = %s, want us-east-1", req.RegionCode)
+	}
+	if len(req.AllowedProbeScopes) != 2 {
+		t.Errorf("AllowedProbeScopes length = %d, want 2", len(req.AllowedProbeScopes))
+	}
+	// Verify default capabilities are set
+	hasMonitoring := false
+	hasProbes := false
+	for _, cap := range req.Capabilities {
+		if cap == "monitoring:execute" {
+			hasMonitoring = true
+		}
+		if cap == "probes:execute" {
+			hasProbes = true
+		}
+	}
+	if !hasMonitoring || !hasProbes {
+		t.Errorf("Capabilities = %v, missing monitoring:execute or probes:execute", req.Capabilities)
+	}
+}
+
+// TestConstructor_NewRegistrationKey tests the NewRegistrationKey constructor
+func TestConstructor_NewRegistrationKey(t *testing.T) {
+	req := NewRegistrationKey("Registration Key", "Registration Desc", 789)
+
+	if req.Name != "Registration Key" {
+		t.Errorf("Name = %s, want Registration Key", req.Name)
+	}
+	if req.Type != APIKeyTypeRegistration {
+		t.Errorf("Type = %s, want %s", req.Type, APIKeyTypeRegistration)
+	}
+	if req.OrganizationID != 789 {
+		t.Errorf("OrganizationID = %d, want 789", req.OrganizationID)
+	}
+	// Verify default capabilities
+	hasRegister := false
+	hasUpdate := false
+	for _, cap := range req.Capabilities {
+		if cap == "servers:register" {
+			hasRegister = true
+		}
+		if cap == "servers:update" {
+			hasUpdate = true
+		}
+	}
+	if !hasRegister || !hasUpdate {
+		t.Errorf("Capabilities = %v, missing servers:register or servers:update", req.Capabilities)
+	}
+}
+
+// ============================================================================
+// ToQuery Method Tests (Note: Tag-related ToQuery tests are in tags_test.go and model_methods_coverage_test.go)
+// ============================================================================
+
+// Note: The following ToQuery tests are already covered in other test files:
+// - TestTagListOptions_ToQuery -> tags_test.go
+// - TestOrganizationTagListOptions_ToQuery -> model_methods_coverage_test.go
+// - TestServerRelationshipListOptions_ToQuery -> model_methods_coverage_test.go
+// - TestTagHistoryQueryParams_ToQuery -> tags_test.go
+// - TestTagDetectionRuleListOptions_ToQuery -> tags_test.go
+
+// ============================================================================
+// JSON Validation Edge Cases
+// ============================================================================
+
+// TestJSON_MalformedInput tests unmarshaling malformed JSON
+func TestJSON_MalformedInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		model interface{}
+	}{
+		{"missing closing brace", `{"name":"test"`, &Organization{}},
+		{"invalid comma", `{"name":"test",,}`, &User{}},
+		{"trailing comma", `{"name":"test",}`, &Server{}},
+		{"single quotes", `{'name':'test'}`, &Organization{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := json.Unmarshal([]byte(tt.input), tt.model)
+			if err == nil {
+				t.Error("expected error for malformed JSON, got nil")
+			}
+		})
+	}
+}
+
+// TestJSON_TypeMismatches tests type mismatch handling
+func TestJSON_TypeMismatches(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		model interface{}
+	}{
+		{
+			name:  "string for int",
+			input: `{"id":"not-a-number","name":"test"}`,
+			model: &Organization{},
+		},
+		{
+			name:  "int for string",
+			input: `{"uuid":12345,"name":"test"}`,
+			model: &Organization{},
+		},
+		{
+			name:  "string for bool",
+			input: `{"alerts_enabled":"yes"}`,
+			model: &Organization{},
+		},
+		{
+			name:  "int for bool",
+			input: `{"is_active":1}`,
+			model: &User{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := json.Unmarshal([]byte(tt.input), tt.model)
+			if err == nil {
+				t.Error("expected error for type mismatch, got nil")
+			}
+		})
+	}
+}
+
+// TestJSON_EmptyAndNullArrays tests empty vs nil array handling
+func TestJSON_EmptyAndNullArrays(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectNil   bool
+		expectEmpty bool
+	}{
+		{
+			name:        "null array",
+			input:       `{"uuid":"test","name":"Test","tags":null}`,
+			expectNil:   true,
+			expectEmpty: false,
+		},
+		{
+			name:        "empty array",
+			input:       `{"uuid":"test","name":"Test","tags":[]}`,
+			expectNil:   false,
+			expectEmpty: true,
+		},
+		{
+			name:        "missing array field",
+			input:       `{"uuid":"test","name":"Test"}`,
+			expectNil:   true,
+			expectEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var org Organization
+			if err := json.Unmarshal([]byte(tt.input), &org); err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+
+			if tt.expectNil {
+				if org.Tags != nil {
+					t.Errorf("expected nil Tags, got %v", org.Tags)
+				}
+			}
+
+			if tt.expectEmpty {
+				if org.Tags == nil {
+					t.Error("expected non-nil empty Tags, got nil")
+				} else if len(org.Tags) != 0 {
+					t.Errorf("expected empty Tags, got length %d", len(org.Tags))
+				}
+			}
+		})
+	}
+}
+
+// TestJSON_EmptyAndNullMaps tests empty vs nil map handling
+func TestJSON_EmptyAndNullMaps(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string
+		expectNil   bool
+		expectEmpty bool
+	}{
+		{
+			name:        "null map",
+			input:       `{"uuid":"test","name":"Test","settings":null}`,
+			expectNil:   true,
+			expectEmpty: false,
+		},
+		{
+			name:        "empty map",
+			input:       `{"uuid":"test","name":"Test","settings":{}}`,
+			expectNil:   false,
+			expectEmpty: true,
+		},
+		{
+			name:        "missing map field",
+			input:       `{"uuid":"test","name":"Test"}`,
+			expectNil:   true,
+			expectEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var org Organization
+			if err := json.Unmarshal([]byte(tt.input), &org); err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+
+			if tt.expectNil {
+				if org.Settings != nil {
+					t.Errorf("expected nil Settings, got %v", org.Settings)
+				}
+			}
+
+			if tt.expectEmpty {
+				if org.Settings == nil {
+					t.Error("expected non-nil empty Settings, got nil")
+				} else if len(org.Settings) != 0 {
+					t.Errorf("expected empty Settings, got length %d", len(org.Settings))
+				}
+			}
+		})
+	}
+}
+
+// TestJSON_NegativeValuesForUint tests negative values for uint fields
+func TestJSON_NegativeValuesForUint(t *testing.T) {
+	input := `{"uuid":"test","name":"Test","max_servers":-10}`
+
+	var org Organization
+	err := json.Unmarshal([]byte(input), &org)
+	if err == nil {
+		t.Error("expected error for negative value in uint field, got nil")
+	}
+}
+
+// ============================================================================
+// Additional Domain Model Tests
+// ============================================================================
+
+// TestProbe_JSON tests Probe model serialization
+func TestProbe_JSON(t *testing.T) {
+	now := CustomTime{Time: time.Now().UTC()}
+	probe := Probe{
+		GormModel: GormModel{
+			ID:        1,
+			CreatedAt: &now,
+		},
+		ProbeUUID:      "probe-uuid-123",
+		Name:           "HTTP Health Check",
+		Description:    "Checks HTTP endpoint health",
+		Type:           "http",
+		Target:         "https://example.com",
+		Interval:       60,
+		Timeout:        10,
+		Enabled:        true,
+		OrganizationID: 1,
+		Regions:        []string{"us-east-1", "us-west-2"},
+	}
+
+	data, err := json.Marshal(probe)
+	if err != nil {
+		t.Fatalf("failed to marshal Probe: %v", err)
+	}
+
+	var decoded Probe
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal Probe: %v", err)
+	}
+
+	if decoded.ProbeUUID != probe.ProbeUUID {
+		t.Errorf("ProbeUUID = %s, want %s", decoded.ProbeUUID, probe.ProbeUUID)
+	}
+	if decoded.Name != probe.Name {
+		t.Errorf("Name = %s, want %s", decoded.Name, probe.Name)
+	}
+	if decoded.Type != probe.Type {
+		t.Errorf("Type = %s, want %s", decoded.Type, probe.Type)
+	}
+	if decoded.Interval != probe.Interval {
+		t.Errorf("Interval = %d, want %d", decoded.Interval, probe.Interval)
+	}
+}
+
+// TestCPUMetrics_JSON tests CPUMetrics model serialization
+func TestCPUMetrics_JSON(t *testing.T) {
+	metrics := CPUMetrics{
+		UsagePercent:  75.5,
+		UserPercent:   45.2,
+		SystemPercent: 30.3,
+		IdlePercent:   24.5,
+		IOWaitPercent: 5.0,
+		StealPercent:  0.0,
+		LoadAverage1:  1.5,
+		LoadAverage5:  2.0,
+		LoadAverage15: 2.5,
+		CoreCount:     8,
+		ThreadCount:   16,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal CPUMetrics: %v", err)
+	}
+
+	var decoded CPUMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal CPUMetrics: %v", err)
+	}
+
+	if decoded.UsagePercent != metrics.UsagePercent {
+		t.Errorf("UsagePercent = %f, want %f", decoded.UsagePercent, metrics.UsagePercent)
+	}
+	if decoded.CoreCount != metrics.CoreCount {
+		t.Errorf("CoreCount = %d, want %d", decoded.CoreCount, metrics.CoreCount)
+	}
+}
+
+// TestMemoryMetrics_JSON tests MemoryMetrics model serialization
+func TestMemoryMetrics_JSON(t *testing.T) {
+	metrics := MemoryMetrics{
+		TotalBytes:       34359738368,
+		UsedBytes:        17179869184,
+		FreeBytes:        17179869184,
+		UsagePercent:     50.0,
+		AvailableBytes:   20000000000,
+		BuffersBytes:     1000000000,
+		CachedBytes:      2000000000,
+		SwapTotalBytes:   8589934592,
+		SwapUsedBytes:    4294967296,
+		SwapFreeBytes:    4294967296,
+		SwapUsagePercent: 50.0,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal MemoryMetrics: %v", err)
+	}
+
+	var decoded MemoryMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal MemoryMetrics: %v", err)
+	}
+
+	if decoded.TotalBytes != metrics.TotalBytes {
+		t.Errorf("TotalBytes = %d, want %d", decoded.TotalBytes, metrics.TotalBytes)
+	}
+	if decoded.UsagePercent != metrics.UsagePercent {
+		t.Errorf("UsagePercent = %f, want %f", decoded.UsagePercent, metrics.UsagePercent)
+	}
+}
+
+// TestDiskMetrics_JSON tests DiskMetrics model serialization
+func TestDiskMetrics_JSON(t *testing.T) {
+	metrics := DiskMetrics{
+		Device:             "/dev/sda1",
+		Mountpoint:         "/",
+		Filesystem:         "ext4",
+		TotalBytes:         1099511627776,
+		UsedBytes:          549755813888,
+		FreeBytes:          549755813888,
+		UsagePercent:       50.0,
+		InodesTotal:        65536000,
+		InodesUsed:         32768000,
+		InodesFree:         32768000,
+		InodesUsagePercent: 50.0,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal DiskMetrics: %v", err)
+	}
+
+	var decoded DiskMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal DiskMetrics: %v", err)
+	}
+
+	if decoded.Device != metrics.Device {
+		t.Errorf("Device = %s, want %s", decoded.Device, metrics.Device)
+	}
+	if decoded.Filesystem != metrics.Filesystem {
+		t.Errorf("Filesystem = %s, want %s", decoded.Filesystem, metrics.Filesystem)
+	}
+	if decoded.UsagePercent != metrics.UsagePercent {
+		t.Errorf("UsagePercent = %f, want %f", decoded.UsagePercent, metrics.UsagePercent)
+	}
+}
+
+// TestNetworkMetrics_JSON tests NetworkMetrics model serialization
+func TestNetworkMetrics_JSON(t *testing.T) {
+	metrics := NetworkMetrics{
+		Interface:   "eth0",
+		BytesSent:   1073741824,
+		BytesRecv:   2147483648,
+		PacketsSent: 1000000,
+		PacketsRecv: 2000000,
+		ErrorsIn:    100,
+		ErrorsOut:   50,
+		DropsIn:     10,
+		DropsOut:    5,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal NetworkMetrics: %v", err)
+	}
+
+	var decoded NetworkMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal NetworkMetrics: %v", err)
+	}
+
+	if decoded.Interface != metrics.Interface {
+		t.Errorf("Interface = %s, want %s", decoded.Interface, metrics.Interface)
+	}
+	if decoded.BytesSent != metrics.BytesSent {
+		t.Errorf("BytesSent = %d, want %d", decoded.BytesSent, metrics.BytesSent)
+	}
+}
+
+// TestProcessMetrics_JSON tests ProcessMetrics model serialization
+func TestProcessMetrics_JSON(t *testing.T) {
+	metrics := ProcessMetrics{
+		PID:           1234,
+		Name:          "nginx",
+		Username:      "www-data",
+		State:         "running",
+		CPUPercent:    15.5,
+		MemoryPercent: 5.2,
+		MemoryRSS:     104857600,
+		MemoryVMS:     209715200,
+		CreateTime:    1234567890,
+		OpenFiles:     100,
+		NumThreads:    4,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal ProcessMetrics: %v", err)
+	}
+
+	var decoded ProcessMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal ProcessMetrics: %v", err)
+	}
+
+	if decoded.PID != metrics.PID {
+		t.Errorf("PID = %d, want %d", decoded.PID, metrics.PID)
+	}
+	if decoded.Name != metrics.Name {
+		t.Errorf("Name = %s, want %s", decoded.Name, metrics.Name)
+	}
+}
+
+// TestTemperatureMetrics_JSON tests TemperatureMetrics model serialization
+func TestTemperatureMetrics_JSON(t *testing.T) {
+	metrics := TemperatureMetrics{
+		Sensors: []TemperatureSensorData{
+			{
+				SensorID:      "cpu_sensor_1",
+				SensorName:    "CPU",
+				Temperature:   65.5,
+				Status:        "ok",
+				Type:          "cpu",
+				UpperWarning:  80.0,
+				UpperCritical: 90.0,
+			},
+			{
+				SensorID:      "gpu_sensor_1",
+				SensorName:    "GPU",
+				Temperature:   70.2,
+				Status:        "ok",
+				Type:          "gpu",
+				UpperWarning:  85.0,
+				UpperCritical: 95.0,
+			},
+		},
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal TemperatureMetrics: %v", err)
+	}
+
+	var decoded TemperatureMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal TemperatureMetrics: %v", err)
+	}
+
+	if len(decoded.Sensors) != len(metrics.Sensors) {
+		t.Errorf("Sensors length = %d, want %d", len(decoded.Sensors), len(metrics.Sensors))
+	}
+	if len(decoded.Sensors) > 0 {
+		if decoded.Sensors[0].SensorName != metrics.Sensors[0].SensorName {
+			t.Errorf("Sensors[0].SensorName = %s, want %s", decoded.Sensors[0].SensorName, metrics.Sensors[0].SensorName)
+		}
+	}
+}
+
+// TestPowerMetrics_JSON tests PowerMetrics model serialization
+func TestPowerMetrics_JSON(t *testing.T) {
+	metrics := PowerMetrics{
+		PowerSupplies: []PowerSupplyMetrics{
+			{
+				ID:            "psu1",
+				Name:          "PSU1",
+				Status:        "ok",
+				PowerWatts:    450.5,
+				MaxPowerWatts: 650.0,
+				Voltage:       12.0,
+				Current:       37.5,
+				Efficiency:    92.5,
+				Temperature:   45.0,
+			},
+		},
+		TotalPowerW: 450.5,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal PowerMetrics: %v", err)
+	}
+
+	var decoded PowerMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal PowerMetrics: %v", err)
+	}
+
+	if decoded.TotalPowerW != metrics.TotalPowerW {
+		t.Errorf("TotalPowerW = %f, want %f", decoded.TotalPowerW, metrics.TotalPowerW)
+	}
+	if len(decoded.PowerSupplies) != len(metrics.PowerSupplies) {
+		t.Errorf("PowerSupplies length = %d, want %d", len(decoded.PowerSupplies), len(metrics.PowerSupplies))
+	}
+}
+
+// TestServiceMetrics_JSON tests ServiceMetrics model serialization
+func TestServiceMetrics_JSON(t *testing.T) {
+	metrics := ServiceMetrics{
+		ServiceName:  "nginx",
+		Timestamp:    time.Now().UTC(),
+		CPUPercent:   25.5,
+		MemoryRSS:    524288000,
+		ProcessCount: 3,
+		ThreadCount:  8,
+	}
+
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatalf("failed to marshal ServiceMetrics: %v", err)
+	}
+
+	var decoded ServiceMetrics
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal ServiceMetrics: %v", err)
+	}
+
+	if decoded.ServiceName != metrics.ServiceName {
+		t.Errorf("ServiceName = %s, want %s", decoded.ServiceName, metrics.ServiceName)
+	}
+	if decoded.CPUPercent != metrics.CPUPercent {
+		t.Errorf("CPUPercent = %f, want %f", decoded.CPUPercent, metrics.CPUPercent)
+	}
+}
+
+// TestIncident_JSON tests Incident model serialization
+func TestIncident_JSON(t *testing.T) {
+	now := CustomTime{Time: time.Now().UTC()}
+	incident := Incident{
+		GormModel: GormModel{
+			ID:        1,
+			CreatedAt: &now,
+		},
+		Title:          "Service Outage",
+		Description:    "Database connection failed",
+		Severity:       "critical",
+		Status:         "investigating",
+		Source:         "monitoring",
+		OrganizationID: 1,
+		StartedAt:      &now,
+	}
+
+	data, err := json.Marshal(incident)
+	if err != nil {
+		t.Fatalf("failed to marshal Incident: %v", err)
+	}
+
+	var decoded Incident
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal Incident: %v", err)
+	}
+
+	if decoded.Title != incident.Title {
+		t.Errorf("Title = %s, want %s", decoded.Title, incident.Title)
+	}
+	if decoded.Severity != incident.Severity {
+		t.Errorf("Severity = %s, want %s", decoded.Severity, incident.Severity)
+	}
+}
+
+// TestHardwareDetails_JSON tests HardwareDetails model serialization with nested structures
+func TestHardwareDetails_JSON(t *testing.T) {
+	hardware := HardwareDetails{
+		CPU: []ServerCPUInfo{
+			{
+				ModelName:     "Intel Xeon E5",
+				PhysicalCores: 8,
+				LogicalCores:  16,
+				BaseSpeed:     2400.0,
+			},
+		},
+		Memory: &ServerMemoryInfo{
+			TotalSize:  32768,
+			MemoryType: "DDR4",
+			Speed:      2400,
+		},
+		Disks: []ServerDiskInfo{
+			{
+				Device: "/dev/sda",
+				Size:   512000,
+				Type:   "SSD",
+			},
+		},
+		Network: []ServerNetworkInterfaceInfo{
+			{
+				Name:      "eth0",
+				SpeedMbps: 1000,
+			},
+		},
+	}
+
+	data, err := json.Marshal(hardware)
+	if err != nil {
+		t.Fatalf("failed to marshal HardwareDetails: %v", err)
+	}
+
+	var decoded HardwareDetails
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("failed to unmarshal HardwareDetails: %v", err)
+	}
+
+	if len(decoded.CPU) != len(hardware.CPU) {
+		t.Errorf("CPU count = %d, want %d", len(decoded.CPU), len(hardware.CPU))
+	}
+	if decoded.Memory == nil {
+		t.Fatal("Memory should not be nil")
+	}
+	if decoded.Memory.TotalSize != hardware.Memory.TotalSize {
+		t.Errorf("Memory.TotalSize = %d, want %d", decoded.Memory.TotalSize, hardware.Memory.TotalSize)
+	}
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
