@@ -361,10 +361,11 @@ func (s *APIKeysService) Get(ctx context.Context, id string) (*APIKey, error) {
 
 // List retrieves a list of API keys (legacy interface)
 func (s *APIKeysService) List(ctx context.Context, opts *ListOptions) ([]*APIKey, *PaginationMeta, error) {
-	unifiedOpts := &ListUnifiedAPIKeysOptions{
-		ListOptions: *opts,
+	unifiedOpts := &ListUnifiedAPIKeysOptions{}
+	if opts != nil {
+		unifiedOpts.ListOptions = *opts
 	}
-	
+
 	return s.ListUnified(ctx, unifiedOpts)
 }
 

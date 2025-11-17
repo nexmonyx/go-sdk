@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1446,7 +1447,7 @@ func TestMetricsService_Context_Cancellation(t *testing.T) {
 
 	metrics := []*Metric{
 		{
-			ServerUUID: "test-uuid",
+			// ServerUUID parameter provided to Submit() method
 			Name:       "cpu.usage",
 			Value:      50.0,
 			Timestamp:  time.Now(),
@@ -1479,7 +1480,7 @@ func TestMetricsService_API_Key_Authentication(t *testing.T) {
 
 	metrics := []*Metric{
 		{
-			ServerUUID: "test-uuid",
+			// ServerUUID parameter provided to Submit() method
 			Name:       "cpu.usage",
 			Value:      50.0,
 			Timestamp:  time.Now(),
@@ -1600,7 +1601,7 @@ func TestMetricsService_Edge_Cases(t *testing.T) {
 		metrics := make([]*Metric, 1000)
 		for i := 0; i < 1000; i++ {
 			metrics[i] = &Metric{
-				ServerUUID: "test-uuid",
+				// ServerUUID parameter provided to Submit() method
 				Name:       "cpu.usage",
 				Value:      float64(i % 100),
 				Timestamp:  time.Now(),
@@ -2204,6 +2205,120 @@ func TestMetricsService_SubmitComprehensiveToTimescale(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.NotNil(t, lastRequest)
+			}
+		})
+	}
+}
+
+// TestMetricsService_NetworkErrors tests handling of network-level errors
+func TestMetricsService_NetworkErrors(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupServer   func() string
+		setupContext  func() context.Context
+		operation     string
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "connection refused - server not listening",
+			setupServer: func() string {
+				return "http://127.0.0.1:9999"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "get",
+			expectError:   true,
+			errorContains: "connection refused",
+		},
+		{
+			name: "connection timeout - unreachable host",
+			setupServer: func() string {
+				return "http://192.0.2.1:8080"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				return ctx
+			},
+			operation:     "submit",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+		{
+			name: "DNS failure - invalid hostname",
+			setupServer: func() string {
+				return "http://this-domain-does-not-exist-12345.invalid"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "query",
+			expectError:   true,
+			errorContains: "no such host",
+		},
+		{
+			name: "read timeout - server accepts but doesn't respond",
+			setupServer: func() string {
+				listener, _ := net.Listen("tcp", "127.0.0.1:0")
+				go func() {
+					defer listener.Close()
+					conn, err := listener.Accept()
+					if err != nil {
+						return
+					}
+					time.Sleep(5 * time.Second)
+					conn.Close()
+				}()
+				return "http://" + listener.Addr().String()
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				return ctx
+			},
+			operation:     "aggregate",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serverURL := tt.setupServer()
+			ctx := tt.setupContext()
+
+			client, err := NewClient(&Config{
+				BaseURL:    serverURL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+				Timeout:    2 * time.Second,
+			})
+			require.NoError(t, err)
+
+			var apiErr error
+			switch tt.operation {
+			case "get":
+				_, _, apiErr = client.Metrics.Get(ctx, "test-uuid", nil)
+			case "submit":
+				metrics := []*Metric{{Name: "test"}}
+				apiErr = client.Metrics.Submit(ctx, "test-uuid", metrics)
+			case "query":
+				query := &MetricsQuery{ServerUUIDs: []string{"test-uuid"}}
+				_, apiErr = client.Metrics.Query(ctx, query)
+			case "aggregate":
+				agg := &MetricsAggregation{Function: "avg"}
+				_, apiErr = client.Metrics.GetAggregated(ctx, agg)
+			}
+
+			if tt.expectError {
+				assert.Error(t, apiErr)
+				if tt.errorContains != "" {
+					assert.Contains(t, apiErr.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, apiErr)
 			}
 		})
 	}

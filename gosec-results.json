@@ -11,16 +11,17 @@
 			"rule_id": "G304",
 			"details": "Potential file inclusion via variable",
 			"file": "/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tests/integration/helpers.go",
-			"code": "152: \n153: \tdata, err := os.ReadFile(fixturePath)\n154: \trequire.NoError(t, err, \"Failed to read fixture file %s\", filename)\n",
-			"line": "153",
+			"code": "151: \n152: \tdata, err := os.ReadFile(fixturePath)\n153: \trequire.NoError(t, err, \"Failed to read fixture file %s\", filename)\n",
+			"line": "152",
 			"column": "15",
 			"nosec": false,
-			"suppressions": null
+			"suppressions": null,
+			"autofix": "Consider using os.Root to scope file access under a fixed root (Go \u003e=1.24). Prefer root.Open/root.Stat over os.Open/os.Stat to prevent directory traversal."
 		}
 	],
 	"Stats": {
-		"files": 231,
-		"lines": 83326,
+		"files": 243,
+		"lines": 91637,
 		"nosec": 3,
 		"found": 1
 	},

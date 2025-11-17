@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -545,3 +546,116 @@ func TestHealthService_DeleteHealthCheckComprehensive(t *testing.T) {
 		})
 	}
 }
+
+// TestHealthService_NetworkErrors tests handling of network-level errors
+func TestHealthService_NetworkErrors(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupServer   func() string
+		setupContext  func() context.Context
+		operation     string
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "connection refused - server not listening",
+			setupServer: func() string {
+				return "http://127.0.0.1:9999"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "list",
+			expectError:   true,
+			errorContains: "connection refused",
+		},
+		{
+			name: "connection timeout - unreachable host",
+			setupServer: func() string {
+				return "http://192.0.2.1:8080"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				return ctx
+			},
+			operation:     "get",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+		{
+			name: "DNS failure - invalid hostname",
+			setupServer: func() string {
+				return "http://this-domain-does-not-exist-12345.invalid"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "check",
+			expectError:   true,
+			errorContains: "no such host",
+		},
+		{
+			name: "read timeout - server accepts but doesn't respond",
+			setupServer: func() string {
+				listener, _ := net.Listen("tcp", "127.0.0.1:0")
+				go func() {
+					defer listener.Close()
+					conn, err := listener.Accept()
+					if err != nil {
+						return
+					}
+					time.Sleep(5 * time.Second)
+					conn.Close()
+				}()
+				return "http://" + listener.Addr().String()
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				return ctx
+			},
+			operation:     "update",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serverURL := tt.setupServer()
+			ctx := tt.setupContext()
+
+			client, err := NewClient(&Config{
+				BaseURL:    serverURL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0,
+				Timeout:    2 * time.Second,
+			})
+			require.NoError(t, err)
+
+			var apiErr error
+			switch tt.operation {
+			case "list":
+				_, _, apiErr = client.Health.List(ctx, nil)
+			case "get":
+				_, apiErr = client.Health.Get(ctx, 1)
+			case "check":
+				_, apiErr = client.Health.GetHealth(ctx)
+			case "update":
+				req := &UpdateHealthCheckRequest{IsEnabled: boolPtr(true)}
+				_, apiErr = client.Health.Update(ctx, 1, req)
+			}
+
+			if tt.expectError {
+				assert.Error(t, apiErr)
+				if tt.errorContains != "" {
+					assert.Contains(t, apiErr.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, apiErr)
+			}
+		})
+	}
+}
+

@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -664,6 +665,125 @@ func TestAlertsService_DeleteComprehensive(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestAlertsService_NetworkErrors tests handling of network-level errors
+func TestAlertsService_NetworkErrors(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupServer   func() string
+		setupContext  func() context.Context
+		operation     string
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "connection refused - server not listening",
+			setupServer: func() string {
+				// Return URL on port that nothing is listening on
+				return "http://127.0.0.1:9999"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "list",
+			expectError:   true,
+			errorContains: "connection refused",
+		},
+		{
+			name: "connection timeout - unreachable host",
+			setupServer: func() string {
+				// Use non-routable IP (RFC 5737 TEST-NET-1)
+				return "http://192.0.2.1:8080"
+			},
+			setupContext: func() context.Context {
+				// Very short timeout to fail fast
+				ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
+				return ctx
+			},
+			operation:     "get",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+		{
+			name: "DNS failure - invalid hostname",
+			setupServer: func() string {
+				// Use guaranteed non-existent domain
+				return "http://this-domain-does-not-exist-12345.invalid"
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+				return ctx
+			},
+			operation:     "create",
+			expectError:   true,
+			errorContains: "no such host",
+		},
+		{
+			name: "read timeout - server accepts but doesn't respond",
+			setupServer: func() string {
+				// Create server that accepts connections but never responds
+				listener, _ := net.Listen("tcp", "127.0.0.1:0")
+				go func() {
+					defer listener.Close()
+					conn, err := listener.Accept()
+					if err != nil {
+						return
+					}
+					// Accept connection but never read/write - just hold it open
+					time.Sleep(5 * time.Second)
+					conn.Close()
+				}()
+				return "http://" + listener.Addr().String()
+			},
+			setupContext: func() context.Context {
+				ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				return ctx
+			},
+			operation:     "update",
+			expectError:   true,
+			errorContains: "context deadline exceeded",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serverURL := tt.setupServer()
+			ctx := tt.setupContext()
+
+			client, err := NewClient(&Config{
+				BaseURL:    serverURL,
+				Auth:       AuthConfig{Token: "test-token"},
+				RetryCount: 0, // Critical: prevent retry delays
+				Timeout:    2 * time.Second,
+			})
+			require.NoError(t, err)
+
+			var apiErr error
+			switch tt.operation {
+			case "list":
+				_, _, apiErr = client.Alerts.List(ctx, nil)
+			case "get":
+				_, apiErr = client.Alerts.Get(ctx, "alert-uuid")
+			case "create":
+				alert := &Alert{Name: "Test Alert", OrganizationID: 1}
+				_, apiErr = client.Alerts.Create(ctx, alert)
+			case "update":
+				alert := &Alert{Name: "Updated"}
+				_, apiErr = client.Alerts.Update(ctx, "alert-uuid", alert)
+			}
+
+			if tt.expectError {
+				assert.Error(t, apiErr)
+				if tt.errorContains != "" {
+					assert.Contains(t, apiErr.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, apiErr)
 			}
 		})
 	}

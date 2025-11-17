@@ -150,9 +150,9 @@ func NewClient(config *Config) (*Client, error) {
 	if config.Timeout == 0 {
 		config.Timeout = defaultTimeout
 	}
-	if config.RetryCount == 0 {
-		config.RetryCount = 3
-	}
+	// RetryCount: 0 means no retries (explicit choice)
+	// RetryCount: <positive> means that many retries
+	// No default is applied - users must explicitly configure retries if desired
 	if config.RetryWaitTime == 0 {
 		config.RetryWaitTime = 1 * time.Second
 	}

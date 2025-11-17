@@ -266,29 +266,27 @@ func TestServiceMonitoringService_GetServerServices(t *testing.T) {
 			serverID:   "server-001",
 			mockStatus: http.StatusOK,
 			mockResponse: map[string]interface{}{
-				"data": map[string]interface{}{
-					"server_uuid":   "server-001",
-					"last_updated":  time.Now().Format(time.RFC3339),
-					"services": []map[string]interface{}{
-						{
-							"name":      "nginx",
-							"state":     "active",
-							"sub_state": "running",
-							"main_pid":  1234,
-						},
-						{
-							"name":      "mysql",
-							"state":     "active",
-							"sub_state": "running",
-							"main_pid":  5678,
-						},
+				"server_uuid":  "server-001",
+				"last_updated": time.Now().Format(time.RFC3339),
+				"services": []map[string]interface{}{
+					{
+						"name":      "nginx",
+						"state":     "active",
+						"sub_state": "running",
+						"main_pid":  1234,
 					},
-					"summary": map[string]interface{}{
-						"total":    2,
-						"active":   2,
-						"inactive": 0,
-						"failed":   0,
+					{
+						"name":      "mysql",
+						"state":     "active",
+						"sub_state": "running",
+						"main_pid":  5678,
 					},
+				},
+				"summary": map[string]interface{}{
+					"total":    2,
+					"active":   2,
+					"inactive": 0,
+					"failed":   0,
 				},
 			},
 			wantErr:      false,
@@ -307,16 +305,14 @@ func TestServiceMonitoringService_GetServerServices(t *testing.T) {
 			serverID:   "server-789",
 			mockStatus: http.StatusOK,
 			mockResponse: map[string]interface{}{
-				"data": map[string]interface{}{
-					"server_uuid":   "server-789",
-					"last_updated":  time.Now().Format(time.RFC3339),
-					"services":      []interface{}{},
-					"summary": map[string]interface{}{
-						"total":    0,
-						"active":   0,
-						"inactive": 0,
-						"failed":   0,
-					},
+				"server_uuid":  "server-789",
+				"last_updated": time.Now().Format(time.RFC3339),
+				"services":     []interface{}{},
+				"summary": map[string]interface{}{
+					"total":    0,
+					"active":   0,
+					"inactive": 0,
+					"failed":   0,
 				},
 			},
 			wantErr:      false,
@@ -439,24 +435,22 @@ func TestServiceMonitoringService_GetServiceHistory(t *testing.T) {
 			serviceName: "nginx",
 			mockStatus:  http.StatusOK,
 			mockResponse: map[string]interface{}{
-				"data": map[string]interface{}{
-					"server_uuid":   "server-001",
-					"service_name":  "nginx",
-					"history": []map[string]interface{}{
-						{
-							"timestamp":    "2024-10-17T10:00:00Z",
-							"state":        "active",
-							"sub_state":    "running",
-							"cpu_percent":  25.5,
-							"memory_bytes": 1024000,
-						},
-						{
-							"timestamp":    "2024-10-17T11:00:00Z",
-							"state":        "active",
-							"sub_state":    "running",
-							"cpu_percent":  30.2,
-							"memory_bytes": 1124000,
-						},
+				"server_uuid":  "server-001",
+				"service_name": "nginx",
+				"history": []map[string]interface{}{
+					{
+						"timestamp":    "2024-10-17T10:00:00Z",
+						"state":        "active",
+						"sub_state":    "running",
+						"cpu_percent":  25.5,
+						"memory_bytes": 1024000,
+					},
+					{
+						"timestamp":    "2024-10-17T11:00:00Z",
+						"state":        "active",
+						"sub_state":    "running",
+						"cpu_percent":  30.2,
+						"memory_bytes": 1124000,
 					},
 				},
 			},
@@ -477,17 +471,15 @@ func TestServiceMonitoringService_GetServiceHistory(t *testing.T) {
 			serviceName: "mysql",
 			mockStatus:  http.StatusOK,
 			mockResponse: map[string]interface{}{
-				"data": map[string]interface{}{
-					"server_uuid":   "server-002",
-					"service_name":  "mysql",
-					"history": []map[string]interface{}{
-						{
-							"timestamp":    "2024-10-16T00:00:00Z",
-							"state":        "active",
-							"sub_state":    "running",
-							"cpu_percent":  15.0,
-							"memory_bytes": 2048000,
-						},
+				"server_uuid":  "server-002",
+				"service_name": "mysql",
+				"history": []map[string]interface{}{
+					{
+						"timestamp":    "2024-10-16T00:00:00Z",
+						"state":        "active",
+						"sub_state":    "running",
+						"cpu_percent":  15.0,
+						"memory_bytes": 2048000,
 					},
 				},
 			},
@@ -738,18 +730,16 @@ func TestServiceMonitoringService_GetServiceLogs(t *testing.T) {
 			serverID:    "server-001",
 			serviceName: "nginx",
 			mockStatus:  http.StatusOK,
-			mockResponse: map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"timestamp": "2024-10-17T10:00:00Z",
-						"level":     "info",
-						"message":   "Server started",
-					},
-					{
-						"timestamp": "2024-10-17T11:00:00Z",
-						"level":     "warning",
-						"message":   "Memory usage high",
-					},
+			mockResponse: []map[string]interface{}{
+				{
+					"timestamp": "2024-10-17T10:00:00Z",
+					"level":     "info",
+					"message":   "Server started",
+				},
+				{
+					"timestamp": "2024-10-17T11:00:00Z",
+					"level":     "warning",
+					"message":   "Memory usage high",
 				},
 			},
 			wantErr:     false,
@@ -766,13 +756,11 @@ func TestServiceMonitoringService_GetServiceLogs(t *testing.T) {
 			serverID:    "server-002",
 			serviceName: "mysql",
 			mockStatus:  http.StatusOK,
-			mockResponse: map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"timestamp": "2024-10-17T10:30:00Z",
-						"level":     "error",
-						"message":   "Connection timeout",
-					},
+			mockResponse: []map[string]interface{}{
+				{
+					"timestamp": "2024-10-17T10:30:00Z",
+					"level":     "error",
+					"message":   "Connection timeout",
 				},
 			},
 			wantErr:      false,
@@ -898,20 +886,18 @@ func TestServiceMonitoringService_GetFailedServices(t *testing.T) {
 			name:           "success - get failed services",
 			organizationID: "org-001",
 			mockStatus:     http.StatusOK,
-			mockResponse: map[string]interface{}{
-				"data": []map[string]interface{}{
-					{
-						"name":      "nginx",
-						"state":     "failed",
-						"sub_state": "dead",
-						"main_pid":  0,
-					},
-					{
-						"name":      "redis",
-						"state":     "failed",
-						"sub_state": "dead",
-						"main_pid":  0,
-					},
+			mockResponse: []map[string]interface{}{
+				{
+					"name":      "nginx",
+					"state":     "failed",
+					"sub_state": "dead",
+					"main_pid":  0,
+				},
+				{
+					"name":      "redis",
+					"state":     "failed",
+					"sub_state": "dead",
+					"main_pid":  0,
 				},
 			},
 			wantErr:      false,
@@ -927,11 +913,9 @@ func TestServiceMonitoringService_GetFailedServices(t *testing.T) {
 			name:           "success - empty list",
 			organizationID: "org-002",
 			mockStatus:     http.StatusOK,
-			mockResponse: map[string]interface{}{
-				"data": []interface{}{},
-			},
-			wantErr:      false,
-			wantServices: 0,
+			mockResponse:   []interface{}{},
+			wantErr:        false,
+			wantServices:   0,
 			checkFunc: func(t *testing.T, services []*ServiceMonitoringInfo) {
 				assert.Equal(t, 0, len(services))
 			},
