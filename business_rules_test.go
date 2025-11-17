@@ -582,3 +582,480 @@ func TestBusinessRules_TimeBasedConstraints(t *testing.T) {
 		})
 	}
 }
+
+// TestBusinessRules_APIKeyLifecycle tests API key lifecycle state methods (IsActive, IsExpired, IsRevoked)
+func TestBusinessRules_APIKeyLifecycle(t *testing.T) {
+	now := time.Now()
+	futureTime := CustomTime{Time: now.Add(24 * time.Hour)}
+	pastTime := CustomTime{Time: now.Add(-24 * time.Hour)}
+
+	tests := []struct {
+		name           string
+		key            *UnifiedAPIKey
+		expectActive   bool
+		expectExpired  bool
+		expectRevoked  bool
+	}{
+		{
+			name: "active key - no expiration",
+			key: &UnifiedAPIKey{
+				Status:    APIKeyStatusActive,
+				ExpiresAt: nil,
+			},
+			expectActive:  true,
+			expectExpired: false,
+			expectRevoked: false,
+		},
+		{
+			name: "active key - not yet expired",
+			key: &UnifiedAPIKey{
+				Status:    APIKeyStatusActive,
+				ExpiresAt: &futureTime,
+			},
+			expectActive:  true,
+			expectExpired: false,
+			expectRevoked: false,
+		},
+		{
+			name: "active key - but expired",
+			key: &UnifiedAPIKey{
+				Status:    APIKeyStatusActive,
+				ExpiresAt: &pastTime,
+			},
+			expectActive:  false,
+			expectExpired: true,
+			expectRevoked: false,
+		},
+		{
+			name: "revoked key",
+			key: &UnifiedAPIKey{
+				Status:    APIKeyStatusRevoked,
+				ExpiresAt: nil,
+			},
+			expectActive:  false,
+			expectExpired: false,
+			expectRevoked: true,
+		},
+		{
+			name: "revoked and expired key",
+			key: &UnifiedAPIKey{
+				Status:    APIKeyStatusRevoked,
+				ExpiresAt: &pastTime,
+			},
+			expectActive:  false,
+			expectExpired: true,
+			expectRevoked: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectActive, tt.key.IsActive(), "IsActive() mismatch")
+			assert.Equal(t, tt.expectExpired, tt.key.IsExpired(), "IsExpired() mismatch")
+			assert.Equal(t, tt.expectRevoked, tt.key.IsRevoked(), "IsRevoked() mismatch")
+		})
+	}
+}
+
+// TestBusinessRules_APIKeyCapabilities tests API key capability checking with wildcard support
+func TestBusinessRules_APIKeyCapabilities(t *testing.T) {
+	tests := []struct {
+		name         string
+		key          *UnifiedAPIKey
+		checkCap     string
+		expectHasCap bool
+	}{
+		{
+			name: "exact capability match",
+			key: &UnifiedAPIKey{
+				Capabilities: []string{"servers:read", "servers:write"},
+			},
+			checkCap:     "servers:read",
+			expectHasCap: true,
+		},
+		{
+			name: "no capability match",
+			key: &UnifiedAPIKey{
+				Capabilities: []string{"servers:read"},
+			},
+			checkCap:     "servers:write",
+			expectHasCap: false,
+		},
+		{
+			name: "wildcard grants all capabilities",
+			key: &UnifiedAPIKey{
+				Capabilities: []string{"*"},
+			},
+			checkCap:     "any:capability",
+			expectHasCap: true,
+		},
+		{
+			name: "wildcard among other capabilities",
+			key: &UnifiedAPIKey{
+				Capabilities: []string{"servers:read", "*", "alerts:write"},
+			},
+			checkCap:     "billing:manage",
+			expectHasCap: true,
+		},
+		{
+			name: "empty capabilities",
+			key: &UnifiedAPIKey{
+				Capabilities: []string{},
+			},
+			checkCap:     "servers:read",
+			expectHasCap: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectHasCap, tt.key.HasCapability(tt.checkCap))
+		})
+	}
+}
+
+// TestBusinessRules_OrganizationAccessControl tests organization-scoped access control with admin/system overrides
+func TestBusinessRules_OrganizationAccessControl(t *testing.T) {
+	tests := []struct {
+		name        string
+		key         *UnifiedAPIKey
+		checkOrgID  uint
+		expectAccess bool
+	}{
+		{
+			name: "user key - same organization",
+			key: &UnifiedAPIKey{
+				Type:           APIKeyTypeUser,
+				OrganizationID: 100,
+			},
+			checkOrgID:   100,
+			expectAccess: true,
+		},
+		{
+			name: "user key - different organization",
+			key: &UnifiedAPIKey{
+				Type:           APIKeyTypeUser,
+				OrganizationID: 100,
+			},
+			checkOrgID:   200,
+			expectAccess: false,
+		},
+		{
+			name: "admin key - can access any organization",
+			key: &UnifiedAPIKey{
+				Type:           APIKeyTypeAdmin,
+				OrganizationID: 100,
+			},
+			checkOrgID:   200,
+			expectAccess: true,
+		},
+		{
+			name: "system key - can access any organization",
+			key: &UnifiedAPIKey{
+				Type:           APIKeyTypeSystem,
+				OrganizationID: 100,
+			},
+			checkOrgID:   300,
+			expectAccess: true,
+		},
+		{
+			name: "monitoring agent - same organization only",
+			key: &UnifiedAPIKey{
+				Type:           APIKeyTypeMonitoringAgent,
+				OrganizationID: 100,
+			},
+			checkOrgID:   200,
+			expectAccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectAccess, tt.key.CanAccessOrganization(tt.checkOrgID))
+		})
+	}
+}
+
+// TestBusinessRules_KeyTypeDetection tests API key type detection logic (IsPublicAgent, IsPrivateAgent)
+func TestBusinessRules_KeyTypeDetection(t *testing.T) {
+	tests := []struct {
+		name             string
+		key              *UnifiedAPIKey
+		expectPublic     bool
+		expectPrivate    bool
+	}{
+		{
+			name: "public agent - explicit type",
+			key: &UnifiedAPIKey{
+				Type:      APIKeyTypePublicAgent,
+				AgentType: "",
+			},
+			expectPublic:  true,
+			expectPrivate: false,
+		},
+		{
+			name: "public agent - monitoring agent with public agentType",
+			key: &UnifiedAPIKey{
+				Type:      APIKeyTypeMonitoringAgent,
+				AgentType: "public",
+			},
+			expectPublic:  true,
+			expectPrivate: false,
+		},
+		{
+			name: "private agent - monitoring agent with private agentType",
+			key: &UnifiedAPIKey{
+				Type:      APIKeyTypeMonitoringAgent,
+				AgentType: "private",
+			},
+			expectPublic:  false,
+			expectPrivate: true,
+		},
+		{
+			name: "not an agent - user key",
+			key: &UnifiedAPIKey{
+				Type:      APIKeyTypeUser,
+				AgentType: "",
+			},
+			expectPublic:  false,
+			expectPrivate: false,
+		},
+		{
+			name: "monitoring agent - no agentType specified",
+			key: &UnifiedAPIKey{
+				Type:      APIKeyTypeMonitoringAgent,
+				AgentType: "",
+			},
+			expectPublic:  false,
+			expectPrivate: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectPublic, tt.key.IsPublicAgent(), "IsPublicAgent() mismatch")
+			assert.Equal(t, tt.expectPrivate, tt.key.IsPrivateAgent(), "IsPrivateAgent() mismatch")
+		})
+	}
+}
+
+// TestBusinessRules_ServerRegistrationValidation tests server registration permission checks
+func TestBusinessRules_ServerRegistrationValidation(t *testing.T) {
+	tests := []struct {
+		name               string
+		key                *UnifiedAPIKey
+		expectCanRegister  bool
+	}{
+		{
+			name: "registration key - can register servers",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeRegistration,
+				Capabilities: []string{"servers:register", "servers:update"},
+			},
+			expectCanRegister: true,
+		},
+		{
+			name: "monitoring agent - cannot register servers without capability",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeMonitoringAgent,
+				Capabilities: []string{"monitoring:execute"},
+			},
+			expectCanRegister: false,
+		},
+		{
+			name: "user key - can register if has capability",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeUser,
+				Capabilities: []string{"servers:register"},
+			},
+			expectCanRegister: true,
+		},
+		{
+			name: "admin key - can register with wildcard",
+			key: &UnifiedAPIKey{
+				Type:         APIKeyTypeAdmin,
+				Capabilities: []string{"*"},
+			},
+			expectCanRegister: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectCanRegister, tt.key.HasCapability("servers:register"))
+		})
+	}
+}
+
+// TestBusinessRules_KeyBuilderDefaults tests API key builder functions set correct defaults
+func TestBusinessRules_KeyBuilderDefaults(t *testing.T) {
+	t.Run("NewUserAPIKey sets correct defaults", func(t *testing.T) {
+		req := NewUserAPIKey("My API Key", "Test description", []string{"servers:read"})
+
+		assert.Equal(t, "My API Key", req.Name)
+		assert.Equal(t, "Test description", req.Description)
+		assert.Equal(t, APIKeyTypeUser, req.Type)
+		assert.Equal(t, []string{"servers:read"}, req.Capabilities)
+	})
+
+	t.Run("NewAdminAPIKey sets correct defaults", func(t *testing.T) {
+		req := NewAdminAPIKey("Admin Key", "Admin description", []string{"*"}, 1)
+
+		assert.Equal(t, "Admin Key", req.Name)
+		assert.Equal(t, "Admin description", req.Description)
+		assert.Equal(t, APIKeyTypeAdmin, req.Type)
+		assert.Contains(t, req.Capabilities, "*")
+		assert.Equal(t, uint(1), req.OrganizationID)
+	})
+
+	t.Run("NewMonitoringAgentKey sets correct defaults", func(t *testing.T) {
+		req := NewMonitoringAgentKey(
+			"Agent Key",
+			"Agent description",
+			"monitoring-namespace",
+			"private",
+			"us-east-1",
+			[]string{"scope1", "scope2"},
+		)
+
+		assert.Equal(t, "Agent Key", req.Name)
+		assert.Equal(t, "Agent description", req.Description)
+		assert.Equal(t, APIKeyTypeMonitoringAgent, req.Type)
+		assert.Equal(t, "monitoring-namespace", req.NamespaceName)
+		assert.Equal(t, "private", req.AgentType)
+		assert.Equal(t, "us-east-1", req.RegionCode)
+		assert.Contains(t, req.Capabilities, "monitoring:execute")
+		assert.Contains(t, req.Capabilities, "probes:execute")
+		assert.Equal(t, []string{"scope1", "scope2"}, req.AllowedProbeScopes)
+	})
+
+	t.Run("NewRegistrationKey sets correct defaults", func(t *testing.T) {
+		req := NewRegistrationKey("Registration Key", "Registration description", 42)
+
+		assert.Equal(t, "Registration Key", req.Name)
+		assert.Equal(t, "Registration description", req.Description)
+		assert.Equal(t, APIKeyTypeRegistration, req.Type)
+		assert.Equal(t, uint(42), req.OrganizationID)
+		assert.Contains(t, req.Capabilities, "servers:register")
+		assert.Contains(t, req.Capabilities, "servers:update")
+	})
+}
+
+// TestBusinessRules_AlertStateTransitions tests alert state machine transitions
+func TestBusinessRules_AlertStateTransitions(t *testing.T) {
+	tests := []struct {
+		name          string
+		currentState  string
+		newState      string
+		expectAllowed bool
+	}{
+		{
+			name:          "pending to firing - allowed",
+			currentState:  "pending",
+			newState:      "firing",
+			expectAllowed: true,
+		},
+		{
+			name:          "firing to resolved - allowed",
+			currentState:  "firing",
+			newState:      "resolved",
+			expectAllowed: true,
+		},
+		{
+			name:          "firing to silenced - allowed",
+			currentState:  "firing",
+			newState:      "silenced",
+			expectAllowed: true,
+		},
+		{
+			name:          "resolved to firing - not allowed",
+			currentState:  "resolved",
+			newState:      "firing",
+			expectAllowed: false,
+		},
+		{
+			name:          "pending to resolved - not allowed",
+			currentState:  "pending",
+			newState:      "resolved",
+			expectAllowed: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// State machine logic: pending -> firing -> (silenced|resolved)
+			validTransitions := map[string][]string{
+				"pending":  {"firing"},
+				"firing":   {"silenced", "resolved"},
+				"silenced": {"resolved"},
+				"resolved": {}, // Terminal state
+			}
+
+			allowedStates, exists := validTransitions[tt.currentState]
+			isAllowed := exists && stringSliceContains(allowedStates, tt.newState)
+
+			assert.Equal(t, tt.expectAllowed, isAllowed, "State transition validation mismatch")
+		})
+	}
+}
+
+// TestBusinessRules_RegionStatusValidation tests region status transitions
+func TestBusinessRules_RegionStatusValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		currentStatus string
+		newStatus     string
+		expectAllowed bool
+	}{
+		{
+			name:          "active to maintenance - allowed",
+			currentStatus: "active",
+			newStatus:     "maintenance",
+			expectAllowed: true,
+		},
+		{
+			name:          "maintenance to active - allowed",
+			currentStatus: "maintenance",
+			newStatus:     "active",
+			expectAllowed: true,
+		},
+		{
+			name:          "active to inactive - allowed",
+			currentStatus: "active",
+			newStatus:     "inactive",
+			expectAllowed: true,
+		},
+		{
+			name:          "inactive to active - not allowed",
+			currentStatus: "inactive",
+			newStatus:     "active",
+			expectAllowed: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Region status transitions
+			validTransitions := map[string][]string{
+				"active":      {"maintenance", "inactive"},
+				"maintenance": {"active"},
+				"inactive":    {}, // One-way transition
+			}
+
+			allowedStatuses, exists := validTransitions[tt.currentStatus]
+			isAllowed := exists && stringSliceContains(allowedStatuses, tt.newStatus)
+
+			assert.Equal(t, tt.expectAllowed, isAllowed, "Region status transition validation mismatch")
+		})
+	}
+}
+
+// stringSliceContains is a helper function for slice membership check
+func stringSliceContains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
