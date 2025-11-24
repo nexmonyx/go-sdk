@@ -1011,6 +1011,18 @@ tags, meta, err := client.Tags.List(ctx, &nexmonyx.TagListOptions{
     Limit:     50,
 })
 
+// Get a single tag by ID
+tag, err := client.Tags.GetTag(ctx, 123)
+
+// Update a tag's description
+updatedTag, err := client.Tags.UpdateTag(ctx, 123, &nexmonyx.TagUpdateRequest{
+    Description: "Updated production environment tag",
+})
+
+// Delete a tag (with optional cascade to remove server associations)
+result, err := client.Tags.DeleteTag(ctx, 123, true) // cascade=true
+fmt.Printf("Removed %d server associations\n", result.RemovedAssociations)
+
 // Get tags for a specific server
 serverTags, err := client.Tags.GetServerTags(ctx, "server-uuid-123")
 
@@ -1057,6 +1069,17 @@ err = client.Tags.SetNamespacePermissions(ctx, namespace.ID, &nexmonyx.TagNamesp
     CanApprove: false,
 })
 
+// Update a namespace's properties
+updatedNS, err := client.Tags.UpdateNamespace(ctx, namespace.ID, &nexmonyx.TagNamespaceUpdateRequest{
+    Description: "Updated description for Kubernetes tags",
+    Icon:        "⚓",
+    Color:       "#0066cc",
+})
+
+// Delete a namespace (with optional cascade to remove all tags in the namespace)
+result, err := client.Tags.DeleteNamespace(ctx, namespace.ID, true) // cascade=true
+fmt.Printf("Deleted namespace and removed %d tags\n", result.DeletedTags)
+
 
 // Tag Inheritance
 // ----------------
@@ -1088,6 +1111,23 @@ orgTags, err := client.Tags.ListOrganizationTags(ctx, &nexmonyx.OrganizationTagL
 
 // Remove organization tag
 err = client.Tags.RemoveOrganizationTag(ctx, orgTag.ID)
+
+// Tag-to-Tag Inheritance (tag inherits values from parent tag)
+// Set tag inheritance - child tag inherits from parent tag
+inheritance, err := client.Tags.SetTagInheritance(ctx, 456, 123) // childTagID=456, parentTagID=123
+// Creates relationship where tag 456 inherits values from tag 123
+
+// Get inherited tags and inheritance chain for a tag
+chain, err := client.Tags.GetInheritedTags(ctx, 456)
+fmt.Printf("Tag %d inherits from %d parent tags\n", chain.TagID, chain.TotalInheritances)
+fmt.Printf("Inheritance depth: %d levels\n", chain.InheritanceDepth)
+for _, parent := range chain.InheritanceChain {
+    fmt.Printf("  - Inherits from: %s/%s = %s\n", parent.Namespace, parent.Key, parent.Value)
+}
+
+// Remove tag inheritance (with optional cascade to remove child's descendants)
+result, err := client.Tags.RemoveTagInheritance(ctx, 456, 123, true) // cascade=true
+fmt.Printf("Removed %d inheritance relationships\n", result.DeletedRelationships)
 
 // Create server parent-child relationship for inheritance
 relationship, err := client.Tags.CreateServerRelationship(ctx, &nexmonyx.ServerRelationshipRequest{

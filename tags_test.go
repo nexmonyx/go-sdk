@@ -1065,3 +1065,561 @@ func TestTagDetectionRuleListOptions_ToQuery(t *testing.T) {
 	assert.Equal(t, "1", query["page"])
 	assert.Equal(t, "50", query["limit"])
 }
+
+// ============================================================================
+// Tag CRUD Tests (Task #3892)
+// ============================================================================
+
+func TestTagsService_GetTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/tags/123", r.URL.Path)
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag retrieved successfully",
+			Data: &Tag{
+				ID:             123,
+				OrganizationID: 100,
+				Namespace:      "env",
+				Key:            "environment",
+				Value:          "production",
+				Description:    "Production environment tag",
+				Source:         "manual",
+				ServerCount:    15,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	tag, err := client.Tags.GetTag(context.Background(), 123)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), tag.ID)
+	assert.Equal(t, "env", tag.Namespace)
+	assert.Equal(t, "environment", tag.Key)
+	assert.Equal(t, "production", tag.Value)
+	assert.Equal(t, "Production environment tag", tag.Description)
+	assert.Equal(t, int64(15), tag.ServerCount)
+}
+
+func TestTagsService_GetTag_NotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"error":   "not_found",
+			"message": "Tag not found",
+		})
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	_, err = client.Tags.GetTag(context.Background(), 999)
+	assert.Error(t, err)
+}
+
+func TestTagsService_UpdateTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PUT", r.Method)
+		assert.Equal(t, "/v1/tags/123", r.URL.Path)
+
+		var req TagUpdateRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		assert.Equal(t, "Updated production environment", req.Description)
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag updated successfully",
+			Data: &Tag{
+				ID:             123,
+				OrganizationID: 100,
+				Namespace:      "env",
+				Key:            "environment",
+				Value:          "production",
+				Description:    req.Description,
+				ServerCount:    15,
+				CreatedAt:      CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:      CustomTime{time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	req := &TagUpdateRequest{
+		Description: "Updated production environment",
+	}
+	tag, err := client.Tags.UpdateTag(context.Background(), 123, req)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), tag.ID)
+	assert.Equal(t, "Updated production environment", tag.Description)
+}
+
+func TestTagsService_DeleteTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/123", r.URL.Path)
+		assert.Equal(t, "true", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag deleted successfully",
+			Data: &TagDeleteResult{
+				TagID:              123,
+				RemovedAssociations: 15,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.DeleteTag(context.Background(), 123, true)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), result.TagID)
+	assert.Equal(t, int64(15), result.RemovedAssociations)
+}
+
+func TestTagsService_DeleteTag_NoCascade(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/123", r.URL.Path)
+		assert.Equal(t, "false", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag deleted successfully",
+			Data: &TagDeleteResult{
+				TagID:              123,
+				RemovedAssociations: 0,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.DeleteTag(context.Background(), 123, false)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), result.TagID)
+	assert.Equal(t, int64(0), result.RemovedAssociations)
+}
+
+// ============================================================================
+// Namespace CRUD Tests (Task #3892)
+// ============================================================================
+
+func TestTagsService_UpdateNamespace(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "PUT", r.Method)
+		assert.Equal(t, "/v1/tags/namespaces/123", r.URL.Path)
+
+		var req NamespaceUpdateRequest
+		json.NewDecoder(r.Body).Decode(&req)
+		assert.Equal(t, "Updated environment namespace description", req.Description)
+		assert.Equal(t, "^[a-z0-9-]+$", req.KeyPattern)
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Namespace updated successfully",
+			Data: &TagNamespace{
+				ID:               123,
+				Namespace:        "env",
+				Description:      req.Description,
+				Type:             "system",
+				KeyPattern:       req.KeyPattern,
+				ValuePattern:     req.ValuePattern,
+				AllowedValues:    req.AllowedValues,
+				RequiresApproval: false,
+				IsActive:         true,
+				CreatedAt:        CustomTime{time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)},
+				UpdatedAt:        CustomTime{time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	req := &NamespaceUpdateRequest{
+		Description:  "Updated environment namespace description",
+		KeyPattern:   "^[a-z0-9-]+$",
+		ValuePattern: "^[a-zA-Z0-9-]+$",
+		AllowedValues: []string{"production", "staging", "development"},
+	}
+	ns, err := client.Tags.UpdateNamespace(context.Background(), 123, req)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), ns.ID)
+	assert.Equal(t, "Updated environment namespace description", ns.Description)
+	assert.Equal(t, "^[a-z0-9-]+$", ns.KeyPattern)
+}
+
+func TestTagsService_DeleteNamespace(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/namespaces/123", r.URL.Path)
+		assert.Equal(t, "true", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Namespace deleted successfully",
+			Data: &NamespaceDeleteResult{
+				NamespaceID:        123,
+				DeletedTags:        25,
+				DeletedChildren:    3,
+				DeletedPermissions: 5,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.DeleteNamespace(context.Background(), 123, true)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), result.NamespaceID)
+	assert.Equal(t, int64(25), result.DeletedTags)
+	assert.Equal(t, int64(3), result.DeletedChildren)
+	assert.Equal(t, int64(5), result.DeletedPermissions)
+}
+
+func TestTagsService_DeleteNamespace_NoCascade(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/namespaces/123", r.URL.Path)
+		assert.Equal(t, "false", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Namespace deleted successfully",
+			Data: &NamespaceDeleteResult{
+				NamespaceID:        123,
+				DeletedTags:        0,
+				DeletedChildren:    0,
+				DeletedPermissions: 0,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.DeleteNamespace(context.Background(), 123, false)
+	require.NoError(t, err)
+	assert.Equal(t, uint(123), result.NamespaceID)
+	assert.Equal(t, int64(0), result.DeletedTags)
+}
+
+// ============================================================================
+// Tag-to-Tag Inheritance Tests (Task #3892)
+// ============================================================================
+
+func TestTagsService_SetTagInheritance(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/tags/456/inherit", r.URL.Path)
+
+		var reqBody map[string]interface{}
+		json.NewDecoder(r.Body).Decode(&reqBody)
+		assert.Equal(t, float64(123), reqBody["parent_tag_id"])
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag inheritance set successfully",
+			Data: &TagInheritanceRelationship{
+				ID:             1,
+				OrganizationID: 100,
+				ParentTag: TagInfo{
+					ID:          123,
+					Namespace:   "env",
+					Key:         "environment",
+					Value:       "production",
+					Description: "Production environment",
+				},
+				ChildTag: TagInfo{
+					ID:          456,
+					Namespace:   "env",
+					Key:         "environment",
+					Value:       "prod-us-west",
+					Description: "Production US West",
+				},
+				CreatedBy: &UserInfo{
+					ID:    10,
+					Email: "admin@example.com",
+				},
+				CreatedAt: "2025-01-01T00:00:00Z",
+				UpdatedAt: "2025-01-01T00:00:00Z",
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	rel, err := client.Tags.SetTagInheritance(context.Background(), 456, 123)
+	require.NoError(t, err)
+	assert.Equal(t, uint(1), rel.ID)
+	assert.Equal(t, uint(123), rel.ParentTag.ID)
+	assert.Equal(t, uint(456), rel.ChildTag.ID)
+	assert.Equal(t, "production", rel.ParentTag.Value)
+	assert.Equal(t, "prod-us-west", rel.ChildTag.Value)
+}
+
+func TestTagsService_SetTagInheritance_CircularReference(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"error":   "bad_request",
+			"message": "Circular reference detected",
+			"details": "This inheritance would create a circular reference",
+		})
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	_, err = client.Tags.SetTagInheritance(context.Background(), 123, 456)
+	assert.Error(t, err)
+}
+
+func TestTagsService_GetInheritedTags(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/tags/456/inherited", r.URL.Path)
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Inherited tags retrieved successfully",
+			Data: &TagInheritanceChain{
+				TagID: 456,
+				InheritanceChain: []TagInfo{
+					{
+						ID:          123,
+						Namespace:   "env",
+						Key:         "environment",
+						Value:       "production",
+						Description: "Production environment",
+					},
+					{
+						ID:          789,
+						Namespace:   "env",
+						Key:         "environment",
+						Value:       "root",
+						Description: "Root environment",
+					},
+				},
+				InheritanceDepth:  2,
+				TotalInheritances: 2,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	chain, err := client.Tags.GetInheritedTags(context.Background(), 456)
+	require.NoError(t, err)
+	assert.Equal(t, uint(456), chain.TagID)
+	assert.Equal(t, 2, chain.InheritanceDepth)
+	assert.Equal(t, 2, chain.TotalInheritances)
+	assert.Len(t, chain.InheritanceChain, 2)
+	assert.Equal(t, uint(123), chain.InheritanceChain[0].ID)
+	assert.Equal(t, "production", chain.InheritanceChain[0].Value)
+}
+
+func TestTagsService_GetInheritedTags_NoInheritance(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Inherited tags retrieved successfully",
+			Data: &TagInheritanceChain{
+				TagID:             456,
+				InheritanceChain:  []TagInfo{},
+				InheritanceDepth:  0,
+				TotalInheritances: 0,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	chain, err := client.Tags.GetInheritedTags(context.Background(), 456)
+	require.NoError(t, err)
+	assert.Equal(t, 0, chain.InheritanceDepth)
+	assert.Len(t, chain.InheritanceChain, 0)
+}
+
+func TestTagsService_RemoveTagInheritance(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/456/inherit", r.URL.Path)
+		assert.Equal(t, "true", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag inheritance removed successfully",
+			Data: &TagInheritanceDeleteResult{
+				DeletedRelationships: 3,
+				Cascade:              true,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.RemoveTagInheritance(context.Background(), 456, true)
+	require.NoError(t, err)
+	assert.Equal(t, 3, result.DeletedRelationships)
+	assert.True(t, result.Cascade)
+}
+
+func TestTagsService_RemoveTagInheritance_NoCascade(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "DELETE", r.Method)
+		assert.Equal(t, "/v1/tags/456/inherit", r.URL.Path)
+		assert.Equal(t, "false", r.URL.Query().Get("cascade"))
+
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Tag inheritance removed successfully",
+			Data: &TagInheritanceDeleteResult{
+				DeletedRelationships: 1,
+				Cascade:              false,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.RemoveTagInheritance(context.Background(), 456, false)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.DeletedRelationships)
+	assert.False(t, result.Cascade)
+}
+
+func TestTagsService_RemoveTagInheritance_NotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"error":   "not_found",
+			"message": "No inheritance relationship found",
+		})
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	_, err = client.Tags.RemoveTagInheritance(context.Background(), 999, false)
+	assert.Error(t, err)
+}

@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 // TagsService handles tag-related operations
@@ -151,7 +152,7 @@ func (s *TagsService) CreateNamespace(ctx context.Context, req *TagNamespaceCrea
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   "/v1/tag-namespaces",
+		Path:   "/v1/tags/namespaces",
 		Body:   req,
 		Result: &resp,
 	})
@@ -164,7 +165,7 @@ func (s *TagsService) CreateNamespace(ctx context.Context, req *TagNamespaceCrea
 
 // ListNamespaces retrieves all namespaces for the organization with optional filtering
 // Authentication: JWT Token required
-// Endpoint: GET /v1/tag-namespaces
+// Endpoint: GET /v1/tags/namespaces
 // Parameters:
 //   - opts: Filtering options (type, parent, active, search, hierarchy)
 //
@@ -181,7 +182,7 @@ func (s *TagsService) ListNamespaces(ctx context.Context, opts *TagNamespaceList
 
 	req := &Request{
 		Method: "GET",
-		Path:   "/v1/tag-namespaces",
+		Path:   "/v1/tags/namespaces",
 		Result: &resp,
 	}
 
@@ -199,18 +200,19 @@ func (s *TagsService) ListNamespaces(ctx context.Context, opts *TagNamespaceList
 
 // SetNamespacePermissions sets user or role permissions for a namespace
 // Authentication: JWT Token required
-// Endpoint: POST /v1/tag-namespaces/{namespace}/permissions
+// Endpoint: POST /v1/tags/namespaces/{namespace}/permissions
 // Parameters:
 //   - namespace: Namespace name
 //   - req: Permission request with user_id OR role_name and permission flags
 //
 // Note: Either UserID or RoleName must be provided, but not both
+// WARNING: API endpoint not yet implemented - this method will return 404
 func (s *TagsService) SetNamespacePermissions(ctx context.Context, namespace string, req *TagNamespacePermissionRequest) error {
 	var resp StandardResponse
 
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
-		Path:   fmt.Sprintf("/v1/tag-namespaces/%s/permissions", namespace),
+		Path:   fmt.Sprintf("/v1/tags/namespaces/%s/permissions", namespace),
 		Body:   req,
 		Result: &resp,
 	})
@@ -681,6 +683,269 @@ func (s *TagsService) EvaluateRules(ctx context.Context, req *EvaluateRulesReque
 		Body:   req,
 		Result: &resp,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// ============================================================================
+// Tag CRUD Methods
+// ============================================================================
+
+// GetTag retrieves a single tag by ID
+// Authentication: JWT Token or API Key required
+// Endpoint: GET /v1/tags/{id}
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - tagID: Tag ID to retrieve
+//
+// Returns the tag details including server count
+func (s *TagsService) GetTag(ctx context.Context, tagID uint) (*Tag, error) {
+	var resp struct {
+		Data    *Tag   `json:"data"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tags/%d", tagID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// UpdateTag updates an existing tag's description
+// Authentication: JWT Token required
+// Endpoint: PUT /v1/tags/{id}
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - tagID: Tag ID to update
+//   - req: Update request with new description
+//
+// Returns the updated tag
+func (s *TagsService) UpdateTag(ctx context.Context, tagID uint, req *TagUpdateRequest) (*Tag, error) {
+	var resp struct {
+		Data    *Tag   `json:"data"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/tags/%d", tagID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// DeleteTag deletes a tag by ID
+// Authentication: JWT Token required
+// Endpoint: DELETE /v1/tags/{id}
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - tagID: Tag ID to delete
+//   - cascade: If true, removes tag from all servers. If false, fails if tag is assigned (default: true)
+//
+// Returns deletion result with count of removed server associations
+func (s *TagsService) DeleteTag(ctx context.Context, tagID uint, cascade bool) (*TagDeleteResult, error) {
+	var resp struct {
+		Data    *TagDeleteResult `json:"data"`
+		Status  string           `json:"status"`
+		Message string           `json:"message"`
+	}
+
+	req := &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/tags/%d", tagID),
+		Result: &resp,
+	}
+
+	// Add cascade query parameter
+	req.Query = map[string]string{
+		"cascade": strconv.FormatBool(cascade),
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// ============================================================================
+// Namespace CRUD Methods
+// ============================================================================
+
+// UpdateNamespace updates an existing namespace definition
+// Authentication: JWT Token required
+// Endpoint: PUT /v1/tags/namespaces/{id}
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - namespaceID: Namespace ID to update
+//   - req: Update request with new configuration
+//
+// Returns the updated namespace
+func (s *TagsService) UpdateNamespace(ctx context.Context, namespaceID uint, req *NamespaceUpdateRequest) (*TagNamespace, error) {
+	var resp struct {
+		Data    *TagNamespace `json:"data"`
+		Status  string        `json:"status"`
+		Message string        `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/tags/namespaces/%d", namespaceID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// DeleteNamespace deletes a namespace definition
+// Authentication: JWT Token required
+// Endpoint: DELETE /v1/tags/namespaces/{id}
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - namespaceID: Namespace ID to delete
+//   - cascade: If true, deletes associated tags and child namespaces. If false, fails if namespace has dependencies (default: false)
+//
+// Returns deletion result with counts of deleted resources
+func (s *TagsService) DeleteNamespace(ctx context.Context, namespaceID uint, cascade bool) (*NamespaceDeleteResult, error) {
+	var resp struct {
+		Data    *NamespaceDeleteResult `json:"data"`
+		Status  string                 `json:"status"`
+		Message string                 `json:"message"`
+	}
+
+	req := &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/tags/namespaces/%d", namespaceID),
+		Result: &resp,
+	}
+
+	// Add cascade query parameter
+	req.Query = map[string]string{
+		"cascade": strconv.FormatBool(cascade),
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// ============================================================================
+// Tag-to-Tag Inheritance Methods
+// ============================================================================
+
+// SetTagInheritance creates a tag-to-tag inheritance relationship
+// Authentication: JWT Token required
+// Endpoint: POST /v1/tags/{id}/inherit
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - childTagID: Child tag ID that will inherit from parent
+//   - parentTagID: Parent tag ID to inherit from
+//
+// Creates inheritance with circular reference and depth limit (max 10 levels) checks
+// Returns the created inheritance relationship
+func (s *TagsService) SetTagInheritance(ctx context.Context, childTagID uint, parentTagID uint) (*TagInheritanceRelationship, error) {
+	var resp struct {
+		Data    *TagInheritanceRelationship `json:"data"`
+		Status  string                      `json:"status"`
+		Message string                      `json:"message"`
+	}
+
+	reqBody := map[string]interface{}{
+		"parent_tag_id": parentTagID,
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/tags/%d/inherit", childTagID),
+		Body:   reqBody,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// GetInheritedTags retrieves the complete inheritance chain for a tag
+// Authentication: JWT Token required
+// Endpoint: GET /v1/tags/{id}/inherited
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - tagID: Tag ID to get inheritance chain for
+//
+// Returns inheritance chain from immediate parent to root, with depth and count
+func (s *TagsService) GetInheritedTags(ctx context.Context, tagID uint) (*TagInheritanceChain, error) {
+	var resp struct {
+		Data    *TagInheritanceChain `json:"data"`
+		Status  string               `json:"status"`
+		Message string               `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tags/%d/inherited", tagID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// RemoveTagInheritance removes tag-to-tag inheritance relationships
+// Authentication: JWT Token required
+// Endpoint: DELETE /v1/tags/{id}/inherit
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - childTagID: Child tag ID to remove inheritance from
+//   - cascade: If true, removes all descendant relationships. If false, only removes direct parent relationship (default: false)
+//
+// Returns count of deleted inheritance relationships
+func (s *TagsService) RemoveTagInheritance(ctx context.Context, childTagID uint, cascade bool) (*TagInheritanceDeleteResult, error) {
+	var resp struct {
+		Data    *TagInheritanceDeleteResult `json:"data"`
+		Status  string                      `json:"status"`
+		Message string                      `json:"message"`
+	}
+
+	req := &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/tags/%d/inherit", childTagID),
+		Result: &resp,
+	}
+
+	// Add cascade query parameter
+	req.Query = map[string]string{
+		"cascade": strconv.FormatBool(cascade),
+	}
+
+	_, err := s.client.Do(ctx, req)
 	if err != nil {
 		return nil, err
 	}

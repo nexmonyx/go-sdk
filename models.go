@@ -2118,6 +2118,17 @@ type TagAssignmentResult struct {
 	Total           int `json:"total"`
 }
 
+// TagUpdateRequest represents the request structure for updating a tag
+type TagUpdateRequest struct {
+	Description string `json:"description,omitempty"`
+}
+
+// TagDeleteResult represents the result of a tag deletion operation
+type TagDeleteResult struct {
+	TagID              uint  `json:"tag_id"`
+	RemovedAssociations int64 `json:"removed_associations"`
+}
+
 // ServerTag represents a tag assigned to a server
 type ServerTag struct {
 	ID              uint       `json:"id"`
@@ -2203,6 +2214,49 @@ type TagNamespacePermissionRequest struct {
 	CanUpdate  bool   `json:"can_update"`
 	CanDelete  bool   `json:"can_delete"`
 	CanApprove bool   `json:"can_approve"`
+}
+
+// NamespaceUpdateRequest represents the request structure for updating a namespace
+type NamespaceUpdateRequest struct {
+	Description      string   `json:"description,omitempty"`
+	KeyPattern       string   `json:"key_pattern,omitempty"`
+	ValuePattern     string   `json:"value_pattern,omitempty"`
+	AllowedValues    []string `json:"allowed_values,omitempty"`
+	RequiresApproval *bool    `json:"requires_approval,omitempty"`
+	IsActive         *bool    `json:"is_active,omitempty"`
+}
+
+// NamespaceDeleteResult represents the result of a namespace deletion operation
+type NamespaceDeleteResult struct {
+	NamespaceID        uint  `json:"namespace_id"`
+	DeletedTags        int64 `json:"deleted_tags"`
+	DeletedChildren    int64 `json:"deleted_children"`
+	DeletedPermissions int64 `json:"deleted_permissions"`
+}
+
+// TagInheritanceRelationship represents a tag-to-tag inheritance relationship
+type TagInheritanceRelationship struct {
+	ID             uint      `json:"id"`
+	OrganizationID uint      `json:"organization_id"`
+	ParentTag      TagInfo   `json:"parent_tag"`
+	ChildTag       TagInfo   `json:"child_tag"`
+	CreatedBy      *UserInfo `json:"created_by,omitempty"`
+	CreatedAt      string    `json:"created_at"`
+	UpdatedAt      string    `json:"updated_at"`
+}
+
+// TagInheritanceChain represents the inheritance chain for a tag
+type TagInheritanceChain struct {
+	TagID             uint      `json:"tag_id"`
+	InheritanceChain  []TagInfo `json:"inheritance_chain"`  // Ordered from immediate parent to root
+	InheritanceDepth  int       `json:"inheritance_depth"`
+	TotalInheritances int       `json:"total_inheritances"`
+}
+
+// TagInheritanceDeleteResult represents the result of removing tag inheritance
+type TagInheritanceDeleteResult struct {
+	DeletedRelationships int  `json:"deleted_relationships"`
+	Cascade              bool `json:"cascade"`
 }
 
 // TagNamespaceListOptions represents filtering options for listing namespaces
