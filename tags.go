@@ -134,6 +134,32 @@ func (s *TagsService) RemoveTagFromServer(ctx context.Context, serverID string, 
 	return err
 }
 
+// GetServersByTag retrieves all servers that have a specific tag assigned
+// Authentication: JWT Token required
+// Endpoint: GET /v1/tags/{tagID}/servers
+// Parameters:
+//   - tagID: Tag ID to get servers for
+//
+// Returns the tag information and list of servers with that tag
+func (s *TagsService) GetServersByTag(ctx context.Context, tagID uint) (*GetServersByTagResponse, error) {
+	var resp struct {
+		Data    *GetServersByTagResponse `json:"data"`
+		Status  string                   `json:"status"`
+		Message string                   `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tags/%d/servers", tagID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
 // ============================================================================
 // Tag Namespace Methods
 // ============================================================================
@@ -683,6 +709,233 @@ func (s *TagsService) EvaluateRules(ctx context.Context, req *EvaluateRulesReque
 		Body:   req,
 		Result: &resp,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// CreateTagDetectionRule creates a new tag detection rule
+//
+// Endpoint: POST /v1/tag-rules
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - req: Rule creation request with name, conditions, tag to apply, priority, etc.
+//
+// Returns:
+//   - rule: The created tag detection rule
+//   - err: Error if the request fails
+func (s *TagsService) CreateTagDetectionRule(ctx context.Context, req *TagDetectionRuleCreateRequest) (*TagDetectionRule, error) {
+	var resp struct {
+		Data    *TagDetectionRule `json:"data"`
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/tag-rules",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// GetTagDetectionRule retrieves a single tag detection rule by ID
+//
+// Endpoint: GET /v1/tag-rules/{id}
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - ruleID: Rule ID to retrieve
+//
+// Returns:
+//   - rule: The tag detection rule
+//   - err: Error if the request fails
+func (s *TagsService) GetTagDetectionRule(ctx context.Context, ruleID uint) (*TagDetectionRule, error) {
+	var resp struct {
+		Data    *TagDetectionRule `json:"data"`
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tag-rules/%d", ruleID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// UpdateTagDetectionRule updates an existing tag detection rule
+//
+// Endpoint: PUT /v1/tag-rules/{id}
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - ruleID: Rule ID to update
+//   - req: Update request with modified fields
+//
+// Returns:
+//   - rule: The updated tag detection rule
+//   - err: Error if the request fails
+func (s *TagsService) UpdateTagDetectionRule(ctx context.Context, ruleID uint, req *TagDetectionRuleUpdateRequest) (*TagDetectionRule, error) {
+	var resp struct {
+		Data    *TagDetectionRule `json:"data"`
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/tag-rules/%d", ruleID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// DeleteTagDetectionRule deletes a tag detection rule
+//
+// Endpoint: DELETE /v1/tag-rules/{id}
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - ruleID: Rule ID to delete
+//
+// Returns:
+//   - err: Error if the request fails
+func (s *TagsService) DeleteTagDetectionRule(ctx context.Context, ruleID uint) error {
+	var resp StandardResponse
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/tag-rules/%d", ruleID),
+		Result: &resp,
+	})
+	return err
+}
+
+// ExecuteTagDetectionRule manually executes a tag detection rule against servers
+//
+// Endpoint: POST /v1/tag-rules/{id}/execute
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - ruleID: Rule ID to execute
+//   - req: Execution options (server IDs to evaluate, dry run mode)
+//
+// Returns:
+//   - result: Execution result with matched servers and applied tags
+//   - err: Error if the request fails
+func (s *TagsService) ExecuteTagDetectionRule(ctx context.Context, ruleID uint, req *ExecuteRuleRequest) (*ExecuteRuleResponse, error) {
+	var resp struct {
+		Data    *ExecuteRuleResponse `json:"data"`
+		Status  string               `json:"status"`
+		Message string               `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/tag-rules/%d/execute", ruleID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// GetTagDetectionRuleExecutions retrieves the execution history for a rule
+//
+// Endpoint: GET /v1/tag-rules/{id}/executions
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - ruleID: Rule ID to get executions for
+//   - opts: Pagination options (page, limit)
+//
+// Returns:
+//   - result: Execution history with server tags applied by this rule
+//   - err: Error if the request fails
+func (s *TagsService) GetTagDetectionRuleExecutions(ctx context.Context, ruleID uint, opts *RuleExecutionListOptions) (*RuleExecutionsResponse, error) {
+	var resp struct {
+		Data       *RuleExecutionsResponse `json:"data"`
+		Status     string                  `json:"status"`
+		Message    string                  `json:"message"`
+		Pagination *PaginationMeta         `json:"pagination"`
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tag-rules/%d/executions", ruleID),
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// GetTagDetectionRuleStatistics retrieves aggregated statistics for tag detection rules
+//
+// Endpoint: GET /v1/tag-rules/statistics
+// Authentication: JWT Token or API Key required
+//
+// Parameters:
+//   - ctx: Context for request cancellation and timeouts
+//   - opts: Filter options (enabled status, namespace)
+//
+// Returns:
+//   - stats: Aggregated rule statistics
+//   - err: Error if the request fails
+func (s *TagsService) GetTagDetectionRuleStatistics(ctx context.Context, opts *RuleStatisticsOptions) (*RuleStatisticsResponse, error) {
+	var resp struct {
+		Data    *RuleStatisticsResponse `json:"data"`
+		Status  string                  `json:"status"`
+		Message string                  `json:"message"`
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/tag-rules/statistics",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
 	if err != nil {
 		return nil, err
 	}

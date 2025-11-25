@@ -2175,6 +2175,33 @@ func (o *TagListOptions) ToQuery() map[string]string {
 	return query
 }
 
+// TagServerInfo represents a server in the tag's server list response
+type TagServerInfo struct {
+	ID             uint       `json:"id"`
+	ServerUUID     string     `json:"server_uuid"`
+	Name           string     `json:"name"`
+	Hostname       string     `json:"hostname"`
+	MainIP         string     `json:"main_ip,omitempty"`
+	Os             string     `json:"os,omitempty"`
+	OsVersion      string     `json:"os_version,omitempty"`
+	Environment    string     `json:"environment,omitempty"`
+	Location       string     `json:"location,omitempty"`
+	Classification string     `json:"classification,omitempty"`
+	Status         string     `json:"status"`
+	AssignedAt     CustomTime `json:"assigned_at"`
+	Source         string     `json:"source"`
+}
+
+// GetServersByTagResponse represents the response for getting servers by tag
+type GetServersByTagResponse struct {
+	TagID       uint            `json:"tag_id"`
+	TagKey      string          `json:"tag_key"`
+	TagValue    string          `json:"tag_value"`
+	Namespace   string          `json:"namespace"`
+	ServerCount int             `json:"server_count"`
+	Servers     []TagServerInfo `json:"servers"`
+}
+
 // TagNamespace represents a tag namespace definition
 type TagNamespace struct {
 	ID               uint       `json:"id"`
@@ -2653,6 +2680,139 @@ type EvaluateRulesRequest struct {
 // EvaluateRulesResult represents the result of rule evaluation
 type EvaluateRulesResult struct {
 	ProcessingCount int `json:"processing_count"`
+}
+
+// TagDetectionRuleCreateRequest represents a request to create a tag detection rule
+type TagDetectionRuleCreateRequest struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Namespace   string          `json:"namespace,omitempty"`
+	TagKey      string          `json:"tag_key"`
+	TagValue    string          `json:"tag_value"`
+	Conditions  json.RawMessage `json:"conditions"`
+	Priority    int             `json:"priority,omitempty"`
+	Confidence  float64         `json:"confidence,omitempty"`
+	Enabled     bool            `json:"enabled"`
+}
+
+// TagDetectionRuleUpdateRequest represents a request to update a tag detection rule
+type TagDetectionRuleUpdateRequest struct {
+	Name        *string          `json:"name,omitempty"`
+	Description *string          `json:"description,omitempty"`
+	Namespace   *string          `json:"namespace,omitempty"`
+	TagKey      *string          `json:"tag_key,omitempty"`
+	TagValue    *string          `json:"tag_value,omitempty"`
+	Conditions  *json.RawMessage `json:"conditions,omitempty"`
+	Priority    *int             `json:"priority,omitempty"`
+	Confidence  *float64         `json:"confidence,omitempty"`
+	Enabled     *bool            `json:"enabled,omitempty"`
+}
+
+// ExecuteRuleRequest represents a request to execute a tag detection rule
+type ExecuteRuleRequest struct {
+	ServerIDs []uint `json:"server_ids,omitempty"`
+	DryRun    bool   `json:"dry_run"`
+}
+
+// ExecuteRuleResult represents the result for a single server in rule execution
+type ExecuteRuleResult struct {
+	ServerID     uint    `json:"server_id"`
+	ServerName   string  `json:"server_name"`
+	ServerUUID   string  `json:"server_uuid"`
+	Matched      bool    `json:"matched"`
+	TagApplied   bool    `json:"tag_applied"`
+	TagKey       string  `json:"tag_key,omitempty"`
+	TagValue     string  `json:"tag_value,omitempty"`
+	Confidence   float64 `json:"confidence,omitempty"`
+	SkipReason   string  `json:"skip_reason,omitempty"`
+	ErrorMessage string  `json:"error_message,omitempty"`
+}
+
+// ExecuteRuleResponse represents the response from executing a tag detection rule
+type ExecuteRuleResponse struct {
+	RuleID         uint                `json:"rule_id"`
+	RuleName       string              `json:"rule_name"`
+	DryRun         bool                `json:"dry_run"`
+	TotalServers   int                 `json:"total_servers"`
+	MatchedServers int                 `json:"matched_servers"`
+	TagsApplied    int                 `json:"tags_applied"`
+	TagsSkipped    int                 `json:"tags_skipped"`
+	Errors         int                 `json:"errors"`
+	Results        []ExecuteRuleResult `json:"results"`
+}
+
+// RuleExecutionListOptions provides filtering options for rule execution history
+type RuleExecutionListOptions struct {
+	Page  int
+	Limit int
+}
+
+// ToQuery converts options to query parameters
+func (o *RuleExecutionListOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.Limit > 0 {
+		query["limit"] = fmt.Sprintf("%d", o.Limit)
+	}
+	return query
+}
+
+// RuleExecutionEntry represents a single execution history entry
+type RuleExecutionEntry struct {
+	TagID        uint    `json:"tag_id"`
+	TagKey       string  `json:"tag_key"`
+	TagValue     string  `json:"tag_value"`
+	ServerID     uint    `json:"server_id"`
+	ServerName   string  `json:"server_name"`
+	ServerUUID   string  `json:"server_uuid"`
+	Source       string  `json:"source"`
+	Confidence   float64 `json:"confidence_score"`
+	AssignedAt   string  `json:"assigned_at"`
+	AssignedByID *uint   `json:"assigned_by_id,omitempty"`
+}
+
+// RuleExecutionsResponse represents the response for rule execution history
+type RuleExecutionsResponse struct {
+	RuleID     uint                 `json:"rule_id"`
+	RuleName   string               `json:"rule_name"`
+	Executions []RuleExecutionEntry `json:"executions"`
+	Pagination PaginationMeta       `json:"pagination"`
+}
+
+// RuleStatisticsOptions provides filtering options for rule statistics
+type RuleStatisticsOptions struct {
+	RuleID *uint
+}
+
+// ToQuery converts options to query parameters
+func (o *RuleStatisticsOptions) ToQuery() map[string]string {
+	query := make(map[string]string)
+	if o.RuleID != nil {
+		query["rule_id"] = fmt.Sprintf("%d", *o.RuleID)
+	}
+	return query
+}
+
+// RuleStatistic represents statistics for a single rule
+type RuleStatistic struct {
+	RuleID          uint    `json:"rule_id"`
+	RuleName        string  `json:"rule_name"`
+	Enabled         bool    `json:"enabled"`
+	TotalExecutions int64   `json:"total_executions"`
+	TagsApplied     int64   `json:"tags_applied"`
+	LastExecutedAt  *string `json:"last_executed_at,omitempty"`
+}
+
+// RuleStatisticsResponse represents the response for rule statistics
+type RuleStatisticsResponse struct {
+	TotalRules       int64           `json:"total_rules"`
+	EnabledRules     int64           `json:"enabled_rules"`
+	DisabledRules    int64           `json:"disabled_rules"`
+	TotalExecutions  int64           `json:"total_executions"`
+	TotalTagsApplied int64           `json:"total_tags_applied"`
+	Rules            []RuleStatistic `json:"rules"`
 }
 
 // ============================================================================
