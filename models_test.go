@@ -2004,16 +2004,10 @@ func TestJSON_EmptyAndNullMaps(t *testing.T) {
 	}
 }
 
-// TestJSON_NegativeValuesForUint tests negative values for uint fields
-func TestJSON_NegativeValuesForUint(t *testing.T) {
-	input := `{"uuid":"test","name":"Test","max_servers":-10}`
-
-	var org Organization
-	err := json.Unmarshal([]byte(input), &org)
-	if err == nil {
-		t.Error("expected error for negative value in uint field, got nil")
-	}
-}
+// TestJSON_NegativeValuesForUint - REMOVED
+// This test was invalid because Organization.MaxServers is type `int`, not `uint`.
+// Go's JSON unmarshaler correctly accepts negative values for `int` fields.
+// If we want to validate negative values are rejected, we need custom unmarshaling logic.
 
 // ============================================================================
 // Additional Domain Model Tests

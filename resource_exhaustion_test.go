@@ -540,19 +540,22 @@ func TestResourceExhaustion_BackpressureHandling(t *testing.T) {
 			require.NoError(t, err)
 
 			stopChan := make(chan bool)
-			var wg sync.WaitGroup
+			var requestWg sync.WaitGroup
+			var tickerWg sync.WaitGroup
 
 			// Start generating requests at specified rate
+			tickerWg.Add(1)
 			go func() {
+				defer tickerWg.Done()
 				ticker := time.NewTicker(time.Second / time.Duration(tt.incomingRate))
 				defer ticker.Stop()
 
 				for {
 					select {
 					case <-ticker.C:
-						wg.Add(1)
+						requestWg.Add(1)
 						go func() {
-							defer wg.Done()
+							defer requestWg.Done()
 							client.Servers.List(context.Background(), nil)
 						}()
 					case <-stopChan:
@@ -563,7 +566,8 @@ func TestResourceExhaustion_BackpressureHandling(t *testing.T) {
 
 			time.Sleep(tt.duration)
 			close(stopChan)
-			wg.Wait()
+			tickerWg.Wait()  // Wait for ticker to stop spawning goroutines
+			requestWg.Wait() // Now safe to wait for all requests
 
 			t.Logf("Max queue size: %d", atomic.LoadInt64(&maxQueueSize))
 

@@ -1,0 +1,212 @@
+=== RUN   TestAlertsService_ConcurrentOperations
+=== RUN   TestAlertsService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    alerts_comprehensive_test.go:804: Completed 50 operations in 15.50991ms (3223.75 ops/sec)
+=== RUN   TestAlertsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    alerts_comprehensive_test.go:804: Completed 100 operations in 45.283594ms (2208.31 ops/sec)
+=== RUN   TestAlertsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    alerts_comprehensive_test.go:804: Completed 60 operations in 28.023797ms (2141.04 ops/sec)
+=== RUN   TestAlertsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    alerts_comprehensive_test.go:804: Completed 100 operations in 29.740444ms (3362.42 ops/sec)
+--- PASS: TestAlertsService_ConcurrentOperations (0.13s)
+    --- PASS: TestAlertsService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestAlertsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.05s)
+    --- PASS: TestAlertsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.03s)
+    --- PASS: TestAlertsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestAPIKeysService_ConcurrentOperations
+=== RUN   TestAPIKeysService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    api_keys_comprehensive_test.go:1942: Completed 50 operations in 18.142767ms (2755.92 ops/sec)
+=== RUN   TestAPIKeysService_ConcurrentOperations/concurrent_GetUnified_-_medium_concurrency
+    api_keys_comprehensive_test.go:1942: Completed 100 operations in 30.220607ms (3309.00 ops/sec)
+=== RUN   TestAPIKeysService_ConcurrentOperations/concurrent_CreateUnified_-_medium_concurrency
+    api_keys_comprehensive_test.go:1942: Completed 60 operations in 19.622349ms (3057.74 ops/sec)
+=== RUN   TestAPIKeysService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    api_keys_comprehensive_test.go:1942: Completed 100 operations in 32.077064ms (3117.49 ops/sec)
+--- PASS: TestAPIKeysService_ConcurrentOperations (0.11s)
+    --- PASS: TestAPIKeysService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestAPIKeysService_ConcurrentOperations/concurrent_GetUnified_-_medium_concurrency (0.03s)
+    --- PASS: TestAPIKeysService_ConcurrentOperations/concurrent_CreateUnified_-_medium_concurrency (0.02s)
+    --- PASS: TestAPIKeysService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.04s)
+=== RUN   TestBackgroundJobsService_ConcurrentOperations
+=== RUN   TestBackgroundJobsService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    background_jobs_comprehensive_test.go:818: Completed 50 operations in 14.524561ms (3442.44 ops/sec)
+=== RUN   TestBackgroundJobsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    background_jobs_comprehensive_test.go:818: Completed 100 operations in 26.220578ms (3813.80 ops/sec)
+=== RUN   TestBackgroundJobsService_ConcurrentOperations/concurrent_CreateJob_-_medium_concurrency
+    background_jobs_comprehensive_test.go:818: Completed 60 operations in 20.404189ms (2940.57 ops/sec)
+=== RUN   TestBackgroundJobsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    background_jobs_comprehensive_test.go:818: Completed 100 operations in 25.373241ms (3941.16 ops/sec)
+--- PASS: TestBackgroundJobsService_ConcurrentOperations (0.09s)
+    --- PASS: TestBackgroundJobsService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestBackgroundJobsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.03s)
+    --- PASS: TestBackgroundJobsService_ConcurrentOperations/concurrent_CreateJob_-_medium_concurrency (0.02s)
+    --- PASS: TestBackgroundJobsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestBillingService_ConcurrentOperations
+=== RUN   TestBillingService_ConcurrentOperations/concurrent_GetBillingInfo_-_low_concurrency
+    billing_comprehensive_test.go:908: Completed 50 operations in 15.035692ms (3325.42 ops/sec)
+=== RUN   TestBillingService_ConcurrentOperations/concurrent_GetSubscription_-_medium_concurrency
+    billing_comprehensive_test.go:908: Completed 100 operations in 26.914861ms (3715.42 ops/sec)
+=== RUN   TestBillingService_ConcurrentOperations/concurrent_ListInvoices_-_medium_concurrency
+    billing_comprehensive_test.go:908: Completed 60 operations in 20.261684ms (2961.25 ops/sec)
+=== RUN   TestBillingService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    billing_comprehensive_test.go:908: Completed 100 operations in 24.300221ms (4115.19 ops/sec)
+--- PASS: TestBillingService_ConcurrentOperations (0.09s)
+    --- PASS: TestBillingService_ConcurrentOperations/concurrent_GetBillingInfo_-_low_concurrency (0.02s)
+    --- PASS: TestBillingService_ConcurrentOperations/concurrent_GetSubscription_-_medium_concurrency (0.03s)
+    --- PASS: TestBillingService_ConcurrentOperations/concurrent_ListInvoices_-_medium_concurrency (0.02s)
+    --- PASS: TestBillingService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestClustersService_ConcurrentOperations
+=== RUN   TestClustersService_ConcurrentOperations/concurrent_ListClusters_-_low_concurrency
+    clusters_comprehensive_test.go:1094: Completed 50 operations in 14.266476ms (3504.72 ops/sec)
+=== RUN   TestClustersService_ConcurrentOperations/concurrent_GetCluster_-_medium_concurrency
+    clusters_comprehensive_test.go:1094: Completed 100 operations in 26.142895ms (3825.13 ops/sec)
+=== RUN   TestClustersService_ConcurrentOperations/concurrent_CreateCluster_-_medium_concurrency
+    clusters_comprehensive_test.go:1094: Completed 60 operations in 20.4666ms (2931.61 ops/sec)
+=== RUN   TestClustersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    clusters_comprehensive_test.go:1094: Completed 100 operations in 24.659242ms (4055.27 ops/sec)
+--- PASS: TestClustersService_ConcurrentOperations (0.09s)
+    --- PASS: TestClustersService_ConcurrentOperations/concurrent_ListClusters_-_low_concurrency (0.02s)
+    --- PASS: TestClustersService_ConcurrentOperations/concurrent_GetCluster_-_medium_concurrency (0.03s)
+    --- PASS: TestClustersService_ConcurrentOperations/concurrent_CreateCluster_-_medium_concurrency (0.02s)
+    --- PASS: TestClustersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestHealthService_ConcurrentOperations
+=== RUN   TestHealthService_ConcurrentOperations/concurrent_GetHealth_-_low_concurrency
+    health_comprehensive_test.go:781: Completed 50 operations in 13.032ms (3836.71 ops/sec)
+=== RUN   TestHealthService_ConcurrentOperations/concurrent_GetHealthDetailed_-_medium_concurrency
+    health_comprehensive_test.go:781: Completed 100 operations in 27.310178ms (3661.64 ops/sec)
+=== RUN   TestHealthService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency
+    health_comprehensive_test.go:781: Completed 60 operations in 15.308075ms (3919.50 ops/sec)
+=== RUN   TestHealthService_ConcurrentOperations/high_concurrency_stress_-_health_check
+    health_comprehensive_test.go:781: Completed 100 operations in 22.765376ms (4392.64 ops/sec)
+--- PASS: TestHealthService_ConcurrentOperations (0.09s)
+    --- PASS: TestHealthService_ConcurrentOperations/concurrent_GetHealth_-_low_concurrency (0.01s)
+    --- PASS: TestHealthService_ConcurrentOperations/concurrent_GetHealthDetailed_-_medium_concurrency (0.03s)
+    --- PASS: TestHealthService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency (0.02s)
+    --- PASS: TestHealthService_ConcurrentOperations/high_concurrency_stress_-_health_check (0.02s)
+=== RUN   TestMetricsService_ConcurrentOperations
+=== RUN   TestMetricsService_ConcurrentOperations/concurrent_Get_-_low_concurrency
+    metrics_comprehensive_test.go:2339: Completed 50 operations in 14.351852ms (3483.87 ops/sec)
+=== RUN   TestMetricsService_ConcurrentOperations/concurrent_Submit_-_medium_concurrency
+    metrics_comprehensive_test.go:2339: Completed 100 operations in 30.760091ms (3250.97 ops/sec)
+=== RUN   TestMetricsService_ConcurrentOperations/concurrent_Query_-_medium_concurrency
+    metrics_comprehensive_test.go:2339: Completed 60 operations in 21.515089ms (2788.74 ops/sec)
+=== RUN   TestMetricsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    metrics_comprehensive_test.go:2339: Completed 100 operations in 33.046843ms (3026.01 ops/sec)
+--- PASS: TestMetricsService_ConcurrentOperations (0.11s)
+    --- PASS: TestMetricsService_ConcurrentOperations/concurrent_Get_-_low_concurrency (0.02s)
+    --- PASS: TestMetricsService_ConcurrentOperations/concurrent_Submit_-_medium_concurrency (0.03s)
+    --- PASS: TestMetricsService_ConcurrentOperations/concurrent_Query_-_medium_concurrency (0.02s)
+    --- PASS: TestMetricsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestMonitoringService_ConcurrentOperations
+=== RUN   TestMonitoringService_ConcurrentOperations/concurrent_ListProbes_-_low_concurrency
+    monitoring_comprehensive_test.go:920: Completed 50 operations in 15.953506ms (3134.11 ops/sec)
+=== RUN   TestMonitoringService_ConcurrentOperations/concurrent_GetProbe_-_medium_concurrency
+    monitoring_comprehensive_test.go:920: Completed 100 operations in 26.058706ms (3837.49 ops/sec)
+=== RUN   TestMonitoringService_ConcurrentOperations/concurrent_CreateProbe_-_medium_concurrency
+    monitoring_comprehensive_test.go:920: Completed 60 operations in 20.623841ms (2909.25 ops/sec)
+=== RUN   TestMonitoringService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    monitoring_comprehensive_test.go:920: Completed 100 operations in 25.737782ms (3885.34 ops/sec)
+--- PASS: TestMonitoringService_ConcurrentOperations (0.10s)
+    --- PASS: TestMonitoringService_ConcurrentOperations/concurrent_ListProbes_-_low_concurrency (0.02s)
+    --- PASS: TestMonitoringService_ConcurrentOperations/concurrent_GetProbe_-_medium_concurrency (0.03s)
+    --- PASS: TestMonitoringService_ConcurrentOperations/concurrent_CreateProbe_-_medium_concurrency (0.02s)
+    --- PASS: TestMonitoringService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestOrganizationsService_ConcurrentOperations
+=== RUN   TestOrganizationsService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    organizations_comprehensive_test.go:1931: Completed 50 operations in 16.392545ms (3050.17 ops/sec)
+=== RUN   TestOrganizationsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    organizations_comprehensive_test.go:1931: Completed 100 operations in 25.657448ms (3897.50 ops/sec)
+=== RUN   TestOrganizationsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    organizations_comprehensive_test.go:1931: Completed 60 operations in 20.20445ms (2969.64 ops/sec)
+=== RUN   TestOrganizationsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    organizations_comprehensive_test.go:1931: Completed 100 operations in 29.352898ms (3406.82 ops/sec)
+--- PASS: TestOrganizationsService_ConcurrentOperations (0.10s)
+    --- PASS: TestOrganizationsService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestOrganizationsService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.03s)
+    --- PASS: TestOrganizationsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.02s)
+    --- PASS: TestOrganizationsService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestProbesService_ConcurrentOperations
+=== RUN   TestProbesService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    probes_comprehensive_test.go:1152: Completed 50 operations in 14.965289ms (3341.06 ops/sec)
+=== RUN   TestProbesService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    probes_comprehensive_test.go:1152: Completed 100 operations in 25.697654ms (3891.41 ops/sec)
+=== RUN   TestProbesService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    probes_comprehensive_test.go:1152: Completed 60 operations in 20.601791ms (2912.37 ops/sec)
+=== RUN   TestProbesService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    probes_comprehensive_test.go:1152: Completed 100 operations in 24.640824ms (4058.31 ops/sec)
+--- PASS: TestProbesService_ConcurrentOperations (0.09s)
+    --- PASS: TestProbesService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestProbesService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.03s)
+    --- PASS: TestProbesService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.02s)
+    --- PASS: TestProbesService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestProvidersService_ConcurrentOperations
+=== RUN   TestProvidersService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    providers_comprehensive_test.go:1185: Completed 50 operations in 15.009869ms (3331.14 ops/sec)
+=== RUN   TestProvidersService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    providers_comprehensive_test.go:1185: Completed 100 operations in 31.099065ms (3215.53 ops/sec)
+=== RUN   TestProvidersService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency
+    providers_comprehensive_test.go:1185: Completed 60 operations in 19.378559ms (3096.21 ops/sec)
+=== RUN   TestProvidersService_ConcurrentOperations/high_concurrency_stress_-_list
+    providers_comprehensive_test.go:1185: Completed 100 operations in 23.605281ms (4236.34 ops/sec)
+--- PASS: TestProvidersService_ConcurrentOperations (0.10s)
+    --- PASS: TestProvidersService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestProvidersService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.03s)
+    --- PASS: TestProvidersService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency (0.02s)
+    --- PASS: TestProvidersService_ConcurrentOperations/high_concurrency_stress_-_list (0.03s)
+=== RUN   TestServersService_ConcurrentOperations
+=== RUN   TestServersService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    servers_comprehensive_test.go:923: Completed 50 operations in 14.360896ms (3481.68 ops/sec)
+=== RUN   TestServersService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    servers_comprehensive_test.go:923: Completed 100 operations in 24.957259ms (4006.85 ops/sec)
+=== RUN   TestServersService_ConcurrentOperations/concurrent_Register_-_medium_concurrency
+    servers_comprehensive_test.go:923: Completed 60 operations in 17.665191ms (3396.51 ops/sec)
+=== RUN   TestServersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    servers_comprehensive_test.go:923: Completed 100 operations in 23.971824ms (4171.56 ops/sec)
+--- PASS: TestServersService_ConcurrentOperations (0.09s)
+    --- PASS: TestServersService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestServersService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.03s)
+    --- PASS: TestServersService_ConcurrentOperations/concurrent_Register_-_medium_concurrency (0.02s)
+    --- PASS: TestServersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestTagsService_ConcurrentOperations
+=== RUN   TestTagsService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    tags_comprehensive_test.go:1008: Completed 50 operations in 14.598109ms (3425.10 ops/sec)
+=== RUN   TestTagsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    tags_comprehensive_test.go:1008: Completed 100 operations in 28.54828ms (3502.84 ops/sec)
+=== RUN   TestTagsService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency
+    tags_comprehensive_test.go:1008: Completed 60 operations in 15.962621ms (3758.78 ops/sec)
+=== RUN   TestTagsService_ConcurrentOperations/high_concurrency_stress_-_list
+    tags_comprehensive_test.go:1008: Completed 100 operations in 26.931838ms (3713.08 ops/sec)
+--- PASS: TestTagsService_ConcurrentOperations (0.09s)
+    --- PASS: TestTagsService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.02s)
+    --- PASS: TestTagsService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.03s)
+    --- PASS: TestTagsService_ConcurrentOperations/concurrent_mixed_operations_-_medium_concurrency (0.02s)
+    --- PASS: TestTagsService_ConcurrentOperations/high_concurrency_stress_-_list (0.03s)
+=== RUN   TestUsersService_ConcurrentOperations
+=== RUN   TestUsersService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    users_comprehensive_test.go:1750: Completed 50 operations in 8.227448ms (6077.22 ops/sec)
+=== RUN   TestUsersService_ConcurrentOperations/concurrent_Get_-_medium_concurrency
+    users_comprehensive_test.go:1750: Completed 100 operations in 26.205201ms (3816.04 ops/sec)
+=== RUN   TestUsersService_ConcurrentOperations/concurrent_Create_-_medium_concurrency
+    users_comprehensive_test.go:1750: Completed 60 operations in 20.046249ms (2993.08 ops/sec)
+=== RUN   TestUsersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations
+    users_comprehensive_test.go:1750: Completed 100 operations in 24.225791ms (4127.83 ops/sec)
+--- PASS: TestUsersService_ConcurrentOperations (0.09s)
+    --- PASS: TestUsersService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.01s)
+    --- PASS: TestUsersService_ConcurrentOperations/concurrent_Get_-_medium_concurrency (0.03s)
+    --- PASS: TestUsersService_ConcurrentOperations/concurrent_Create_-_medium_concurrency (0.02s)
+    --- PASS: TestUsersService_ConcurrentOperations/high_concurrency_stress_-_mixed_operations (0.03s)
+=== RUN   TestVMsService_ConcurrentOperations
+=== RUN   TestVMsService_ConcurrentOperations/concurrent_List_-_low_concurrency
+    vms_comprehensive_test.go:1241: Completed 50 operations in 13.749652ms (3636.46 ops/sec)
+=== RUN   TestVMsService_ConcurrentOperations/concurrent_List_-_medium_concurrency
+    vms_comprehensive_test.go:1241: Completed 100 operations in 25.135698ms (3978.41 ops/sec)
+=== RUN   TestVMsService_ConcurrentOperations/concurrent_List_-_medium_concurrency_mixed
+    vms_comprehensive_test.go:1241: Completed 60 operations in 16.851325ms (3560.55 ops/sec)
+=== RUN   TestVMsService_ConcurrentOperations/high_concurrency_stress_-_list
+    vms_comprehensive_test.go:1241: Completed 100 operations in 23.249826ms (4301.11 ops/sec)
+--- PASS: TestVMsService_ConcurrentOperations (0.09s)
+    --- PASS: TestVMsService_ConcurrentOperations/concurrent_List_-_low_concurrency (0.01s)
+    --- PASS: TestVMsService_ConcurrentOperations/concurrent_List_-_medium_concurrency (0.03s)
+    --- PASS: TestVMsService_ConcurrentOperations/concurrent_List_-_medium_concurrency_mixed (0.02s)
+    --- PASS: TestVMsService_ConcurrentOperations/high_concurrency_stress_-_list (0.02s)
+PASS
+ok  	github.com/nexmonyx/go-sdk/v2	2.507s

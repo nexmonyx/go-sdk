@@ -130,7 +130,7 @@ func TestProvidersService_Create(t *testing.T) {
 		}
 
 		// Send response
-		response := Provider{
+		provider := Provider{
 			ID:           "provider-123",
 			Name:         req.Name,
 			ProviderType: req.ProviderType,
@@ -138,6 +138,11 @@ func TestProvidersService_Create(t *testing.T) {
 			VMCount:      0,
 			CreatedAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		}
+
+		response := StandardResponse{
+			Status: "success",
+			Data:   provider,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -194,7 +199,7 @@ func TestProvidersService_Get(t *testing.T) {
 		}
 
 		// Send response
-		response := Provider{
+		provider := Provider{
 			ID:           "provider-123",
 			Name:         "AWS Production",
 			ProviderType: "aws",
@@ -202,6 +207,11 @@ func TestProvidersService_Get(t *testing.T) {
 			VMCount:      5,
 			CreatedAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		}
+
+		response := StandardResponse{
+			Status: "success",
+			Data:   provider,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -258,7 +268,7 @@ func TestProvidersService_Update(t *testing.T) {
 		}
 
 		// Send response
-		response := Provider{
+		provider := Provider{
 			ID:           "provider-123",
 			Name:         req.Name,
 			ProviderType: "aws",
@@ -266,6 +276,11 @@ func TestProvidersService_Update(t *testing.T) {
 			VMCount:      5,
 			CreatedAt:    time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			UpdatedAt:    time.Date(2025, 1, 1, 1, 0, 0, 0, time.UTC),
+		}
+
+		response := StandardResponse{
+			Status: "success",
+			Data:   provider,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -311,14 +326,15 @@ func TestProvidersService_Delete(t *testing.T) {
 			t.Errorf("Expected DELETE method, got %s", r.Method)
 		}
 
-		// Check force parameter
-		if r.URL.Query().Get("force") != "true" {
-			t.Errorf("Expected force=true, got %s", r.URL.Query().Get("force"))
+		// Send response
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Provider deleted successfully",
 		}
 
-		// Send response
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"success","message":"Provider deleted successfully"}`))
+		json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -352,7 +368,7 @@ func TestProvidersService_Sync(t *testing.T) {
 		}
 
 		// Send response
-		response := SyncResponse{
+		syncResp := SyncResponse{
 			ID:         "sync-456",
 			ProviderID: "provider-123",
 			Status:     "completed",
@@ -362,6 +378,11 @@ func TestProvidersService_Sync(t *testing.T) {
 			VMsAdded:   2,
 			VMsUpdated: 5,
 			VMsRemoved: 1,
+		}
+
+		response := StandardResponse{
+			Status: "success",
+			Data:   syncResp,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

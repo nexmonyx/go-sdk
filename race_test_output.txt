@@ -1,0 +1,1900 @@
+--- FAIL: TestNewClient (0.00s)
+    --- FAIL: TestNewClient/default_config (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/default_config
+    --- FAIL: TestNewClient/custom_config (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/custom_config
+    --- FAIL: TestNewClient/api_key_auth (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/api_key_auth
+    --- FAIL: TestNewClient/server_credentials (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/server_credentials
+    --- FAIL: TestNewClient/unified_api_key_bearer_token (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/unified_api_key_bearer_token
+    --- FAIL: TestNewClient/unified_api_key_with_secret (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/unified_api_key_with_secret
+    --- FAIL: TestNewClient/registration_key (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/registration_key
+    --- FAIL: TestNewClient/monitoring_key (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/monitoring_key
+    --- FAIL: TestNewClient/custom_headers (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/custom_headers
+    --- FAIL: TestNewClient/custom_http_client (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/custom_http_client
+    --- FAIL: TestNewClient/debug_mode_enabled (0.00s)
+        client_test.go:196: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/client_test.go:196
+            	Error:      	Not equal: 
+            	            	expected: 3
+            	            	actual  : 0
+            	Test:       	TestNewClient/debug_mode_enabled
+[DEBUG] Request: GET /success
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: map[string]string)
+2025/11/17 14:29:37.654341 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /success  HTTP/1.1
+HOST   : 127.0.0.1:12347
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.654206299-06:00
+TIME DURATION: 647.388µs
+HEADERS      :
+	Content-Length: 21
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{
+   "status": "success"
+}
+==============================================================================
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.655844 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:20231
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 400 Bad Request
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.655681159-06:00
+TIME DURATION: 683.678µs
+HEADERS      :
+	Content-Length: 86
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{"error": "validation_error", "message": "Invalid input", "details": "Field required"}
+==============================================================================
+[DEBUG] Error Response: Status=400
+[DEBUG] Error Body: {"error": "validation_error", "message": "Invalid input", "details": "Field required"}
+[DEBUG] Response Headers:
+[DEBUG]   Content-Length: [86]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.657656 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:3473
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 400 Bad Request
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.65743716-06:00
+TIME DURATION: 750.208µs
+HEADERS      :
+	Content-Length: 32
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{"message": "validation failed"}
+==============================================================================
+[DEBUG] Error Response: Status=400
+[DEBUG] Error Body: {"message": "validation failed"}
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [32]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.659256 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:15397
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 401 Unauthorized
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.659076339-06:00
+TIME DURATION: 624.638µs
+HEADERS      :
+	Content-Length: 28
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{"message": "token expired"}
+==============================================================================
+[DEBUG] Error Response: Status=401
+[DEBUG] Error Body: {"message": "token expired"}
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [28]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.660879 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:4973
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 401 Unauthorized
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.66072092-06:00
+TIME DURATION: 719.9µs
+HEADERS      :
+	Content-Length: 2
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{}
+==============================================================================
+[DEBUG] Error Response: Status=401
+[DEBUG] Error Body: {}
+[DEBUG] Response Headers:
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [2]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.662343 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:4823
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 403 Forbidden
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.662161846-06:00
+TIME DURATION: 575.449µs
+HEADERS      :
+	Content-Length: 28
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{"message": "access denied"}
+==============================================================================
+[DEBUG] Error Response: Status=403
+[DEBUG] Error Body: {"message": "access denied"}
+[DEBUG] Response Headers:
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [28]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.663876 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:21929
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 403 Forbidden
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.663658276-06:00
+TIME DURATION: 581.033µs
+HEADERS      :
+	Content-Length: 2
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{}
+==============================================================================
+[DEBUG] Error Response: Status=403
+[DEBUG] Error Body: {}
+[DEBUG] Response Headers:
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [2]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.665350 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:33125
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 429 Too Many Requests
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.665159074-06:00
+TIME DURATION: 589.284µs
+HEADERS      :
+	Content-Length: 34
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+	Retry-After: 120
+BODY         :
+{"message": "rate limit exceeded"}
+==============================================================================
+[DEBUG] Error Response: Status=429
+[DEBUG] Error Body: {"message": "rate limit exceeded"}
+[DEBUG] Response Headers:
+[DEBUG]   Retry-After: [120]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [34]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG] Request: GET /
+[DEBUG] Headers being sent:
+2025/11/17 14:29:37.666822 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /  HTTP/1.1
+HOST   : 127.0.0.1:28883
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 409 Conflict
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.666664143-06:00
+TIME DURATION: 560.693µs
+HEADERS      :
+	Content-Length: 23
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{"message": "conflict"}
+==============================================================================
+[DEBUG] Error Response: Status=409
+[DEBUG] Error Body: {"message": "conflict"}
+[DEBUG] Response Headers:
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:29:37 GMT]
+[DEBUG]   Content-Length: [23]
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG] Request: GET /test
+[DEBUG] Headers being sent:
+[DEBUG]   X-Api-Secret: [REDACTED]
+[DEBUG]   Authorization: [REDACTED]
+[DEBUG]   X-Custom: [value]
+[DEBUG]   Server-Secret: [REDACTED]
+[DEBUG]   X-Server-Secret: [REDACTED]
+2025/11/17 14:29:37.783404 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+GET  /test  HTTP/1.1
+HOST   : 127.0.0.1:25093
+HEADERS:
+	Accept: application/json
+	Authorization: Bearer secret-token
+	Content-Type: application/json
+	Server-Secret: secret
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Api-Secret: secret
+	X-Custom: value
+	X-Server-Secret: secret
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.783206154-06:00
+TIME DURATION: 707.067µs
+HEADERS      :
+	Content-Length: 21
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{
+   "status": "success"
+}
+==============================================================================
+[DEBUG] Request: POST /test
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: map[string]interface {})
+2025/11/17 14:29:37.787805 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /test  HTTP/1.1
+HOST   : 127.0.0.1:10781
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+{
+   "key1": "value1",
+   "key2": 42,
+   "nested": {
+      "key": "value"
+   }
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:29:37.787599905-06:00
+TIME DURATION: 1.908779ms
+HEADERS      :
+	Content-Length: 21
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:29:37 GMT
+BODY         :
+{
+   "status": "success"
+}
+==============================================================================
+--- FAIL: TestJSON_NegativeValuesForUint (0.00s)
+    models_test.go:2014: expected error for negative value in uint field, got nil
+--- FAIL: TestClient_RetryLogic (5.78s)
+    --- FAIL: TestClient_RetryLogic/no_retries_configured_-_still_makes_default_attempts (0.00s)
+        network_errors_test.go:174: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/network_errors_test.go:174
+            	Error:      	Not equal: 
+            	            	expected: 4
+            	            	actual  : 1
+            	Test:       	TestClient_RetryLogic/no_retries_configured_-_still_makes_default_attempts
+            	Messages:   	Unexpected number of attempts
+--- FAIL: TestClient_ConnectionFailures (0.09s)
+    --- FAIL: TestClient_ConnectionFailures/connection_refused_-_server_not_running (0.00s)
+        network_errors_test.go:266: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/network_errors_test.go:266
+            	Error:      	Should be true
+            	Test:       	TestClient_ConnectionFailures/connection_refused_-_server_not_running
+            	Messages:   	Expected error to contain 'connection refused' or 'context deadline exceeded', got: request failed: Get "http://localhost:99999/v2/servers": dial tcp: address 99999: invalid port
+--- FAIL: TestClient_DNSResolutionFailures (0.05s)
+    --- FAIL: TestClient_DNSResolutionFailures/empty_host (0.00s)
+        network_errors_test.go:402: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/network_errors_test.go:402
+            	Error:      	Should be true
+            	Test:       	TestClient_DNSResolutionFailures/empty_host
+            	Messages:   	Expected error to contain 'invalid' or 'context deadline exceeded', got: request failed: Get "http:/v2/servers": http: no Host in request URL
+2025/11/17 14:30:00 httptest.Server blocked in Close after 5 seconds, waiting for connections:
+  *net.TCPConn 0xc001130e98 127.0.0.1:57088 in state active
+[DEBUG] NetworkHardware.Submit: Starting network hardware submission
+[DEBUG] NetworkHardware.Submit: Server UUID: server-uuid-123
+[DEBUG] NetworkHardware.Submit: Number of interfaces: 4
+[DEBUG] NetworkHardware.Submit: Endpoint: POST /v2/server/server-uuid-123/hardware/network
+[DEBUG] NetworkHardware.Submit: Request payload:
+[DEBUG] NetworkHardware.Submit:   ServerUUID: server-uuid-123
+[DEBUG] NetworkHardware.Submit:   Interfaces count: 4
+[DEBUG] NetworkHardware.Submit:   Interface[0]:
+[DEBUG] NetworkHardware.Submit:     Name: eth0
+[DEBUG] NetworkHardware.Submit:     Type: physical
+[DEBUG] NetworkHardware.Submit:     MAC: 00:11:22:33:44:55
+[DEBUG] NetworkHardware.Submit:     Speed: 1000 Mbps
+[DEBUG] NetworkHardware.Submit:     State: up
+[DEBUG] NetworkHardware.Submit:     Link: true
+[DEBUG] NetworkHardware.Submit:     IPs: [192.168.1.100]
+[DEBUG] NetworkHardware.Submit:     RX Bytes: 1024000
+[DEBUG] NetworkHardware.Submit:     TX Bytes: 512000
+[DEBUG] NetworkHardware.Submit:   Interface[1]:
+[DEBUG] NetworkHardware.Submit:     Name: bond0
+[DEBUG] NetworkHardware.Submit:     Type: bond
+[DEBUG] NetworkHardware.Submit:     MAC: 
+[DEBUG] NetworkHardware.Submit:     Speed: 0 Mbps
+[DEBUG] NetworkHardware.Submit:     State: 
+[DEBUG] NetworkHardware.Submit:     Link: false
+[DEBUG] NetworkHardware.Submit:     IPs: []
+[DEBUG] NetworkHardware.Submit:     RX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     TX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     Bond Mode: 802.3ad
+[DEBUG] NetworkHardware.Submit:     Bond Slaves: [eth1 eth2]
+[DEBUG] NetworkHardware.Submit:   Interface[2]:
+[DEBUG] NetworkHardware.Submit:     Name: eth0.100
+[DEBUG] NetworkHardware.Submit:     Type: vlan
+[DEBUG] NetworkHardware.Submit:     MAC: 
+[DEBUG] NetworkHardware.Submit:     Speed: 0 Mbps
+[DEBUG] NetworkHardware.Submit:     State: 
+[DEBUG] NetworkHardware.Submit:     Link: false
+[DEBUG] NetworkHardware.Submit:     IPs: []
+[DEBUG] NetworkHardware.Submit:     RX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     TX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     VLAN ID: 100
+[DEBUG] NetworkHardware.Submit:     VLAN Parent: eth0
+[DEBUG] NetworkHardware.Submit:   Interface[3]:
+[DEBUG] NetworkHardware.Submit:     Name: br0
+[DEBUG] NetworkHardware.Submit:     Type: bridge
+[DEBUG] NetworkHardware.Submit:     MAC: 
+[DEBUG] NetworkHardware.Submit:     Speed: 0 Mbps
+[DEBUG] NetworkHardware.Submit:     State: 
+[DEBUG] NetworkHardware.Submit:     Link: false
+[DEBUG] NetworkHardware.Submit:     IPs: []
+[DEBUG] NetworkHardware.Submit:     RX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     TX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     Bridge Ports: [eth3 eth4]
+[DEBUG] NetworkHardware.Submit:     Bridge STP: true
+[DEBUG] NetworkHardware.Submit: Using authentication method: JWT Token
+[DEBUG] Request: POST /v2/server/server-uuid-123/hardware/network
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: nexmonyx.NetworkHardwareRequest)
+2025/11/17 14:30:09.661518 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v2/server/server-uuid-123/hardware/network  HTTP/1.1
+HOST   : 127.0.0.1:19455
+HEADERS:
+	Accept: application/json
+	Authorization: Bearer test-token
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+{
+   "server_uuid": "server-uuid-123",
+   "interfaces": [
+      {
+         "interface_name": "eth0",
+         "interface_type": "physical",
+         "mac_address": "00:11:22:33:44:55",
+         "speed_mbps": 1000,
+         "link_detected": true,
+         "operational_state": "up",
+         "ip_addresses": [
+            "192.168.1.100"
+         ],
+         "rx_bytes": 1024000,
+         "tx_bytes": 512000,
+         "last_seen": "0001-01-01T00:00:00Z"
+      },
+      {
+         "interface_name": "bond0",
+         "interface_type": "bond",
+         "bond_mode": "802.3ad",
+         "bond_slaves": [
+            "eth1",
+            "eth2"
+         ],
+         "last_seen": "0001-01-01T00:00:00Z"
+      },
+      {
+         "interface_name": "eth0.100",
+         "interface_type": "vlan",
+         "vlan_id": 100,
+         "vlan_parent": "eth0",
+         "last_seen": "0001-01-01T00:00:00Z"
+      },
+      {
+         "interface_name": "br0",
+         "interface_type": "bridge",
+         "bridge_ports": [
+            "eth3",
+            "eth4"
+         ],
+         "bridge_stp": true,
+         "last_seen": "0001-01-01T00:00:00Z"
+      }
+   ]
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:09.661318014-06:00
+TIME DURATION: 2.838394ms
+HEADERS      :
+	Content-Length: 85
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:09 GMT
+BODY         :
+{
+   "status": "success",
+   "message": "Network hardware information submitted successfully"
+}
+
+==============================================================================
+[DEBUG] NetworkHardware.Submit: HTTP Response Status: 200
+[DEBUG] NetworkHardware.Submit: HTTP Response Headers: map[Content-Length:[85] Content-Type:[application/json] Date:[Mon, 17 Nov 2025 20:30:09 GMT]]
+[DEBUG] NetworkHardware.Submit: HTTP Response Body Size: 85 bytes
+[DEBUG] NetworkHardware.Submit: HTTP Response Body: {"status":"success","message":"Network hardware information submitted successfully"}
+
+[DEBUG] NetworkHardware.Submit: Request successful
+[DEBUG] NetworkHardware.Submit: Response Status: success
+[DEBUG] NetworkHardware.Submit: Response Message: Network hardware information submitted successfully
+[DEBUG] NetworkHardware.Submit: Response Data: <nil>
+[DEBUG] NetworkHardware.Submit: Starting network hardware submission
+[DEBUG] NetworkHardware.Submit: Server UUID: nonexistent-server
+[DEBUG] NetworkHardware.Submit: Number of interfaces: 1
+[DEBUG] NetworkHardware.Submit: Endpoint: POST /v2/server/nonexistent-server/hardware/network
+[DEBUG] NetworkHardware.Submit: Request payload:
+[DEBUG] NetworkHardware.Submit:   ServerUUID: nonexistent-server
+[DEBUG] NetworkHardware.Submit:   Interfaces count: 1
+[DEBUG] NetworkHardware.Submit:   Interface[0]:
+[DEBUG] NetworkHardware.Submit:     Name: eth0
+[DEBUG] NetworkHardware.Submit:     Type: physical
+[DEBUG] NetworkHardware.Submit:     MAC: 
+[DEBUG] NetworkHardware.Submit:     Speed: 0 Mbps
+[DEBUG] NetworkHardware.Submit:     State: 
+[DEBUG] NetworkHardware.Submit:     Link: false
+[DEBUG] NetworkHardware.Submit:     IPs: []
+[DEBUG] NetworkHardware.Submit:     RX Bytes: 0
+[DEBUG] NetworkHardware.Submit:     TX Bytes: 0
+[DEBUG] NetworkHardware.Submit: Using authentication method: JWT Token
+[DEBUG] Request: POST /v2/server/nonexistent-server/hardware/network
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: nexmonyx.NetworkHardwareRequest)
+2025/11/17 14:30:09.663651 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v2/server/nonexistent-server/hardware/network  HTTP/1.1
+HOST   : 127.0.0.1:5661
+HEADERS:
+	Accept: application/json
+	Authorization: Bearer test-token
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+BODY   :
+{
+   "server_uuid": "nonexistent-server",
+   "interfaces": [
+      {
+         "interface_name": "eth0",
+         "interface_type": "physical",
+         "last_seen": "0001-01-01T00:00:00Z"
+      }
+   ]
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 404 Not Found
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:09.663473764-06:00
+TIME DURATION: 766.972µs
+HEADERS      :
+	Content-Length: 75
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:09 GMT
+BODY         :
+{
+   "status": "error",
+   "message": "Server not found",
+   "error": "SERVER_NOT_FOUND"
+}
+
+==============================================================================
+[DEBUG] Error Response: Status=404
+[DEBUG] Error Body: {"status":"error","message":"Server not found","error":"SERVER_NOT_FOUND"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [application/json]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:09 GMT]
+[DEBUG]   Content-Length: [75]
+[DEBUG] NetworkHardware.Submit: ERROR - Request failed: Server not found
+[DEBUG] NetworkHardware.Submit: Error type: *nexmonyx.APIError
+[DEBUG] NetworkHardware.Submit: API Error Details:
+[DEBUG] NetworkHardware.Submit:   Status: error
+[DEBUG] NetworkHardware.Submit:   ErrorCode: 
+[DEBUG] NetworkHardware.Submit:   Message: Server not found
+[DEBUG] NetworkHardware.Submit:   ErrorType: SERVER_NOT_FOUND
+[DEBUG] NetworkHardware.Submit: Starting network hardware submission
+[DEBUG] NetworkHardware.Submit: Server UUID: 
+[DEBUG] NetworkHardware.Submit: Number of interfaces: 1
+[DEBUG] NetworkHardware.Submit: ERROR - Server UUID is required
+--- FAIL: TestProvidersService_Create (0.00s)
+    providers_test.go:178: Expected provider ID 'provider-123', got 
+    providers_test.go:181: Expected provider name 'AWS Production', got 
+--- FAIL: TestProvidersService_Get (0.00s)
+    providers_test.go:231: Expected provider ID 'provider-123', got 
+    providers_test.go:234: Expected provider name 'AWS Production', got 
+--- FAIL: TestProvidersService_Update (0.00s)
+    providers_test.go:299: Expected provider name 'AWS Production Updated', got 
+--- FAIL: TestProvidersService_Delete (0.00s)
+    providers_test.go:316: Expected force=true, got 
+--- FAIL: TestProvidersService_Sync (0.00s)
+    providers_test.go:391: Expected sync status 'completed', got 
+    providers_test.go:394: Expected 10 VMs found, got 0
+==================
+WARNING: DATA RACE
+Write at 0x00c00069f358 by goroutine 35312:
+  runtime.racewrite()
+      <autogenerated>:1 +0x1e
+  github.com/nexmonyx/go-sdk/v2.TestResourceExhaustion_BackpressureHandling.func1()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/resource_exhaustion_test.go:566 +0x5f1
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.(*T).Run.gowrap1()
+      /usr/local/go/src/testing/testing.go:1997 +0x44
+
+Previous read at 0x00c00069f358 by goroutine 35314:
+  runtime.raceread()
+      <autogenerated>:1 +0x1e
+  github.com/nexmonyx/go-sdk/v2.TestResourceExhaustion_BackpressureHandling.func1.2()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/resource_exhaustion_test.go:553 +0x184
+
+Goroutine 35312 (running) created at:
+  testing.(*T).Run()
+      /usr/local/go/src/testing/testing.go:1997 +0x9d2
+  github.com/nexmonyx/go-sdk/v2.TestResourceExhaustion_BackpressureHandling()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/resource_exhaustion_test.go:509 +0x21b
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.(*T).Run.gowrap1()
+      /usr/local/go/src/testing/testing.go:1997 +0x44
+
+Goroutine 35314 (finished) created at:
+  github.com/nexmonyx/go-sdk/v2.TestResourceExhaustion_BackpressureHandling.func1()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/resource_exhaustion_test.go:546 +0x5b2
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.(*T).Run.gowrap1()
+      /usr/local/go/src/testing/testing.go:1997 +0x44
+==================
+--- FAIL: TestResourceExhaustion_BackpressureHandling (4.11s)
+    --- FAIL: TestResourceExhaustion_BackpressureHandling/balanced_rates_-_no_backpressure (1.00s)
+        resource_exhaustion_test.go:568: Max queue size: 2
+        testing.go:1617: race detected during execution of test
+[DEBUG] Heartbeat: Starting heartbeat request
+[DEBUG] Heartbeat: Endpoint: POST /v1/heartbeat
+[DEBUG] Heartbeat: Using server UUID: test-uuid
+[DEBUG] Request: POST /v1/heartbeat
+[DEBUG] Headers being sent:
+2025/11/17 14:30:26.482276 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v1/heartbeat  HTTP/1.1
+HOST   : 127.0.0.1:6599
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.48205917-06:00
+TIME DURATION: 634.914µs
+HEADERS      :
+	Content-Length: 52
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Heartbeat received",
+   "status": "success"
+}
+
+==============================================================================
+[DEBUG] Heartbeat: Request successful
+[DEBUG] Heartbeat: Response status: success
+[DEBUG] Heartbeat: Response message: Heartbeat received
+[DEBUG] Heartbeat: HTTP Status Code: 200
+[DEBUG] Heartbeat: Starting heartbeat request
+[DEBUG] Heartbeat: Endpoint: POST /v1/heartbeat
+[DEBUG] Heartbeat: Using server UUID: test-uuid
+[DEBUG] Request: POST /v1/heartbeat
+[DEBUG] Headers being sent:
+2025/11/17 14:30:26.484772 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v1/heartbeat  HTTP/1.1
+HOST   : 127.0.0.1:22353
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+***** NO CONTENT *****
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 400 Bad Request
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.484617594-06:00
+TIME DURATION: 668.096µs
+HEADERS      :
+	Content-Length: 43
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Bad request",
+   "status": "error"
+}
+
+==============================================================================
+[DEBUG] Error Response: Status=400
+[DEBUG] Error Body: {"message":"Bad request","status":"error"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [application/json]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:26 GMT]
+[DEBUG]   Content-Length: [43]
+[DEBUG] Heartbeat: Request failed with error: {"message":"Bad request","status":"error"}
+
+[DEBUG] HeartbeatWithVersion: Starting heartbeat request with version
+[DEBUG] HeartbeatWithVersion: Endpoint: POST /v1/heartbeat
+[DEBUG] HeartbeatWithVersion: Agent version: v2.0.0
+[DEBUG] HeartbeatWithVersion: Using server UUID: test-uuid
+[DEBUG] HeartbeatWithVersion: Request body: map[agent_version:v2.0.0]
+[DEBUG] Request: POST /v1/heartbeat
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: map[string]string)
+2025/11/17 14:30:26.487654 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v1/heartbeat  HTTP/1.1
+HOST   : 127.0.0.1:25969
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "agent_version": "v2.0.0"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.487544039-06:00
+TIME DURATION: 678.996µs
+HEADERS      :
+	Content-Length: 52
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Heartbeat received",
+   "status": "success"
+}
+
+==============================================================================
+[DEBUG] HeartbeatWithVersion: Request successful
+[DEBUG] HeartbeatWithVersion: Response status: success
+[DEBUG] HeartbeatWithVersion: Response message: Heartbeat received
+[DEBUG] HeartbeatWithVersion: HTTP Status Code: 200
+[DEBUG] HeartbeatWithVersion: Starting heartbeat request with version
+[DEBUG] HeartbeatWithVersion: Endpoint: POST /v1/heartbeat
+[DEBUG] HeartbeatWithVersion: Agent version: v1.0.0
+[DEBUG] HeartbeatWithVersion: Using server UUID: test-uuid
+[DEBUG] HeartbeatWithVersion: Request body: map[agent_version:v1.0.0]
+[DEBUG] Request: POST /v1/heartbeat
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: map[string]string)
+2025/11/17 14:30:26.490368 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+POST  /v1/heartbeat  HTTP/1.1
+HOST   : 127.0.0.1:29519
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "agent_version": "v1.0.0"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 403 Forbidden
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.490255796-06:00
+TIME DURATION: 636.083µs
+HEADERS      :
+	Content-Length: 41
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Forbidden",
+   "status": "error"
+}
+
+==============================================================================
+[DEBUG] Error Response: Status=403
+[DEBUG] Error Body: {"message":"Forbidden","status":"error"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [application/json]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:26 GMT]
+[DEBUG]   Content-Length: [41]
+[DEBUG] HeartbeatWithVersion: Request failed with error: {"message":"Forbidden","status":"error"}
+
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: test-server
+[DEBUG]   OS: Ubuntu
+[DEBUG]   OS Version: 22.04
+[DEBUG]   OS Arch: x86_64
+[DEBUG]   CPUModel: Intel Xeon
+[DEBUG]   CPUCores: 16
+[DEBUG]   MemoryTotal: 33554432000
+[DEBUG]   StorageTotal: 2199023255552
+[DEBUG] UpdateDetails: No enhanced hardware details
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.493392 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:33197
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "test-server",
+   "os": "Ubuntu",
+   "os_version": "22.04",
+   "os_arch": "x86_64",
+   "cpu_model": "Intel Xeon",
+   "cpu_cores": 16,
+   "memory_total": 33554432000,
+   "storage_total": 2199023255552
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.493254187-06:00
+TIME DURATION: 723.184µs
+HEADERS      :
+	Content-Length: 88
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "data": {
+      "hostname": "test-server",
+      "id": 1,
+      "server_uuid": "test-uuid"
+   },
+   "status": "success"
+}
+
+==============================================================================
+[DEBUG] UpdateDetails: Request successful
+[DEBUG] UpdateDetails: Response status: success
+[DEBUG] UpdateDetails: Response message: 
+[DEBUG] UpdateDetails: HTTP Status Code: 200
+[DEBUG] UpdateDetails: Server ID: 1
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Server Hostname: test-server
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: test-server
+[DEBUG]   OS: Ubuntu
+[DEBUG]   OS Version: 22.04
+[DEBUG]   OS Arch: x86_64
+[DEBUG]   CPUModel: Intel Xeon
+[DEBUG]   CPUCores: 8
+[DEBUG]   MemoryTotal: 16777216000
+[DEBUG]   StorageTotal: 1099511627776
+[DEBUG] UpdateDetails: Enhanced hardware details present
+[DEBUG]   CPU Count: 1
+[DEBUG]   CPU[0]: Intel Xeon E5-2680 (8 cores)
+[DEBUG]   Memory: 16777216000 bytes total, DDR4 type
+[DEBUG]   Network Interfaces: 1
+[DEBUG]   Interface[0]: eth0 (00:11:22:33:44:55) - 1000 Mbps
+[DEBUG]   Disks: 1
+[DEBUG]   Disk[0]: /dev/sda (Samsung SSD) ssd - 1099511627776 bytes
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.495753 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:21041
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "test-server",
+   "os": "Ubuntu",
+   "os_version": "22.04",
+   "os_arch": "x86_64",
+   "cpu_model": "Intel Xeon",
+   "cpu_cores": 8,
+   "memory_total": 16777216000,
+   "storage_total": 1099511627776,
+   "hardware": {
+      "cpu": [
+         {
+            "manufacturer": "Intel",
+            "model_name": "Xeon E5-2680",
+            "physical_cores": 8,
+            "logical_cores": 16,
+            "l3_cache": 20480
+         }
+      ],
+      "memory": {
+         "total_size": 16777216000,
+         "memory_type": "DDR4",
+         "speed": 2400
+      },
+      "network": [
+         {
+            "name": "eth0",
+            "hardware_addr": "00:11:22:33:44:55",
+            "speed_mbps": 1000
+         }
+      ],
+      "disks": [
+         {
+            "device": "/dev/sda",
+            "disk_model": "Samsung SSD",
+            "size": 1099511627776,
+            "type": "ssd"
+         }
+      ]
+   }
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.495594361-06:00
+TIME DURATION: 762.984µs
+HEADERS      :
+	Content-Length: 88
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "data": {
+      "hostname": "test-server",
+      "id": 1,
+      "server_uuid": "test-uuid"
+   },
+   "status": "success"
+}
+
+==============================================================================
+[DEBUG] UpdateDetails: Request successful
+[DEBUG] UpdateDetails: Response status: success
+[DEBUG] UpdateDetails: Response message: 
+[DEBUG] UpdateDetails: HTTP Status Code: 200
+[DEBUG] UpdateDetails: Server ID: 1
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Server Hostname: test-server
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: test-server
+[DEBUG]   OS: 
+[DEBUG]   OS Version: 
+[DEBUG]   OS Arch: 
+[DEBUG]   CPUModel: 
+[DEBUG]   CPUCores: 0
+[DEBUG]   MemoryTotal: 0
+[DEBUG]   StorageTotal: 0
+[DEBUG] UpdateDetails: No enhanced hardware details
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.499028 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:14721
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "test-server"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 400 Bad Request
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.498894868-06:00
+TIME DURATION: 681.084µs
+HEADERS      :
+	Content-Length: 47
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Invalid request",
+   "status": "error"
+}
+
+==============================================================================
+[DEBUG] Error Response: Status=400
+[DEBUG] Error Body: {"message":"Invalid request","status":"error"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [application/json]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:26 GMT]
+[DEBUG]   Content-Length: [47]
+[DEBUG] UpdateDetails: Request failed with error: {"message":"Invalid request","status":"error"}
+
+[DEBUG] UpdateInfo: Starting server info update
+[DEBUG] UpdateInfo: Endpoint: PUT /v1/server/test-uuid/info
+[DEBUG] UpdateInfo: Server UUID: test-uuid
+[DEBUG] UpdateInfo: Request data:
+[DEBUG]   Hostname: debug-server
+[DEBUG]   OS: CentOS
+[DEBUG]   OS Version: 8
+[DEBUG]   OS Arch: x86_64
+[DEBUG]   CPUModel: Intel Core
+[DEBUG]   CPUCores: 4
+[DEBUG]   MemoryTotal: 8589934592
+[DEBUG]   StorageTotal: 549755813888
+[DEBUG] UpdateInfo: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/info
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.502153 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/info  HTTP/1.1
+HOST   : 127.0.0.1:26701
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "debug-server",
+   "os": "CentOS",
+   "os_version": "8",
+   "os_arch": "x86_64",
+   "cpu_model": "Intel Core",
+   "cpu_cores": 4,
+   "memory_total": 8589934592,
+   "storage_total": 549755813888
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.502010174-06:00
+TIME DURATION: 744.817µs
+HEADERS      :
+	Content-Length: 89
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "data": {
+      "hostname": "debug-server",
+      "id": 1,
+      "server_uuid": "test-uuid"
+   },
+   "status": "success"
+}
+
+==============================================================================
+[DEBUG] UpdateInfo: Request successful
+[DEBUG] UpdateInfo: Response status: success
+[DEBUG] UpdateInfo: Response message: 
+[DEBUG] UpdateInfo: HTTP Status Code: 200
+[DEBUG] UpdateInfo: Server ID: 1
+[DEBUG] UpdateInfo: Server UUID: test-uuid
+[DEBUG] UpdateInfo: Server Hostname: debug-server
+[DEBUG] UpdateInfo: Starting server info update
+[DEBUG] UpdateInfo: Endpoint: PUT /v1/server/test-uuid/info
+[DEBUG] UpdateInfo: Server UUID: test-uuid
+[DEBUG] UpdateInfo: Request data:
+[DEBUG]   Hostname: test-server
+[DEBUG]   OS: 
+[DEBUG]   OS Version: 
+[DEBUG]   OS Arch: 
+[DEBUG]   CPUModel: 
+[DEBUG]   CPUCores: 0
+[DEBUG]   MemoryTotal: 0
+[DEBUG]   StorageTotal: 0
+[DEBUG] UpdateInfo: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/info
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.505263 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/info  HTTP/1.1
+HOST   : 127.0.0.1:29615
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "test-server"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 403 Forbidden
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.505151895-06:00
+TIME DURATION: 779.993µs
+HEADERS      :
+	Content-Length: 41
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "message": "Forbidden",
+   "status": "error"
+}
+
+==============================================================================
+[DEBUG] Error Response: Status=403
+[DEBUG] Error Body: {"message":"Forbidden","status":"error"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [application/json]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:26 GMT]
+[DEBUG]   Content-Length: [41]
+[DEBUG] UpdateInfo: Request failed with error: {"message":"Forbidden","status":"error"}
+
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: debug-server
+[DEBUG]   OS: Ubuntu
+[DEBUG]   OS Version: 22.04
+[DEBUG]   OS Arch: x86_64
+[DEBUG]   CPUModel: Intel Xeon
+[DEBUG]   CPUCores: 16
+[DEBUG]   MemoryTotal: 32768
+[DEBUG]   StorageTotal: 1000000
+[DEBUG] UpdateDetails: Enhanced hardware details present
+[DEBUG]   CPU Count: 2
+[DEBUG]   CPU[0]: Intel Xeon E5-2680 v4 (16 cores)
+[DEBUG]   CPU[1]: Intel Xeon E5-2680 v4 (16 cores)
+[DEBUG]   Memory: 34359738368 bytes total, DDR4 type
+[DEBUG]   Network Interfaces: 2
+[DEBUG]   Interface[0]: eth0 (00:11:22:33:44:55) - 10000 Mbps
+[DEBUG]   Interface[1]: eth1 (00:11:22:33:44:66) - 10000 Mbps
+[DEBUG]   Disks: 2
+[DEBUG]   Disk[0]: /dev/sda (Samsung SSD) SSD - 512000000000 bytes
+[DEBUG]   Disk[1]: /dev/sdb (WD Blue) HDD - 2000000000000 bytes
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.694594 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:8827
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "debug-server",
+   "os": "Ubuntu",
+   "os_version": "22.04",
+   "os_arch": "x86_64",
+   "cpu_model": "Intel Xeon",
+   "cpu_cores": 16,
+   "memory_total": 32768,
+   "storage_total": 1000000,
+   "hardware": {
+      "cpu": [
+         {
+            "manufacturer": "Intel",
+            "model_name": "Xeon E5-2680 v4",
+            "physical_cores": 16,
+            "logical_cores": 32
+         },
+         {
+            "manufacturer": "Intel",
+            "model_name": "Xeon E5-2680 v4",
+            "physical_cores": 16,
+            "logical_cores": 32
+         }
+      ],
+      "memory": {
+         "total_size": 34359738368,
+         "memory_type": "DDR4"
+      },
+      "network": [
+         {
+            "name": "eth0",
+            "hardware_addr": "00:11:22:33:44:55",
+            "speed_mbps": 10000
+         },
+         {
+            "name": "eth1",
+            "hardware_addr": "00:11:22:33:44:66",
+            "speed_mbps": 10000
+         }
+      ],
+      "disks": [
+         {
+            "device": "/dev/sda",
+            "disk_model": "Samsung SSD",
+            "size": 512000000000,
+            "type": "SSD"
+         },
+         {
+            "device": "/dev/sdb",
+            "disk_model": "WD Blue",
+            "size": 2000000000000,
+            "type": "HDD"
+         }
+      ]
+   }
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.694413074-06:00
+TIME DURATION: 687.293µs
+HEADERS      :
+	Content-Length: 251
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "status": "success",
+   "message": "Server details updated",
+   "data": {
+      "id": 0,
+      "server_uuid": "test-uuid",
+      "hostname": "debug-test-server",
+      "organization_id": 0,
+      "cpu_cores": 0,
+      "total_memory_gb": 0,
+      "total_disk_gb": 0,
+      "monitoring_enabled": false,
+      "alerts_enabled": false
+   }
+}
+
+==============================================================================
+[DEBUG] UpdateDetails: Request successful
+[DEBUG] UpdateDetails: Response status: success
+[DEBUG] UpdateDetails: Response message: Server details updated
+[DEBUG] UpdateDetails: HTTP Status Code: 200
+[DEBUG] UpdateDetails: Server ID: 0
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Server Hostname: debug-test-server
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: simple-server
+[DEBUG]   OS: CentOS
+[DEBUG]   OS Version: 7
+[DEBUG]   OS Arch: 
+[DEBUG]   CPUModel: 
+[DEBUG]   CPUCores: 0
+[DEBUG]   MemoryTotal: 0
+[DEBUG]   StorageTotal: 0
+[DEBUG] UpdateDetails: No enhanced hardware details
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.696040 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:8827
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "simple-server",
+   "os": "CentOS",
+   "os_version": "7"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 200 OK
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.695892696-06:00
+TIME DURATION: 475.786µs
+HEADERS      :
+	Content-Length: 251
+	Content-Type: application/json
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{
+   "status": "success",
+   "message": "Server details updated",
+   "data": {
+      "id": 0,
+      "server_uuid": "test-uuid",
+      "hostname": "debug-test-server",
+      "organization_id": 0,
+      "cpu_cores": 0,
+      "total_memory_gb": 0,
+      "total_disk_gb": 0,
+      "monitoring_enabled": false,
+      "alerts_enabled": false
+   }
+}
+
+==============================================================================
+[DEBUG] UpdateDetails: Request successful
+[DEBUG] UpdateDetails: Response status: success
+[DEBUG] UpdateDetails: Response message: Server details updated
+[DEBUG] UpdateDetails: HTTP Status Code: 200
+[DEBUG] UpdateDetails: Server ID: 0
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Server Hostname: debug-test-server
+[DEBUG] UpdateDetails: Starting server details update
+[DEBUG] UpdateDetails: Endpoint: PUT /v1/server/test-uuid/details
+[DEBUG] UpdateDetails: Server UUID: test-uuid
+[DEBUG] UpdateDetails: Request data:
+[DEBUG]   Hostname: error-server
+[DEBUG]   OS: 
+[DEBUG]   OS Version: 
+[DEBUG]   OS Arch: 
+[DEBUG]   CPUModel: 
+[DEBUG]   CPUCores: 0
+[DEBUG]   MemoryTotal: 0
+[DEBUG]   StorageTotal: 0
+[DEBUG] UpdateDetails: No enhanced hardware details
+[DEBUG] UpdateDetails: Using authentication - Server UUID: test-uuid
+[DEBUG] Request: PUT /v1/server/test-uuid/details
+[DEBUG] Headers being sent:
+[DEBUG] Request has body (type: *nexmonyx.ServerDetailsUpdateRequest)
+2025/11/17 14:30:26.697416 DEBUG RESTY 
+==============================================================================
+~~~ REQUEST ~~~
+PUT  /v1/server/test-uuid/details  HTTP/1.1
+HOST   : 127.0.0.1:28465
+HEADERS:
+	Accept: application/json
+	Content-Type: application/json
+	User-Agent: nexmonyx-go-sdk/2.13.0
+	X-Server-Secret: test-secret
+	X-Server-Uuid: test-uuid
+BODY   :
+{
+   "hostname": "error-server"
+}
+
+------------------------------------------------------------------------------
+~~~ RESPONSE ~~~
+STATUS       : 500 Internal Server Error
+PROTO        : HTTP/1.1
+RECEIVED AT  : 2025-11-17T14:30:26.69727002-06:00
+TIME DURATION: 610.354µs
+HEADERS      :
+	Content-Length: 46
+	Content-Type: text/plain; charset=utf-8
+	Date: Mon, 17 Nov 2025 20:30:26 GMT
+BODY         :
+{"status":"error","message":"Internal error"}
+==============================================================================
+[DEBUG] Error Response: Status=500
+[DEBUG] Error Body: {"status":"error","message":"Internal error"}
+
+[DEBUG] Response Headers:
+[DEBUG]   Content-Type: [text/plain; charset=utf-8]
+[DEBUG]   Date: [Mon, 17 Nov 2025 20:30:26 GMT]
+[DEBUG]   Content-Length: [46]
+[DEBUG] UpdateDetails: Request failed with error: internal server error
+--- FAIL: TestSystemdService_Submit (0.00s)
+    systemd_test.go:19: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:19
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v2/hardware/systemd/services"
+        	            	actual  : "/v1/systemd"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v2/hardware/systemd/services
+        	            	+/v1/systemd
+        	Test:       	TestSystemdService_Submit
+--- FAIL: TestSystemdService_GetSystemdServices (0.00s)
+    systemd_test.go:112: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:112
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v2/servers/test-server-uuid/systemd/services"
+        	            	actual  : "/v1/systemd/test-server-uuid"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v2/servers/test-server-uuid/systemd/services
+        	            	+/v1/systemd/test-server-uuid
+        	Test:       	TestSystemdService_GetSystemdServices
+    systemd_test.go:117: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:117
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Should NOT be empty, but was 
+        	Test:       	TestSystemdService_GetSystemdServices
+    systemd_test.go:118: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:118
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Should NOT be empty, but was 
+        	Test:       	TestSystemdService_GetSystemdServices
+--- FAIL: TestSystemdService_GetLatestSystemdServices (0.00s)
+    systemd_test.go:169: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:169
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v2/servers/test-server-uuid/systemd/services/latest"
+        	            	actual  : "/v1/systemd/test-server-uuid/stats"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v2/servers/test-server-uuid/systemd/services/latest
+        	            	+/v1/systemd/test-server-uuid/stats
+        	Test:       	TestSystemdService_GetLatestSystemdServices
+    systemd_test.go:214: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:214
+        	Error:      	Not equal: 
+        	            	expected: 150
+        	            	actual  : 0
+        	Test:       	TestSystemdService_GetLatestSystemdServices
+    systemd_test.go:215: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:215
+        	Error:      	Not equal: 
+        	            	expected: "running"
+        	            	actual  : ""
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-running
+        	            	+
+        	Test:       	TestSystemdService_GetLatestSystemdServices
+--- FAIL: TestSystemdService_GetSystemdServiceByName (0.00s)
+    systemd_test.go:279: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:279
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v2/servers/test-server-uuid/systemd/services/nginx.service"
+        	            	actual  : "/v1/systemd/test-server-uuid/service/nginx.service"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v2/servers/test-server-uuid/systemd/services/nginx.service
+        	            	+/v1/systemd/test-server-uuid/service/nginx.service
+        	Test:       	TestSystemdService_GetSystemdServiceByName
+--- FAIL: TestSystemdService_GetSystemdSystemStats (0.00s)
+    systemd_test.go:326: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:326
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v2/servers/test-server-uuid/systemd/stats"
+        	            	actual  : "/v1/systemd/test-server-uuid/stats"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v2/servers/test-server-uuid/systemd/stats
+        	            	+/v1/systemd/test-server-uuid/stats
+        	Test:       	TestSystemdService_GetSystemdSystemStats
+--- FAIL: TestSystemdServiceInfo_HelperFunctions (0.00s)
+    --- FAIL: TestSystemdServiceInfo_HelperFunctions/IsFailed (0.00s)
+        systemd_test.go:394: 
+            	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/systemd_test.go:394
+            	Error:      	Should be true
+            	Test:       	TestSystemdServiceInfo_HelperFunctions/IsFailed
+--- FAIL: TestTagsService_ListTags (0.00s)
+    tags_test.go:61: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:61
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_ListTags
+--- FAIL: TestTagsService_CreateTag (0.00s)
+    tags_test.go:107: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:107
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_CreateTag
+--- FAIL: TestTagsService_GetServerTags (0.00s)
+    tags_test.go:115: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:115
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v1/servers/server-uuid-123/tags"
+        	            	actual  : "/v1/server/server-uuid-123/tags"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v1/servers/server-uuid-123/tags
+        	            	+/v1/server/server-uuid-123/tags
+        	Test:       	TestTagsService_GetServerTags
+    tags_test.go:145: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:145
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_GetServerTags
+--- FAIL: TestTagsService_AssignTagsToServer (0.00s)
+    tags_test.go:153: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:153
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v1/servers/server-uuid-456/tags"
+        	            	actual  : "/v1/server/server-uuid-456/tags"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v1/servers/server-uuid-456/tags
+        	            	+/v1/server/server-uuid-456/tags
+        	Test:       	TestTagsService_AssignTagsToServer
+--- FAIL: TestTagsService_RemoveTagFromServer (0.00s)
+    tags_test.go:190: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:190
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v1/servers/server-uuid-789/tags/456"
+        	            	actual  : "/v1/server/server-uuid-789/tags/456"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v1/servers/server-uuid-789/tags/456
+        	            	+/v1/server/server-uuid-789/tags/456
+        	Test:       	TestTagsService_RemoveTagFromServer
+--- FAIL: TestTagsService_CreateNamespace (0.00s)
+    tags_test.go:247: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:247
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_CreateNamespace
+--- FAIL: TestTagsService_ListNamespaces (0.00s)
+    tags_test.go:282: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:282
+        	Error:      	Received unexpected error:
+        	            	request failed: json: cannot unmarshal array into Go struct field .data of type struct { Namespaces []*nexmonyx.TagNamespace "json:\"namespaces\""; Total int "json:\"total\"" }
+        	Test:       	TestTagsService_ListNamespaces
+--- FAIL: TestTagsService_CreateInheritanceRule (0.00s)
+    tags_test.go:366: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:366
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_CreateInheritanceRule
+--- FAIL: TestTagsService_SetOrganizationTag (0.00s)
+    tags_test.go:405: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:405
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_SetOrganizationTag
+--- FAIL: TestTagsService_ListOrganizationTags (0.00s)
+    tags_test.go:439: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:439
+        	Error:      	Received unexpected error:
+        	            	request failed: json: cannot unmarshal array into Go struct field .data of type struct { Tags []*nexmonyx.OrganizationTag "json:\"tags\""; Total int "json:\"total\"" }
+        	Test:       	TestTagsService_ListOrganizationTags
+--- FAIL: TestTagsService_CreateServerRelationship (0.00s)
+    tags_test.go:501: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:501
+        	Error:      	Received unexpected error:
+        	            	request failed: parsing time "ul" as "2006-01-02 15:04:05": cannot parse "ul" as "2006"
+        	Test:       	TestTagsService_CreateServerRelationship
+--- FAIL: TestTagsService_ListServerRelationships (0.00s)
+    tags_test.go:536: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/tags_test.go:536
+        	Error:      	Received unexpected error:
+        	            	request failed: json: cannot unmarshal array into Go struct field .data of type struct { Relationships []*nexmonyx.ServerParentRelationship "json:\"relationships\""; Total int "json:\"total\"" }
+        	Test:       	TestTagsService_ListServerRelationships
+--- FAIL: TestRealisticMockServer_SuccessResponse (0.00s)
+    test_helpers_example_test.go:23: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/test_helpers_example_test.go:23
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v1/servers/1"
+        	            	actual  : "/v1/server/1/details"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v1/servers/1
+        	            	+/v1/server/1/details
+        	Test:       	TestRealisticMockServer_SuccessResponse
+    test_helpers_example_test.go:40: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/test_helpers_example_test.go:40
+        	Error:      	Not equal: 
+        	            	expected: "web-01"
+        	            	actual  : "web-01.example.com"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-web-01
+        	            	+web-01.example.com
+        	Test:       	TestRealisticMockServer_SuccessResponse
+--- FAIL: TestRealisticMockServer_PaginatedResponse (0.01s)
+    test_helpers_example_test.go:51: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/test_helpers_example_test.go:51
+        	            				/usr/local/go/src/net/http/server.go:2322
+        	            				/usr/local/go/src/net/http/server.go:3340
+        	            				/usr/local/go/src/net/http/server.go:2109
+        	            				/usr/local/go/src/runtime/asm_amd64.s:1693
+        	Error:      	Not equal: 
+        	            	expected: "/v1/servers"
+        	            	actual  : "/v2/servers"
+        	            	
+        	            	Diff:
+        	            	--- Expected
+        	            	+++ Actual
+        	            	@@ -1 +1 @@
+        	            	-/v1/servers
+        	            	+/v2/servers
+        	Test:       	TestRealisticMockServer_PaginatedResponse
+--- FAIL: TestRealisticMockServer_ValidationError (0.00s)
+    test_helpers_example_test.go:103: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/test_helpers_example_test.go:103
+        	Error:      	Should be true
+        	Test:       	TestRealisticMockServer_ValidationError
+        	Messages:   	Expected ValidationError
+--- FAIL: TestRealisticMockServer_RateLimitError (0.00s)
+    test_helpers_example_test.go:128: 
+        	Error Trace:	/home/mmattox/go/src/github.com/nexmonyx/go-sdk/test_helpers_example_test.go:128
+        	Error:      	Should be true
+        	Test:       	TestRealisticMockServer_RateLimitError
+        	Messages:   	Expected RateLimitError
+==================
+WARNING: DATA RACE
+Read at 0x00c0008875f0 by goroutine 46445:
+  github.com/nexmonyx/go-sdk/v2.(*WebSocketServiceImpl).handleMessages()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket.go:506 +0x355
+  github.com/nexmonyx/go-sdk/v2.(*WebSocketServiceImpl).Connect.gowrap2()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket.go:188 +0x33
+
+Previous write at 0x00c0008875f0 by goroutine 46440:
+  github.com/nexmonyx/go-sdk/v2.(*WebSocketServiceImpl).Disconnect()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket.go:213 +0x1ac
+  github.com/nexmonyx/go-sdk/v2.TestWebSocketService_EventHandlers()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket_test.go:519 +0x514
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.(*T).Run.gowrap1()
+      /usr/local/go/src/testing/testing.go:1997 +0x44
+
+Goroutine 46445 (running) created at:
+  github.com/nexmonyx/go-sdk/v2.(*WebSocketServiceImpl).Connect()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket.go:188 +0x514
+  github.com/nexmonyx/go-sdk/v2.TestWebSocketService_EventHandlers()
+      /home/mmattox/go/src/github.com/nexmonyx/go-sdk/websocket_test.go:512 +0x4ab
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.(*T).Run.gowrap1()
+      /usr/local/go/src/testing/testing.go:1997 +0x44
+
+Goroutine 46440 (running) created at:
+  testing.(*T).Run()
+      /usr/local/go/src/testing/testing.go:1997 +0x9d2
+  testing.runTests.func1()
+      /usr/local/go/src/testing/testing.go:2477 +0x85
+  testing.tRunner()
+      /usr/local/go/src/testing/testing.go:1934 +0x21c
+  testing.runTests()
+      /usr/local/go/src/testing/testing.go:2475 +0x96c
+  testing.(*M).Run()
+      /usr/local/go/src/testing/testing.go:2337 +0xed4
+  main.main()
+      _testmain.go:2739 +0x164
+==================
+--- FAIL: TestWebSocketService_EventHandlers (0.20s)
+    testing.go:1617: race detected during execution of test
+FAIL
+FAIL	github.com/nexmonyx/go-sdk/v2	56.039s
+?   	github.com/nexmonyx/go-sdk/v2/examples	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/auth_debug	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/debug_heartbeat	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/filesystem_metrics	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/monitoring/advanced	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/monitoring/basic	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/monitoring_agent_keys	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/service_monitoring	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/temperature_power	[no test files]
+?   	github.com/nexmonyx/go-sdk/v2/examples/test_metrics	[no test files]
+ok  	github.com/nexmonyx/go-sdk/v2/examples/testing/integration	1.023s
+ok  	github.com/nexmonyx/go-sdk/v2/examples/testing/performance	22.243s
+ok  	github.com/nexmonyx/go-sdk/v2/examples/testing/unit	1.023s
+?   	github.com/nexmonyx/go-sdk/v2/examples/unified_api_keys	[no test files]
+ok  	github.com/nexmonyx/go-sdk/v2/tests/integration	1.020s
+?   	github.com/nexmonyx/go-sdk/v2/tests/integration/docker/cmd	[no test files]
+FAIL

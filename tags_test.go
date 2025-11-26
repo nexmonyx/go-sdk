@@ -208,6 +208,124 @@ func TestTagsService_RemoveTagFromServer(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestTagsService_GetServersByTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/tags/123/servers", r.URL.Path)
+
+		data := GetServersByTagResponse{
+			TagID:       123,
+			TagKey:      "environment",
+			TagValue:    "production",
+			Namespace:   "infra",
+			ServerCount: 2,
+			Servers: []TagServerInfo{
+				{
+					ID:         1,
+					ServerUUID: "server-uuid-001",
+					Name:       "web-server-1",
+					Hostname:   "web-1.example.com",
+					MainIP:     "192.168.1.10",
+					Os:         "Ubuntu",
+					OsVersion:  "22.04",
+					Status:     "online",
+					AssignedAt: CustomTime{time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)},
+					Source:     "manual",
+				},
+				{
+					ID:         2,
+					ServerUUID: "server-uuid-002",
+					Name:       "web-server-2",
+					Hostname:   "web-2.example.com",
+					MainIP:     "192.168.1.11",
+					Os:         "Ubuntu",
+					OsVersion:  "22.04",
+					Status:     "online",
+					AssignedAt: CustomTime{time.Date(2024, 1, 15, 11, 0, 0, 0, time.UTC)},
+					Source:     "automatic",
+				},
+			},
+		}
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Servers fetched successfully",
+			Data:    data,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.GetServersByTag(context.Background(), 123)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, uint(123), result.TagID)
+	assert.Equal(t, "environment", result.TagKey)
+	assert.Equal(t, "production", result.TagValue)
+	assert.Equal(t, "infra", result.Namespace)
+	assert.Equal(t, 2, result.ServerCount)
+	assert.Len(t, result.Servers, 2)
+
+	// Verify first server
+	assert.Equal(t, uint(1), result.Servers[0].ID)
+	assert.Equal(t, "server-uuid-001", result.Servers[0].ServerUUID)
+	assert.Equal(t, "web-server-1", result.Servers[0].Name)
+	assert.Equal(t, "online", result.Servers[0].Status)
+	assert.Equal(t, "manual", result.Servers[0].Source)
+
+	// Verify second server
+	assert.Equal(t, uint(2), result.Servers[1].ID)
+	assert.Equal(t, "server-uuid-002", result.Servers[1].ServerUUID)
+	assert.Equal(t, "automatic", result.Servers[1].Source)
+}
+
+func TestTagsService_GetServersByTag_EmptyResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/tags/456/servers", r.URL.Path)
+
+		data := GetServersByTagResponse{
+			TagID:       456,
+			TagKey:      "environment",
+			TagValue:    "staging",
+			Namespace:   "infra",
+			ServerCount: 0,
+			Servers:     []TagServerInfo{},
+		}
+		response := StandardResponse{
+			Status:  "success",
+			Message: "Servers fetched successfully",
+			Data:    data,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	result, err := client.Tags.GetServersByTag(context.Background(), 456)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, uint(456), result.TagID)
+	assert.Equal(t, 0, result.ServerCount)
+	assert.Len(t, result.Servers, 0)
+}
+
 // ============================================================================
 // Namespace Tests
 // ============================================================================

@@ -518,3 +518,393 @@ func (j *ControllerJob) CanRetry() bool {
 func (j *ControllerJob) CanCancel() bool {
 	return j.Status == "pending" || j.Status == "queued" || j.Status == "running" || j.Status == "retrying"
 }
+
+// =============================================================================
+// Job Types API (Task #3906)
+// =============================================================================
+
+// JobType represents a job type in the registry
+type JobType struct {
+	ID                 string `json:"id,omitempty"`
+	Name               string `json:"name"`
+	DisplayName        string `json:"display_name"`
+	Description        string `json:"description,omitempty"`
+	DefaultTimeoutSecs int    `json:"default_timeout_seconds"`
+	DefaultMaxRetries  int    `json:"default_max_retries"`
+	DefaultPriority    int    `json:"default_priority"`
+	MaxConcurrent      int    `json:"max_concurrent"`
+	IsSystem           bool   `json:"is_system"`
+	IsEnabled          bool   `json:"is_enabled"`
+	CreatedAt          string `json:"created_at,omitempty"`
+}
+
+// CreateJobTypeRequest represents a request to create a custom job type
+type CreateJobTypeRequest struct {
+	Name               string `json:"name"`
+	DisplayName        string `json:"display_name"`
+	Description        string `json:"description,omitempty"`
+	DefaultTimeoutSecs int    `json:"default_timeout_seconds,omitempty"`
+	DefaultMaxRetries  int    `json:"default_max_retries,omitempty"`
+	DefaultPriority    int    `json:"default_priority,omitempty"`
+	MaxConcurrent      int    `json:"max_concurrent,omitempty"`
+}
+
+// ListJobTypesOptions represents options for listing job types
+type ListJobTypesOptions struct {
+	Page          int  `url:"page,omitempty"`
+	PageSize      int  `url:"page_size,omitempty"`
+	IncludeSystem bool `url:"include_system,omitempty"`
+	EnabledOnly   bool `url:"enabled_only,omitempty"`
+}
+
+// ToQuery converts ListJobTypesOptions to query parameters
+func (o *ListJobTypesOptions) ToQuery() map[string]string {
+	params := make(map[string]string)
+	if o.Page > 0 {
+		params["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.PageSize > 0 {
+		params["page_size"] = fmt.Sprintf("%d", o.PageSize)
+	}
+	if o.IncludeSystem {
+		params["include_system"] = "true"
+	}
+	if o.EnabledOnly {
+		params["enabled_only"] = "true"
+	}
+	return params
+}
+
+// PaginatedJobTypesResponse wraps a paginated job types response
+type PaginatedJobTypesResponse struct {
+	JobTypes   []JobType      `json:"job_types"`
+	Pagination PaginationMeta `json:"pagination"`
+}
+
+// ListJobTypes retrieves all available job types
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/jobs/types
+func (s *JobsService) ListJobTypes(ctx context.Context, opts *ListJobTypesOptions) (*PaginatedJobTypesResponse, *Response, error) {
+	var resp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Data    struct {
+			JobTypes   []JobType      `json:"job_types"`
+			Pagination PaginationMeta `json:"pagination"`
+		} `json:"data"`
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/jobs/types",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	apiResp, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &PaginatedJobTypesResponse{
+		JobTypes:   resp.Data.JobTypes,
+		Pagination: resp.Data.Pagination,
+	}, apiResp, nil
+}
+
+// CreateJobType creates a new custom job type
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: POST /v1/jobs/types
+func (s *JobsService) CreateJobType(ctx context.Context, req *CreateJobTypeRequest) (*JobType, *Response, error) {
+	var resp struct {
+		Status  string  `json:"status"`
+		Message string  `json:"message"`
+		Data    JobType `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/jobs/types",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// GetJobType retrieves a specific job type by name
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/jobs/types/{type}
+func (s *JobsService) GetJobType(ctx context.Context, typeName string) (*JobType, *Response, error) {
+	var resp struct {
+		Status  string  `json:"status"`
+		Message string  `json:"message"`
+		Data    JobType `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/jobs/types/%s", typeName),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// =============================================================================
+// Job Templates API (Task #3906)
+// =============================================================================
+
+// JobTemplate represents a reusable job template
+type JobTemplate struct {
+	ID                 string                 `json:"id"`
+	OrganizationID     uint                   `json:"organization_id"`
+	Name               string                 `json:"name"`
+	Description        string                 `json:"description,omitempty"`
+	JobType            string                 `json:"job_type"`
+	DefaultPayload     map[string]interface{} `json:"default_payload,omitempty"`
+	DefaultPriority    int                    `json:"default_priority"`
+	DefaultTimeoutSecs int                    `json:"default_timeout_seconds"`
+	DefaultMaxRetries  int                    `json:"default_max_retries"`
+	Parameters         []TemplateParam        `json:"parameters,omitempty"`
+	Tags               map[string]string      `json:"tags,omitempty"`
+	UsageCount         int                    `json:"usage_count"`
+	IsActive           bool                   `json:"is_active"`
+	CreatedBy          string                 `json:"created_by"`
+	CreatedAt          string                 `json:"created_at"`
+	UpdatedAt          string                 `json:"updated_at"`
+}
+
+// TemplateParam represents a configurable parameter in a job template
+type TemplateParam struct {
+	Name         string      `json:"name"`
+	Description  string      `json:"description,omitempty"`
+	Type         string      `json:"type"` // string, int, bool, json
+	Required     bool        `json:"required"`
+	DefaultValue interface{} `json:"default_value,omitempty"`
+}
+
+// CreateJobTemplateRequest represents a request to create a job template
+type CreateJobTemplateRequest struct {
+	Name               string                 `json:"name"`
+	Description        string                 `json:"description,omitempty"`
+	JobType            string                 `json:"job_type"`
+	DefaultPayload     map[string]interface{} `json:"default_payload,omitempty"`
+	DefaultPriority    int                    `json:"default_priority,omitempty"`
+	DefaultTimeoutSecs int                    `json:"default_timeout_seconds,omitempty"`
+	DefaultMaxRetries  int                    `json:"default_max_retries,omitempty"`
+	Parameters         []TemplateParam        `json:"parameters,omitempty"`
+	Tags               map[string]string      `json:"tags,omitempty"`
+}
+
+// UpdateJobTemplateRequest represents a request to update a job template
+type UpdateJobTemplateRequest struct {
+	Name               *string                `json:"name,omitempty"`
+	Description        *string                `json:"description,omitempty"`
+	DefaultPayload     map[string]interface{} `json:"default_payload,omitempty"`
+	DefaultPriority    *int                   `json:"default_priority,omitempty"`
+	DefaultTimeoutSecs *int                   `json:"default_timeout_seconds,omitempty"`
+	DefaultMaxRetries  *int                   `json:"default_max_retries,omitempty"`
+	Parameters         []TemplateParam        `json:"parameters,omitempty"`
+	Tags               map[string]string      `json:"tags,omitempty"`
+	IsActive           *bool                  `json:"is_active,omitempty"`
+}
+
+// CreateJobFromTemplateRequest represents a request to create a job from a template
+type CreateJobFromTemplateRequest struct {
+	Name             string                 `json:"name"`
+	PayloadOverrides map[string]interface{} `json:"payload_overrides,omitempty"`
+	PriorityOverride *int                   `json:"priority_override,omitempty"`
+	ScheduledAt      *time.Time             `json:"scheduled_at,omitempty"`
+}
+
+// ListJobTemplatesOptions represents options for listing job templates
+type ListJobTemplatesOptions struct {
+	Page       int    `url:"page,omitempty"`
+	PageSize   int    `url:"page_size,omitempty"`
+	JobType    string `url:"job_type,omitempty"`
+	ActiveOnly bool   `url:"active_only,omitempty"`
+	SortBy     string `url:"sort_by,omitempty"`
+	SortOrder  string `url:"sort_order,omitempty"`
+}
+
+// ToQuery converts ListJobTemplatesOptions to query parameters
+func (o *ListJobTemplatesOptions) ToQuery() map[string]string {
+	params := make(map[string]string)
+	if o.Page > 0 {
+		params["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.PageSize > 0 {
+		params["page_size"] = fmt.Sprintf("%d", o.PageSize)
+	}
+	if o.JobType != "" {
+		params["job_type"] = o.JobType
+	}
+	if o.ActiveOnly {
+		params["active_only"] = "true"
+	}
+	if o.SortBy != "" {
+		params["sort_by"] = o.SortBy
+	}
+	if o.SortOrder != "" {
+		params["sort_order"] = o.SortOrder
+	}
+	return params
+}
+
+// PaginatedJobTemplatesResponse wraps a paginated job templates response
+type PaginatedJobTemplatesResponse struct {
+	Templates  []JobTemplate  `json:"templates"`
+	Pagination PaginationMeta `json:"pagination"`
+}
+
+// ListJobTemplates retrieves a paginated list of job templates
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/jobs/templates
+func (s *JobsService) ListJobTemplates(ctx context.Context, opts *ListJobTemplatesOptions) (*PaginatedJobTemplatesResponse, *Response, error) {
+	var resp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Data    struct {
+			Templates  []JobTemplate  `json:"templates"`
+			Pagination PaginationMeta `json:"pagination"`
+		} `json:"data"`
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/jobs/templates",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	apiResp, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &PaginatedJobTemplatesResponse{
+		Templates:  resp.Data.Templates,
+		Pagination: resp.Data.Pagination,
+	}, apiResp, nil
+}
+
+// CreateJobTemplate creates a new job template
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: POST /v1/jobs/templates
+func (s *JobsService) CreateJobTemplate(ctx context.Context, req *CreateJobTemplateRequest) (*JobTemplate, *Response, error) {
+	var resp struct {
+		Status  string      `json:"status"`
+		Message string      `json:"message"`
+		Data    JobTemplate `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/jobs/templates",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// GetJobTemplate retrieves a specific job template by ID
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/jobs/templates/{id}
+func (s *JobsService) GetJobTemplate(ctx context.Context, templateID string) (*JobTemplate, *Response, error) {
+	var resp struct {
+		Status  string      `json:"status"`
+		Message string      `json:"message"`
+		Data    JobTemplate `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/jobs/templates/%s", templateID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// UpdateJobTemplate updates an existing job template
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: PUT /v1/jobs/templates/{id}
+func (s *JobsService) UpdateJobTemplate(ctx context.Context, templateID string, req *UpdateJobTemplateRequest) (*JobTemplate, *Response, error) {
+	var resp struct {
+		Status  string      `json:"status"`
+		Message string      `json:"message"`
+		Data    JobTemplate `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/v1/jobs/templates/%s", templateID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// DeleteJobTemplate deletes a job template
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: DELETE /v1/jobs/templates/{id}
+func (s *JobsService) DeleteJobTemplate(ctx context.Context, templateID string) (*Response, error) {
+	var resp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   fmt.Sprintf("/v1/jobs/templates/%s", templateID),
+		Result: &resp,
+	})
+	return apiResp, err
+}
+
+// CreateJobFromTemplate creates a new job from a template
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: POST /v1/jobs/from-template/{id}
+func (s *JobsService) CreateJobFromTemplate(ctx context.Context, templateID string, req *CreateJobFromTemplateRequest) (*ControllerJob, *Response, error) {
+	var resp struct {
+		Status  string        `json:"status"`
+		Message string        `json:"message"`
+		Data    ControllerJob `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/jobs/from-template/%s", templateID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
