@@ -2614,6 +2614,50 @@ type BulkGroupAssignResult struct {
 	Total    int `json:"total"`
 }
 
+// BulkTagUnassignRequest represents a request to unassign tags from multiple servers
+type BulkTagUnassignRequest struct {
+	ServerIDs []string `json:"server_ids"`
+	TagIDs    []uint   `json:"tag_ids"`
+}
+
+// BulkTagUnassignResult represents the result of bulk tag unassignment
+type BulkTagUnassignResult struct {
+	Unassigned int `json:"unassigned"`
+	Skipped    int `json:"skipped"`
+	Total      int `json:"total"`
+}
+
+// BulkTagUpdateRequest represents a request to update multiple tags
+type BulkTagUpdateRequest struct {
+	Tags []BulkTagUpdateItem `json:"tags"`
+}
+
+// BulkTagUpdateItem represents a single tag update in bulk update
+type BulkTagUpdateItem struct {
+	ID          uint   `json:"id"`
+	Description string `json:"description"`
+}
+
+// BulkTagUpdateResult represents the result of bulk tag update
+type BulkTagUpdateResult struct {
+	Updated int `json:"updated"`
+	Skipped int `json:"skipped"`
+	Total   int `json:"total"`
+}
+
+// BulkTagDeleteRequest represents a request to delete multiple tags
+type BulkTagDeleteRequest struct {
+	TagIDs  []uint `json:"tag_ids"`
+	Cascade bool   `json:"cascade"` // If true, also remove all server-tag associations
+}
+
+// BulkTagDeleteResult represents the result of bulk tag deletion
+type BulkTagDeleteResult struct {
+	Deleted  int `json:"deleted"`
+	Cascaded int `json:"cascaded"` // Number of server-tag associations removed
+	Total    int `json:"total"`
+}
+
 // ============================================================================
 // Tag Detection Rule Models
 // ============================================================================

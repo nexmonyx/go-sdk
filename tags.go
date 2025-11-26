@@ -512,6 +512,87 @@ func (s *TagsService) GetTagHistorySummary(ctx context.Context, serverID uint) (
 	return resp.Data, nil
 }
 
+// GetOrganizationAuditLog retrieves the complete organization-wide tag audit log
+// Authentication: JWT Token required
+// Endpoint: GET /v1/tags/audit-log
+// Parameters:
+//   - opts: Query options for filtering and pagination (action, namespace, source, date range, page, limit)
+//
+// Returns paginated list of tag history entries across all servers in the organization
+func (s *TagsService) GetOrganizationAuditLog(ctx context.Context, opts *TagHistoryQueryParams) ([]*TagHistoryResponse, *PaginationMeta, error) {
+	var resp struct {
+		Data       []*TagHistoryResponse `json:"data"`
+		Pagination *PaginationMeta       `json:"pagination"`
+		Status     string                `json:"status"`
+		Message    string                `json:"message"`
+		Meta       *PaginationMeta       `json:"meta"` // Alternative location for pagination
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   "/v1/tags/audit-log",
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Handle both pagination and meta fields (API might use either)
+	pagination := resp.Pagination
+	if pagination == nil {
+		pagination = resp.Meta
+	}
+
+	return resp.Data, pagination, nil
+}
+
+// GetTagChangeHistory retrieves the change history for a specific tag across all servers
+// Authentication: JWT Token required
+// Endpoint: GET /v1/tags/{tagID}/history
+// Parameters:
+//   - tagID: Tag ID to retrieve history for
+//   - opts: Query options for filtering and pagination (action, source, date range, page, limit)
+//
+// Returns paginated list of tag history entries for the specific tag
+func (s *TagsService) GetTagChangeHistory(ctx context.Context, tagID uint, opts *TagHistoryQueryParams) ([]*TagHistoryResponse, *PaginationMeta, error) {
+	var resp struct {
+		Data       []*TagHistoryResponse `json:"data"`
+		Pagination *PaginationMeta       `json:"pagination"`
+		Status     string                `json:"status"`
+		Message    string                `json:"message"`
+		Meta       *PaginationMeta       `json:"meta"` // Alternative location for pagination
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/tags/%d/history", tagID),
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	_, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Handle both pagination and meta fields (API might use either)
+	pagination := resp.Pagination
+	if pagination == nil {
+		pagination = resp.Meta
+	}
+
+	return resp.Data, pagination, nil
+}
+
 // ============================================================================
 // Bulk Tag Operations
 // ============================================================================
@@ -588,6 +669,88 @@ func (s *TagsService) AssignTagsToGroups(ctx context.Context, req *BulkGroupAssi
 	_, err := s.client.Do(ctx, &Request{
 		Method: "POST",
 		Path:   "/v1/bulk/groups/assign",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// BulkUnassignTags removes multiple tags from multiple servers in a single operation
+// Authentication: JWT Token required
+// Endpoint: POST /v1/bulk/tags/unassign
+// Parameters:
+//   - req: Bulk unassignment request with server IDs and tag IDs
+//
+// Returns result with unassigned, skipped, and total counts
+func (s *TagsService) BulkUnassignTags(ctx context.Context, req *BulkTagUnassignRequest) (*BulkTagUnassignResult, error) {
+	var resp struct {
+		Data    *BulkTagUnassignResult `json:"data"`
+		Status  string                 `json:"status"`
+		Message string                 `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/bulk/tags/unassign",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// BulkUpdateTags updates multiple tag descriptions in a single operation
+// Authentication: JWT Token required
+// Endpoint: PUT /v1/bulk/tags/update
+// Parameters:
+//   - req: Bulk update request with array of tag ID and description pairs
+//
+// Returns result with updated, skipped, and total counts
+func (s *TagsService) BulkUpdateTags(ctx context.Context, req *BulkTagUpdateRequest) (*BulkTagUpdateResult, error) {
+	var resp struct {
+		Data    *BulkTagUpdateResult `json:"data"`
+		Status  string               `json:"status"`
+		Message string               `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "PUT",
+		Path:   "/v1/bulk/tags/update",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// BulkDeleteTags deletes multiple tags in a single operation
+// Authentication: JWT Token required
+// Endpoint: DELETE /v1/bulk/tags/delete
+// Parameters:
+//   - req: Bulk delete request with tag IDs and cascade option
+//
+// Returns result with deleted, cascaded (server associations removed), and total counts
+// Note: System namespace tags cannot be deleted
+func (s *TagsService) BulkDeleteTags(ctx context.Context, req *BulkTagDeleteRequest) (*BulkTagDeleteResult, error) {
+	var resp struct {
+		Data    *BulkTagDeleteResult `json:"data"`
+		Status  string               `json:"status"`
+		Message string               `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "DELETE",
+		Path:   "/v1/bulk/tags/delete",
 		Body:   req,
 		Result: &resp,
 	})
