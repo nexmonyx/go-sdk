@@ -30,6 +30,12 @@ type ControllerJob struct {
 	Tags           map[string]string      `json:"tags,omitempty"`
 	CreatedAt      time.Time              `json:"created_at"`
 	UpdatedAt      time.Time              `json:"updated_at"`
+	// Scheduler integration fields (Task #3913)
+	IdempotencyKey     string `json:"idempotency_key,omitempty"`     // Deduplication key
+	ScheduleTriggerID  string `json:"schedule_trigger_id,omitempty"` // Trigger UUID
+	CatchUpPolicy      string `json:"catch_up_policy,omitempty"`     // skip_missed, run_once, run_all
+	TemplateID         string `json:"template_id,omitempty"`         // Template UUID
+	IsScheduledTrigger bool   `json:"is_scheduled_trigger,omitempty"`
 }
 
 // RetryPolicy represents the retry configuration for a job
@@ -907,4 +913,113 @@ func (s *JobsService) CreateJobFromTemplate(ctx context.Context, templateID stri
 	}
 
 	return &resp.Data, apiResp, nil
+}
+
+// ========================================
+// Scheduler Integration (Task #3913)
+// ========================================
+
+// ScheduledTriggerRequest represents a request from scheduler-controller to trigger a job
+type ScheduledTriggerRequest struct {
+	ScheduleID     string                 `json:"schedule_id"`       // Schedule UUID
+	TemplateID     string                 `json:"template_id"`       // Job template UUID
+	TriggerTime    time.Time              `json:"trigger_time"`      // Scheduled execution time
+	NextRunTime    *time.Time             `json:"next_run_time,omitempty"`
+	Parameters     map[string]interface{} `json:"parameters,omitempty"`
+	IdempotencyKey string                 `json:"idempotency_key"`   // For deduplication
+	CatchUpPolicy  string                 `json:"catch_up_policy,omitempty"` // skip_missed, run_once, run_all
+	CallbackURL    string                 `json:"callback_url,omitempty"`
+	Priority       *int                   `json:"priority,omitempty"`
+	TimeoutSeconds *int                   `json:"timeout_seconds,omitempty"`
+}
+
+// ScheduledTriggerResponse represents the response from a scheduled trigger request
+type ScheduledTriggerResponse struct {
+	JobID         string         `json:"job_id"`
+	Status        string         `json:"status"` // created, deduplicated, skipped
+	Message       string         `json:"message,omitempty"`
+	ExistingJobID *string        `json:"existing_job_id,omitempty"`
+	Job           *ControllerJob `json:"job,omitempty"`
+}
+
+// ListJobsByScheduleOptions represents options for filtering jobs by schedule
+type ListJobsByScheduleOptions struct {
+	Page     int    `url:"page,omitempty"`
+	PageSize int    `url:"page_size,omitempty"`
+	Status   string `url:"status,omitempty"`
+}
+
+// ToQuery converts ListJobsByScheduleOptions to query parameters
+func (o *ListJobsByScheduleOptions) ToQuery() map[string]string {
+	params := make(map[string]string)
+	if o.Page > 0 {
+		params["page"] = fmt.Sprintf("%d", o.Page)
+	}
+	if o.PageSize > 0 {
+		params["page_size"] = fmt.Sprintf("%d", o.PageSize)
+	}
+	if o.Status != "" {
+		params["status"] = o.Status
+	}
+	return params
+}
+
+// TriggerScheduledJob triggers a job from a scheduler-controller schedule
+// This endpoint is typically called by scheduler-controller to create jobs from schedules.
+// It includes deduplication support via idempotency keys to prevent duplicate job creation.
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: POST /v1/jobs/scheduled-trigger
+func (s *JobsService) TriggerScheduledJob(ctx context.Context, req *ScheduledTriggerRequest) (*ScheduledTriggerResponse, *Response, error) {
+	var resp struct {
+		Status  string                   `json:"status"`
+		Message string                   `json:"message"`
+		Data    ScheduledTriggerResponse `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/jobs/scheduled-trigger",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// GetJobsBySchedule retrieves all jobs created from a specific schedule
+// This is useful for viewing job history for a particular schedule.
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/jobs/schedule/{schedule_id}
+func (s *JobsService) GetJobsBySchedule(ctx context.Context, scheduleID string, opts *ListJobsByScheduleOptions) (*PaginatedJobsResponse, *Response, error) {
+	var resp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Data    struct {
+			Jobs       []ControllerJob `json:"jobs"`
+			Pagination PaginationMeta  `json:"pagination"`
+		} `json:"data"`
+	}
+
+	req := &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/jobs/schedule/%s", scheduleID),
+		Result: &resp,
+	}
+
+	if opts != nil {
+		req.Query = opts.ToQuery()
+	}
+
+	apiResp, err := s.client.Do(ctx, req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &PaginatedJobsResponse{
+		Jobs:       resp.Data.Jobs,
+		Pagination: resp.Data.Pagination,
+	}, apiResp, nil
 }
