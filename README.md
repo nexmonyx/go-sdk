@@ -5180,23 +5180,25 @@ retryResp, _, err := client.Jobs.AdminRetry(ctx, "failed-job-id")
 
 The Job Controller provides comprehensive scheduled job management with support for job types, templates, executions, and dead letter queue handling.
 
+> **Note**: Organization context is derived from authentication. No org-id parameter is required.
+
 ```go
 // Create a scheduled job
-jobReq := &nexmonyx.CreateControllerJobRequest{
+jobReq := &nexmonyx.CreateJobRequest{
     Name:        "backup-servers",
     Description: "Daily server backup job",
-    JobTypeID:   1,
+    Type:        "backup",
     Schedule:    "0 2 * * *", // Daily at 2 AM
     Timeout:     3600,
     MaxRetries:  3,
-    Priority:    "high",
+    Priority:    2,
     Parameters: map[string]interface{}{
-        "target": "all-servers",
+        "target":      "all-servers",
         "compression": "gzip",
     },
 }
 
-job, err := client.Jobs.CreateJob(ctx, "org-id", jobReq)
+job, _, err := client.Jobs.CreateJob(ctx, jobReq)
 
 // List jobs with filtering
 opts := &nexmonyx.ListControllerJobsOptions{
@@ -5205,10 +5207,13 @@ opts := &nexmonyx.ListControllerJobsOptions{
     Page:     1,
     PerPage:  20,
 }
-jobs, meta, err := client.Jobs.ListJobs(ctx, "org-id", opts)
+jobsResp, _, err := client.Jobs.ListJobs(ctx, opts)
+for _, job := range jobsResp.Data {
+    fmt.Printf("Job %s: %s\n", job.ID, job.Status)
+}
 
 // Get job details
-job, err := client.Jobs.GetJob(ctx, "org-id", 123)
+job, _, err := client.Jobs.GetJob(ctx, "job-uuid-here")
 
 // Check job status using helper methods
 if job.IsRunning() {
@@ -5219,31 +5224,31 @@ if job.IsComplete() {
 }
 if job.IsFailed() && job.CanRetry() {
     // Retry failed job
-    retriedJob, err := client.Jobs.RetryJob(ctx, "org-id", job.ID)
+    retriedJob, _, err := client.Jobs.RetryJob(ctx, job.ID)
 }
 if job.CanCancel() {
     // Cancel running job
-    cancelledJob, err := client.Jobs.CancelJob(ctx, "org-id", job.ID)
+    cancelledJob, _, err := client.Jobs.CancelJob(ctx, job.ID)
 }
 
 // Update job
-updateReq := &nexmonyx.UpdateControllerJobRequest{
+updateReq := &nexmonyx.UpdateJobRequest{
     Description: "Updated backup job",
-    Priority:    "critical",
+    Priority:    1, // critical
 }
-updatedJob, err := client.Jobs.UpdateJob(ctx, "org-id", 123, updateReq)
+updatedJob, _, err := client.Jobs.UpdateJob(ctx, "job-uuid", updateReq)
 
 // Delete job
-err = client.Jobs.DeleteJob(ctx, "org-id", 123)
+_, err = client.Jobs.DeleteJob(ctx, "job-uuid")
 
-// Get job executions
-execs, meta, err := client.Jobs.GetJobExecutions(ctx, "org-id", 123, nil)
-for _, exec := range execs {
+// Get job executions (with pagination)
+execsResp, _, err := client.Jobs.GetJobExecutions(ctx, "job-uuid", 1, 20)
+for _, exec := range execsResp.Data {
     fmt.Printf("Execution %d: %s at %s\n", exec.ID, exec.Status, exec.StartedAt)
 }
 
 // Get job statistics
-stats, err := client.Jobs.GetJobStatistics(ctx, "org-id")
+stats, _, err := client.Jobs.GetJobStatistics(ctx)
 fmt.Printf("Total: %d, Running: %d, Failed: %d\n",
     stats.TotalJobs, stats.RunningJobs, stats.FailedJobs)
 
@@ -5253,55 +5258,57 @@ dlqOpts := &nexmonyx.ListDeadLetterOptions{
     Page:    1,
     PerPage: 10,
 }
-dlqEntries, meta, err := client.Jobs.ListDeadLetterQueue(ctx, "org-id", dlqOpts)
-for _, entry := range dlqEntries {
+dlqResp, _, err := client.Jobs.ListDeadLetterQueue(ctx, dlqOpts)
+for _, entry := range dlqResp.Data {
     // Retry failed DLQ entry
-    job, err := client.Jobs.RetryDeadLetterEntry(ctx, "org-id", entry.ID)
+    job, _, err := client.Jobs.RetryDeadLetterEntry(ctx, entry.ID)
 }
 
 // Job Types management
-jobTypes, meta, err := client.Jobs.ListJobTypes(ctx, "org-id", nil)
+typesResp, _, err := client.Jobs.ListJobTypes(ctx, nil)
 
 typeReq := &nexmonyx.CreateJobTypeRequest{
     Name:        "backup",
     Description: "Server backup job type",
     Handler:     "backup-handler",
 }
-jobType, err := client.Jobs.CreateJobType(ctx, "org-id", typeReq)
-jobType, err = client.Jobs.GetJobType(ctx, "org-id", 1)
+jobType, _, err := client.Jobs.CreateJobType(ctx, typeReq)
+jobType, _, err = client.Jobs.GetJobType(ctx, "backup")
 
 // Job Templates for reusable job configurations
-templates, meta, err := client.Jobs.ListJobTemplates(ctx, "org-id", nil)
+templatesResp, _, err := client.Jobs.ListJobTemplates(ctx, nil)
 
 templateReq := &nexmonyx.CreateJobTemplateRequest{
     Name:        "daily-backup-template",
     Description: "Template for daily backup jobs",
-    JobTypeID:   1,
+    Type:        "backup",
     Schedule:    "0 2 * * *",
     Parameters: map[string]interface{}{
         "compression": "gzip",
     },
 }
-template, err := client.Jobs.CreateJobTemplate(ctx, "org-id", templateReq)
+template, _, err := client.Jobs.CreateJobTemplate(ctx, templateReq)
+
+// Get template by ID
+template, _, err = client.Jobs.GetJobTemplate(ctx, "template-uuid")
 
 // Create job from template
 fromTemplateReq := &nexmonyx.CreateJobFromTemplateRequest{
-    TemplateID: template.ID,
-    Name:       "backup-job-from-template",
+    Name: "backup-job-from-template",
     Parameters: map[string]interface{}{
         "target": "specific-server",
     },
 }
-job, err = client.Jobs.CreateJobFromTemplate(ctx, "org-id", fromTemplateReq)
+job, _, err = client.Jobs.CreateJobFromTemplate(ctx, "template-uuid", fromTemplateReq)
 
 // Update template
 updateTemplateReq := &nexmonyx.UpdateJobTemplateRequest{
     Description: "Updated template description",
 }
-updatedTemplate, err := client.Jobs.UpdateJobTemplate(ctx, "org-id", template.ID, updateTemplateReq)
+updatedTemplate, _, err := client.Jobs.UpdateJobTemplate(ctx, "template-uuid", updateTemplateReq)
 
 // Delete template
-err = client.Jobs.DeleteJobTemplate(ctx, "org-id", template.ID)
+_, err = client.Jobs.DeleteJobTemplate(ctx, "template-uuid")
 ```
 
 ### API Keys
