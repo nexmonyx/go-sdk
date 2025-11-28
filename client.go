@@ -85,6 +85,7 @@ type Client struct {
 	Database              *DatabaseService
 	AgentDiscovery        *AgentDiscoveryService
 	AccessRules           *AccessRulesService
+	Schedules             *SchedulesService
 }
 
 // Config holds the configuration for the client
@@ -287,6 +288,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.Database = &DatabaseService{client: client}
 	client.AgentDiscovery = &AgentDiscoveryService{client: client}
 	client.AccessRules = &AccessRulesService{client: client}
+	client.Schedules = &SchedulesService{client: client}
 
 	// Note: WebSocket service requires separate initialization via NewWebSocketService()
 	// to ensure proper server credentials validation and connection management
