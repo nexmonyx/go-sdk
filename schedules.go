@@ -552,6 +552,101 @@ func (s *SchedulesService) GetNextRuns(ctx context.Context, scheduleID uint, cou
 }
 
 // =============================================================================
+// Execution Management
+// =============================================================================
+
+// ExecutionCallbackRequest represents a request to update execution status via callback
+type ExecutionCallbackRequest struct {
+	Status             string                 `json:"status"`
+	TargetResourceID   string                 `json:"target_resource_id,omitempty"`
+	TargetResourceType string                 `json:"target_resource_type,omitempty"`
+	ErrorMessage       string                 `json:"error_message,omitempty"`
+	ErrorDetails       map[string]interface{} `json:"error_details,omitempty"`
+	Result             map[string]interface{} `json:"result,omitempty"`
+	DurationMs         *int                   `json:"duration_ms,omitempty"`
+}
+
+// UpdateExecutionRequest represents a request to update an execution record
+type UpdateExecutionRequest struct {
+	Status             *string                `json:"status,omitempty"`
+	TargetResourceID   *string                `json:"target_resource_id,omitempty"`
+	TargetResourceType *string                `json:"target_resource_type,omitempty"`
+	ErrorMessage       *string                `json:"error_message,omitempty"`
+	ErrorDetails       map[string]interface{} `json:"error_details,omitempty"`
+	Result             map[string]interface{} `json:"result,omitempty"`
+	DurationMs         *int                   `json:"duration_ms,omitempty"`
+}
+
+// ExecutionCallback reports execution completion/failure via callback
+// This is used by job/report controllers to report back execution status
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: POST /v1/schedules/{id}/executions/{executionId}/callback
+func (s *SchedulesService) ExecutionCallback(ctx context.Context, scheduleID, executionID uint, req *ExecutionCallbackRequest) (*ScheduleExecution, *Response, error) {
+	var resp struct {
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+		Data    ScheduleExecution `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/schedules/%d/executions/%d/callback", scheduleID, executionID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// UpdateExecution updates an execution record
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: PATCH /v1/schedules/{id}/executions/{executionId}
+func (s *SchedulesService) UpdateExecution(ctx context.Context, scheduleID, executionID uint, req *UpdateExecutionRequest) (*ScheduleExecution, *Response, error) {
+	var resp struct {
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+		Data    ScheduleExecution `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "PATCH",
+		Path:   fmt.Sprintf("/v1/schedules/%d/executions/%d", scheduleID, executionID),
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// GetExecution retrieves a specific execution record
+// Authentication: JWT Token or Unified API Key required
+// Endpoint: GET /v1/schedules/{id}/executions/{executionId}
+func (s *SchedulesService) GetExecution(ctx context.Context, scheduleID, executionID uint) (*ScheduleExecution, *Response, error) {
+	var resp struct {
+		Status  string            `json:"status"`
+		Message string            `json:"message"`
+		Data    ScheduleExecution `json:"data"`
+	}
+
+	apiResp, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   fmt.Sprintf("/v1/schedules/%d/executions/%d", scheduleID, executionID),
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &resp.Data, apiResp, nil
+}
+
+// =============================================================================
 // Utility Operations
 // =============================================================================
 
