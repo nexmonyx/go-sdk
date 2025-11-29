@@ -25,6 +25,7 @@ const (
 type MaintenanceAction struct {
 	Type   string                 `json:"type"`
 	Config map[string]interface{} `json:"config,omitempty"`
+	Order  int                    `json:"order"`
 }
 
 // ScheduledMaintenanceWindow represents a scheduled maintenance window
