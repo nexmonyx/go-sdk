@@ -715,3 +715,1466 @@ func TestInvoice_JSON(t *testing.T) {
 		}
 	})
 }
+
+// ============================================================================
+// Self-Service Subscription Method Tests (Task #3939)
+// ============================================================================
+
+// TestBillingService_GetMySubscription tests retrieving the current user's subscription
+func TestBillingService_GetMySubscription(t *testing.T) {
+	tests := []struct {
+		name       string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *SubscriptionResponse)
+	}{
+		{
+			name:       "successful get my subscription",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Subscription retrieved",
+				Data: &SubscriptionResponse{
+					ID:                "sub_123",
+					OrganizationID:    1,
+					PlanID:            "plan_pro",
+					PlanName:          "Professional",
+					Status:            "active",
+					BillingCycle:      "monthly",
+					CancelAtPeriodEnd: false,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, sub *SubscriptionResponse) {
+				if sub.ID != "sub_123" {
+					t.Errorf("Expected ID 'sub_123', got '%s'", sub.ID)
+				}
+				if sub.Status != "active" {
+					t.Errorf("Expected Status 'active', got '%s'", sub.Status)
+				}
+				if sub.BillingCycle != "monthly" {
+					t.Errorf("Expected BillingCycle 'monthly', got '%s'", sub.BillingCycle)
+				}
+			},
+		},
+		{
+			name:       "no active subscription",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "No active subscription",
+				Data: &SubscriptionResponse{
+					Status: "none",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, sub *SubscriptionResponse) {
+				if sub.Status != "none" {
+					t.Errorf("Expected Status 'none', got '%s'", sub.Status)
+				}
+			},
+		},
+		{
+			name:       "unauthorized",
+			mockStatus: http.StatusUnauthorized,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Unauthorized",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/subscription" {
+					t.Errorf("Expected path '/v1/subscription', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.GetMySubscription(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetMySubscription() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_CreateCheckout tests creating a checkout session
+func TestBillingService_CreateCheckout(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *CreateCheckoutRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *CheckoutSessionResponse)
+	}{
+		{
+			name: "successful checkout creation",
+			request: &CreateCheckoutRequest{
+				PlanID:       "plan_pro",
+				BillingCycle: "monthly",
+				SuccessURL:   "https://example.com/success",
+				CancelURL:    "https://example.com/cancel",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Checkout session created",
+				Data: &CheckoutSessionResponse{
+					SessionID:  "cs_test_123",
+					SessionURL: "https://checkout.stripe.com/c/pay/cs_test_123",
+					ExpiresAt:  1735689600,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *CheckoutSessionResponse) {
+				if resp.SessionID != "cs_test_123" {
+					t.Errorf("Expected SessionID 'cs_test_123', got '%s'", resp.SessionID)
+				}
+				if resp.SessionURL == "" {
+					t.Error("Expected SessionURL to be present")
+				}
+			},
+		},
+		{
+			name: "invalid plan",
+			request: &CreateCheckoutRequest{
+				PlanID:       "invalid_plan",
+				BillingCycle: "monthly",
+				SuccessURL:   "https://example.com/success",
+				CancelURL:    "https://example.com/cancel",
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Invalid plan ID",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/subscription/checkout" {
+					t.Errorf("Expected path '/v1/subscription/checkout', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodPost {
+					t.Errorf("Expected method POST, got %s", r.Method)
+				}
+
+				// Verify request body
+				var body CreateCheckoutRequest
+				if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+					if body.PlanID != tt.request.PlanID {
+						t.Errorf("Expected PlanID '%s', got '%s'", tt.request.PlanID, body.PlanID)
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.CreateCheckout(context.Background(), tt.request)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreateCheckout() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_UpdateMySubscription tests updating a subscription
+func TestBillingService_UpdateMySubscription(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *UpdateSubscriptionRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *SubscriptionResponse)
+	}{
+		{
+			name: "successful upgrade",
+			request: &UpdateSubscriptionRequest{
+				PlanID:       "plan_enterprise",
+				BillingCycle: "yearly",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Subscription updated",
+				Data: &SubscriptionResponse{
+					ID:           "sub_123",
+					PlanID:       "plan_enterprise",
+					PlanName:     "Enterprise",
+					Status:       "active",
+					BillingCycle: "yearly",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, sub *SubscriptionResponse) {
+				if sub.PlanID != "plan_enterprise" {
+					t.Errorf("Expected PlanID 'plan_enterprise', got '%s'", sub.PlanID)
+				}
+				if sub.BillingCycle != "yearly" {
+					t.Errorf("Expected BillingCycle 'yearly', got '%s'", sub.BillingCycle)
+				}
+			},
+		},
+		{
+			name: "no active subscription to update",
+			request: &UpdateSubscriptionRequest{
+				PlanID: "plan_pro",
+			},
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "No active subscription found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/subscription" {
+					t.Errorf("Expected path '/v1/subscription', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodPut {
+					t.Errorf("Expected method PUT, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.UpdateMySubscription(context.Background(), tt.request)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateMySubscription() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_CancelMySubscription tests canceling a subscription
+func TestBillingService_CancelMySubscription(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *CancelSubscriptionRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+	}{
+		{
+			name: "successful cancel at period end",
+			request: &CancelSubscriptionRequest{
+				CancelAtPeriod: true,
+				Reason:         "Too expensive",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Subscription will be canceled at period end",
+			},
+			wantErr: false,
+		},
+		{
+			name: "immediate cancellation",
+			request: &CancelSubscriptionRequest{
+				CancelAtPeriod: false,
+				Reason:         "No longer needed",
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Subscription canceled",
+			},
+			wantErr: false,
+		},
+		{
+			name: "no subscription to cancel",
+			request: &CancelSubscriptionRequest{
+				CancelAtPeriod: true,
+			},
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "No active subscription found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/subscription" {
+					t.Errorf("Expected path '/v1/subscription', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodDelete {
+					t.Errorf("Expected method DELETE, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			err := client.Billing.CancelMySubscription(context.Background(), tt.request)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CancelMySubscription() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestBillingService_CreatePortalSession tests creating a Stripe portal session
+func TestBillingService_CreatePortalSession(t *testing.T) {
+	tests := []struct {
+		name       string
+		returnURL  string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *PortalSessionResponse)
+	}{
+		{
+			name:       "successful portal session creation",
+			returnURL:  "https://example.com/settings",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Portal session created",
+				Data: &PortalSessionResponse{
+					URL:       "https://billing.stripe.com/session/bps_test_123",
+					ExpiresAt: 1735689600,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *PortalSessionResponse) {
+				if resp.URL == "" {
+					t.Error("Expected URL to be present")
+				}
+			},
+		},
+		{
+			name:       "no customer for portal",
+			returnURL:  "https://example.com/settings",
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "No Stripe customer found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/billing/portal" {
+					t.Errorf("Expected path '/v1/billing/portal', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodPost {
+					t.Errorf("Expected method POST, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.CreatePortalSession(context.Background(), tt.returnURL)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CreatePortalSession() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// Plan Method Tests (Task #3939)
+// ============================================================================
+
+// TestBillingService_ListPlans tests listing available plans
+func TestBillingService_ListPlans(t *testing.T) {
+	tests := []struct {
+		name       string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, []*Plan)
+	}{
+		{
+			name:       "successful list plans",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Plans retrieved",
+				Data: &[]*Plan{
+					{
+						ID:           "plan_starter",
+						Name:         "Starter",
+						Description:  "For small teams",
+						MonthlyPrice: 2900,
+						YearlyPrice:  29000,
+						Currency:     "USD",
+						IsPublic:     true,
+						Limits: PlanLimits{
+							MaxServers:        5,
+							MaxUsers:          3,
+							MaxProbes:         10,
+							DataRetentionDays: 30,
+						},
+					},
+					{
+						ID:           "plan_pro",
+						Name:         "Professional",
+						Description:  "For growing teams",
+						MonthlyPrice: 9900,
+						YearlyPrice:  99000,
+						Currency:     "USD",
+						IsPublic:     true,
+						Limits: PlanLimits{
+							MaxServers:        50,
+							MaxUsers:          10,
+							MaxProbes:         100,
+							DataRetentionDays: 90,
+						},
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, plans []*Plan) {
+				if len(plans) != 2 {
+					t.Errorf("Expected 2 plans, got %d", len(plans))
+				}
+				if plans[0].ID != "plan_starter" {
+					t.Errorf("Expected first plan ID 'plan_starter', got '%s'", plans[0].ID)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/pricing/plans" {
+					t.Errorf("Expected path '/v1/pricing/plans', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.ListPlans(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListPlans() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_GetPlan tests retrieving a specific plan
+func TestBillingService_GetPlan(t *testing.T) {
+	tests := []struct {
+		name       string
+		planID     string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *Plan)
+	}{
+		{
+			name:       "successful get plan",
+			planID:     "plan_pro",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Plan retrieved",
+				Data: &Plan{
+					ID:           "plan_pro",
+					Name:         "Professional",
+					Description:  "For growing teams",
+					MonthlyPrice: 9900,
+					YearlyPrice:  99000,
+					Currency:     "USD",
+					IsPublic:     true,
+					Features: []PlanFeature{
+						{Name: "API Access", Included: true},
+						{Name: "Custom Alerts", Included: true},
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, plan *Plan) {
+				if plan.ID != "plan_pro" {
+					t.Errorf("Expected ID 'plan_pro', got '%s'", plan.ID)
+				}
+				if len(plan.Features) != 2 {
+					t.Errorf("Expected 2 features, got %d", len(plan.Features))
+				}
+			},
+		},
+		{
+			name:       "plan not found",
+			planID:     "invalid_plan",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Plan not found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				expectedPath := fmt.Sprintf("/v1/pricing/plans/%s", tt.planID)
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path '%s', got '%s'", expectedPath, r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.GetPlan(context.Background(), tt.planID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPlan() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_GetPlanFeatures tests retrieving the feature matrix
+func TestBillingService_GetPlanFeatures(t *testing.T) {
+	tests := []struct {
+		name       string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *FeatureMatrix)
+	}{
+		{
+			name:       "successful get features",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Features retrieved",
+				Data: &FeatureMatrix{
+					Features: []FeatureRow{
+						{
+							Name:        "API Access",
+							Description: "Access to REST API",
+							Category:    "Core",
+							PlanValues: map[string]string{
+								"starter": "Limited",
+								"pro":     "Full",
+							},
+						},
+					},
+					Plans: []Plan{
+						{ID: "plan_starter", Name: "Starter"},
+						{ID: "plan_pro", Name: "Professional"},
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, matrix *FeatureMatrix) {
+				if len(matrix.Features) != 1 {
+					t.Errorf("Expected 1 feature row, got %d", len(matrix.Features))
+				}
+				if len(matrix.Plans) != 2 {
+					t.Errorf("Expected 2 plans, got %d", len(matrix.Plans))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/pricing/features" {
+					t.Errorf("Expected path '/v1/pricing/features', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.GetPlanFeatures(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPlanFeatures() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// Invoice Method Tests (Task #3939)
+// ============================================================================
+
+// TestBillingService_ListMyInvoices tests listing invoices for authenticated user
+func TestBillingService_ListMyInvoices(t *testing.T) {
+	tests := []struct {
+		name       string
+		opts       *ListInvoiceOptions
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, []*Invoice, *PaginationMeta)
+	}{
+		{
+			name:       "successful list my invoices",
+			opts:       &ListInvoiceOptions{Page: 1, Limit: 10},
+			mockStatus: http.StatusOK,
+			mockBody: PaginatedResponse{
+				Status:  "success",
+				Message: "Invoices retrieved",
+				Data: &[]*Invoice{
+					{
+						ID:            "inv_001",
+						InvoiceNumber: "INV-2025-001",
+						Status:        "paid",
+						Amount:        199.99,
+						Currency:      "USD",
+					},
+				},
+				Meta: &PaginationMeta{
+					Page:       1,
+					TotalPages: 1,
+					TotalItems: 1,
+					Limit:      10,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, invoices []*Invoice, meta *PaginationMeta) {
+				if len(invoices) != 1 {
+					t.Errorf("Expected 1 invoice, got %d", len(invoices))
+				}
+				if meta.TotalItems != 1 {
+					t.Errorf("Expected TotalItems 1, got %d", meta.TotalItems)
+				}
+			},
+		},
+		{
+			name:       "filter by status",
+			opts:       &ListInvoiceOptions{Page: 1, Limit: 10, Status: "paid"},
+			mockStatus: http.StatusOK,
+			mockBody: PaginatedResponse{
+				Status: "success",
+				Data:   &[]*Invoice{},
+				Meta: &PaginationMeta{
+					Page:       1,
+					TotalPages: 0,
+					TotalItems: 0,
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/billing/invoices" {
+					t.Errorf("Expected path '/v1/billing/invoices', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			invoices, meta, err := client.Billing.ListMyInvoices(context.Background(), tt.opts)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListMyInvoices() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, invoices, meta)
+			}
+		})
+	}
+}
+
+// TestBillingService_GetMyInvoice tests retrieving a specific invoice
+func TestBillingService_GetMyInvoice(t *testing.T) {
+	tests := []struct {
+		name       string
+		invoiceID  string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *Invoice)
+	}{
+		{
+			name:       "successful get invoice",
+			invoiceID:  "inv_001",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Invoice retrieved",
+				Data: &Invoice{
+					ID:            "inv_001",
+					InvoiceNumber: "INV-2025-001",
+					Status:        "paid",
+					Amount:        199.99,
+					Currency:      "USD",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, inv *Invoice) {
+				if inv.ID != "inv_001" {
+					t.Errorf("Expected ID 'inv_001', got '%s'", inv.ID)
+				}
+			},
+		},
+		{
+			name:       "invoice not found",
+			invoiceID:  "invalid_inv",
+			mockStatus: http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Invoice not found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				expectedPath := fmt.Sprintf("/v1/billing/invoices/%s", tt.invoiceID)
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path '%s', got '%s'", expectedPath, r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.GetMyInvoice(context.Background(), tt.invoiceID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetMyInvoice() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_DownloadInvoicePDF tests downloading invoice PDF
+func TestBillingService_DownloadInvoicePDF(t *testing.T) {
+	tests := []struct {
+		name       string
+		invoiceID  string
+		mockStatus int
+		mockBody   []byte
+		wantErr    bool
+		checkFunc  func(*testing.T, []byte)
+	}{
+		{
+			name:       "successful download",
+			invoiceID:  "inv_001",
+			mockStatus: http.StatusOK,
+			mockBody:   []byte("%PDF-1.4 fake pdf content"),
+			wantErr:    false,
+			checkFunc: func(t *testing.T, data []byte) {
+				if len(data) == 0 {
+					t.Error("Expected PDF data, got empty")
+				}
+			},
+		},
+		{
+			name:       "invoice not found",
+			invoiceID:  "invalid_inv",
+			mockStatus: http.StatusNotFound,
+			mockBody:   []byte(`{"status":"error","message":"Invoice not found"}`),
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				expectedPath := fmt.Sprintf("/v1/billing/invoices/%s/download", tt.invoiceID)
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path '%s', got '%s'", expectedPath, r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				if tt.mockStatus == http.StatusOK {
+					w.Header().Set("Content-Type", "application/pdf")
+				} else {
+					w.Header().Set("Content-Type", "application/json")
+				}
+				w.WriteHeader(tt.mockStatus)
+				w.Write(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.DownloadInvoicePDF(context.Background(), tt.invoiceID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DownloadInvoicePDF() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_GetBillingHistory tests retrieving billing history
+func TestBillingService_GetBillingHistory(t *testing.T) {
+	tests := []struct {
+		name       string
+		opts       *ListOptions
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *BillingHistoryResponse)
+	}{
+		{
+			name:       "successful get history",
+			opts:       &ListOptions{Page: 1, Limit: 10},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "History retrieved",
+				Data: &BillingHistoryResponse{
+					Invoices: []*Invoice{
+						{ID: "inv_001", Amount: 199.99, Status: "paid"},
+						{ID: "inv_002", Amount: 199.99, Status: "paid"},
+					},
+					TotalSpent: 39998,
+					Currency:   "USD",
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, resp *BillingHistoryResponse) {
+				if len(resp.Invoices) != 2 {
+					t.Errorf("Expected 2 invoices, got %d", len(resp.Invoices))
+				}
+				if resp.TotalSpent != 39998 {
+					t.Errorf("Expected TotalSpent 39998, got %d", resp.TotalSpent)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/billing/history" {
+					t.Errorf("Expected path '/v1/billing/history', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.GetBillingHistory(context.Background(), tt.opts)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBillingHistory() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// Payment Method Tests (Task #3939)
+// ============================================================================
+
+// TestBillingService_ListPaymentMethods tests listing payment methods
+func TestBillingService_ListPaymentMethods(t *testing.T) {
+	tests := []struct {
+		name       string
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, []*PaymentMethod)
+	}{
+		{
+			name:       "successful list payment methods",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Payment methods retrieved",
+				Data: &[]*PaymentMethod{
+					{
+						ID:          "pm_123",
+						Type:        "card",
+						Last4:       "4242",
+						Brand:       "visa",
+						ExpiryMonth: 12,
+						ExpiryYear:  2027,
+						IsDefault:   true,
+					},
+					{
+						ID:        "pm_456",
+						Type:      "bank_account",
+						Last4:     "6789",
+						BankName:  "Chase",
+						IsDefault: false,
+					},
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, methods []*PaymentMethod) {
+				if len(methods) != 2 {
+					t.Errorf("Expected 2 payment methods, got %d", len(methods))
+				}
+				if methods[0].IsDefault != true {
+					t.Error("Expected first method to be default")
+				}
+			},
+		},
+		{
+			name:       "no payment methods",
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "No payment methods",
+				Data:    &[]*PaymentMethod{},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, methods []*PaymentMethod) {
+				if len(methods) != 0 {
+					t.Errorf("Expected 0 payment methods, got %d", len(methods))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/billing/payment-methods" {
+					t.Errorf("Expected path '/v1/billing/payment-methods', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodGet {
+					t.Errorf("Expected method GET, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.ListPaymentMethods(context.Background())
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListPaymentMethods() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_AddPaymentMethod tests adding a new payment method
+func TestBillingService_AddPaymentMethod(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *AddPaymentMethodRequest
+		mockStatus int
+		mockBody   interface{}
+		wantErr    bool
+		checkFunc  func(*testing.T, *PaymentMethod)
+	}{
+		{
+			name: "successful add payment method",
+			request: &AddPaymentMethodRequest{
+				PaymentMethodToken: "pm_token_123",
+				SetDefault:         true,
+			},
+			mockStatus: http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Payment method added",
+				Data: &PaymentMethod{
+					ID:          "pm_new",
+					Type:        "card",
+					Last4:       "1234",
+					Brand:       "mastercard",
+					ExpiryMonth: 10,
+					ExpiryYear:  2028,
+					IsDefault:   true,
+				},
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, pm *PaymentMethod) {
+				if pm.ID != "pm_new" {
+					t.Errorf("Expected ID 'pm_new', got '%s'", pm.ID)
+				}
+				if pm.IsDefault != true {
+					t.Error("Expected payment method to be default")
+				}
+			},
+		},
+		{
+			name: "invalid token",
+			request: &AddPaymentMethodRequest{
+				PaymentMethodToken: "invalid_token",
+			},
+			mockStatus: http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Invalid payment method token",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v1/billing/payment-methods" {
+					t.Errorf("Expected path '/v1/billing/payment-methods', got '%s'", r.URL.Path)
+				}
+				if r.Method != http.MethodPost {
+					t.Errorf("Expected method POST, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			result, err := client.Billing.AddPaymentMethod(context.Background(), tt.request)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddPaymentMethod() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+// TestBillingService_RemovePaymentMethod tests removing a payment method
+func TestBillingService_RemovePaymentMethod(t *testing.T) {
+	tests := []struct {
+		name            string
+		paymentMethodID string
+		mockStatus      int
+		mockBody        interface{}
+		wantErr         bool
+	}{
+		{
+			name:            "successful remove",
+			paymentMethodID: "pm_123",
+			mockStatus:      http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Payment method removed",
+			},
+			wantErr: false,
+		},
+		{
+			name:            "payment method not found",
+			paymentMethodID: "pm_invalid",
+			mockStatus:      http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Payment method not found",
+			},
+			wantErr: true,
+		},
+		{
+			name:            "cannot remove default",
+			paymentMethodID: "pm_default",
+			mockStatus:      http.StatusBadRequest,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Cannot remove default payment method",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				expectedPath := fmt.Sprintf("/v1/billing/payment-methods/%s", tt.paymentMethodID)
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path '%s', got '%s'", expectedPath, r.URL.Path)
+				}
+				if r.Method != http.MethodDelete {
+					t.Errorf("Expected method DELETE, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			err := client.Billing.RemovePaymentMethod(context.Background(), tt.paymentMethodID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RemovePaymentMethod() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestBillingService_SetDefaultPaymentMethod tests setting a default payment method
+func TestBillingService_SetDefaultPaymentMethod(t *testing.T) {
+	tests := []struct {
+		name            string
+		paymentMethodID string
+		mockStatus      int
+		mockBody        interface{}
+		wantErr         bool
+	}{
+		{
+			name:            "successful set default",
+			paymentMethodID: "pm_123",
+			mockStatus:      http.StatusOK,
+			mockBody: StandardResponse{
+				Status:  "success",
+				Message: "Default payment method updated",
+			},
+			wantErr: false,
+		},
+		{
+			name:            "payment method not found",
+			paymentMethodID: "pm_invalid",
+			mockStatus:      http.StatusNotFound,
+			mockBody: StandardResponse{
+				Status:  "error",
+				Message: "Payment method not found",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				expectedPath := fmt.Sprintf("/v1/billing/payment-methods/%s/default", tt.paymentMethodID)
+				if r.URL.Path != expectedPath {
+					t.Errorf("Expected path '%s', got '%s'", expectedPath, r.URL.Path)
+				}
+				if r.Method != http.MethodPut {
+					t.Errorf("Expected method PUT, got %s", r.Method)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.mockStatus)
+				json.NewEncoder(w).Encode(tt.mockBody)
+			}))
+			defer server.Close()
+
+			client, _ := NewClient(&Config{
+				BaseURL: server.URL,
+				Auth:    AuthConfig{Token: "test-token"},
+			})
+
+			err := client.Billing.SetDefaultPaymentMethod(context.Background(), tt.paymentMethodID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SetDefaultPaymentMethod() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// New Type JSON Tests (Task #3939)
+// ============================================================================
+
+// TestCreateCheckoutRequest_JSON tests JSON marshaling of CreateCheckoutRequest
+func TestCreateCheckoutRequest_JSON(t *testing.T) {
+	original := &CreateCheckoutRequest{
+		PlanID:       "plan_pro",
+		BillingCycle: "yearly",
+		SuccessURL:   "https://example.com/success",
+		CancelURL:    "https://example.com/cancel",
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var decoded CreateCheckoutRequest
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if decoded.PlanID != original.PlanID {
+		t.Errorf("PlanID mismatch: got %s, want %s", decoded.PlanID, original.PlanID)
+	}
+	if decoded.BillingCycle != original.BillingCycle {
+		t.Errorf("BillingCycle mismatch: got %s, want %s", decoded.BillingCycle, original.BillingCycle)
+	}
+}
+
+// TestPlan_JSON tests JSON marshaling of Plan
+func TestPlan_JSON(t *testing.T) {
+	original := &Plan{
+		ID:           "plan_pro",
+		Name:         "Professional",
+		Description:  "For growing teams",
+		MonthlyPrice: 9900,
+		YearlyPrice:  99000,
+		Currency:     "USD",
+		Features: []PlanFeature{
+			{Name: "API Access", Included: true},
+		},
+		Limits: PlanLimits{
+			MaxServers:        50,
+			MaxUsers:          10,
+			DataRetentionDays: 90,
+		},
+		IsPublic:  true,
+		SortOrder: 2,
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var decoded Plan
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if decoded.ID != original.ID {
+		t.Errorf("ID mismatch: got %s, want %s", decoded.ID, original.ID)
+	}
+	if decoded.MonthlyPrice != original.MonthlyPrice {
+		t.Errorf("MonthlyPrice mismatch: got %d, want %d", decoded.MonthlyPrice, original.MonthlyPrice)
+	}
+	if decoded.Limits.MaxServers != original.Limits.MaxServers {
+		t.Errorf("MaxServers mismatch: got %d, want %d", decoded.Limits.MaxServers, original.Limits.MaxServers)
+	}
+}
+
+// TestSubscriptionResponse_JSON tests JSON marshaling of SubscriptionResponse
+func TestSubscriptionResponse_JSON(t *testing.T) {
+	original := &SubscriptionResponse{
+		ID:                   "sub_123",
+		OrganizationID:       1,
+		PlanID:               "plan_pro",
+		PlanName:             "Professional",
+		Status:               "active",
+		BillingCycle:         "monthly",
+		CancelAtPeriodEnd:    false,
+		StripeSubscriptionID: "sub_stripe_123",
+	}
+
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var decoded SubscriptionResponse
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if decoded.ID != original.ID {
+		t.Errorf("ID mismatch: got %s, want %s", decoded.ID, original.ID)
+	}
+	if decoded.StripeSubscriptionID != original.StripeSubscriptionID {
+		t.Errorf("StripeSubscriptionID mismatch: got %s, want %s", decoded.StripeSubscriptionID, original.StripeSubscriptionID)
+	}
+}
