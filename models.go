@@ -3475,6 +3475,227 @@ type ReportStatus struct {
 	EstimatedCompletionTime *CustomTime `json:"estimated_completion_time,omitempty"`
 }
 
+// ReportTemplate represents a report template definition
+type ReportTemplate struct {
+	ID               uint                   `json:"id"`
+	OrganizationUUID *string                `json:"organization_uuid,omitempty"`
+	Name             string                 `json:"name"`
+	Description      string                 `json:"description,omitempty"`
+	Type             string                 `json:"type"` // "health", "alert", "inventory", "uptime", "custom"
+	IsSystem         bool                   `json:"is_system"`
+	Sections         []TemplateSection      `json:"sections,omitempty"`
+	DefaultParams    map[string]interface{} `json:"default_params,omitempty"`
+	OutputFormats    []string               `json:"output_formats,omitempty"`
+	CreatedByID      *uint                  `json:"created_by_id,omitempty"`
+	CreatedAt        CustomTime             `json:"created_at"`
+	UpdatedAt        CustomTime             `json:"updated_at"`
+}
+
+// TemplateSection represents a section within a report template
+type TemplateSection struct {
+	ID          string                 `json:"id"`
+	Name        string                 `json:"name"`
+	Type        string                 `json:"type"` // "chart", "table", "summary", "text"
+	Order       int                    `json:"order"`
+	Config      map[string]interface{} `json:"config,omitempty"`
+	DataSource  string                 `json:"data_source,omitempty"`
+	Columns     []string               `json:"columns,omitempty"`
+	ChartType   string                 `json:"chart_type,omitempty"`
+	Aggregation string                 `json:"aggregation,omitempty"`
+}
+
+// CreateTemplateRequest represents a request to create a new template
+type CreateTemplateRequest struct {
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description,omitempty"`
+	Type          string                 `json:"type"` // "health", "alert", "inventory", "uptime", "custom"
+	Sections      []TemplateSection      `json:"sections,omitempty"`
+	DefaultParams map[string]interface{} `json:"default_params,omitempty"`
+	OutputFormats []string               `json:"output_formats,omitempty"`
+}
+
+// UpdateTemplateRequest represents a request to update a template
+type UpdateTemplateRequest struct {
+	Name          *string                 `json:"name,omitempty"`
+	Description   *string                 `json:"description,omitempty"`
+	Sections      []TemplateSection       `json:"sections,omitempty"`
+	DefaultParams map[string]interface{}  `json:"default_params,omitempty"`
+	OutputFormats []string                `json:"output_formats,omitempty"`
+}
+
+// TemplatePreviewRequest represents a request to preview a template
+type TemplatePreviewRequest struct {
+	Params    map[string]interface{} `json:"params,omitempty"`
+	TimeRange *ReportTimeRange       `json:"time_range,omitempty"`
+}
+
+// TemplatePreviewResponse represents a template preview result
+type TemplatePreviewResponse struct {
+	TemplateID   uint                   `json:"template_id"`
+	TemplateName string                 `json:"template_name"`
+	GeneratedAt  CustomTime             `json:"generated_at"`
+	Sections     []PreviewSection       `json:"sections"`
+	Summary      map[string]interface{} `json:"summary,omitempty"`
+}
+
+// PreviewSection represents a section in the preview response
+type PreviewSection struct {
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"`
+	Data     interface{}            `json:"data,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// UpdateReportScheduleRequest represents a request to update a report schedule
+type UpdateReportScheduleRequest struct {
+	Name          *string              `json:"name,omitempty"`
+	Description   *string              `json:"description,omitempty"`
+	Schedule      *string              `json:"schedule,omitempty"` // Cron expression
+	Enabled       *bool                `json:"enabled,omitempty"`
+	Configuration *ReportConfiguration `json:"configuration,omitempty"`
+}
+
+// HealthSummaryResponse represents a quick health summary report
+type HealthSummaryResponse struct {
+	GeneratedAt   CustomTime             `json:"generated_at"`
+	Summary       HealthSummaryStats     `json:"summary"`
+	ServerHealth  []ServerHealthEntry    `json:"server_health"`
+	RecentAlerts  []AlertEntry           `json:"recent_alerts,omitempty"`
+	Trends        map[string]interface{} `json:"trends,omitempty"`
+}
+
+// HealthSummaryStats contains overall health statistics
+type HealthSummaryStats struct {
+	TotalServers   int     `json:"total_servers"`
+	HealthyServers int     `json:"healthy_servers"`
+	WarningServers int     `json:"warning_servers"`
+	CriticalServers int    `json:"critical_servers"`
+	OfflineServers int     `json:"offline_servers"`
+	OverallScore   float64 `json:"overall_score"`
+}
+
+// ServerHealthEntry represents a server's health status
+type ServerHealthEntry struct {
+	ServerUUID    string     `json:"server_uuid"`
+	Hostname      string     `json:"hostname"`
+	Status        string     `json:"status"`
+	HealthScore   float64    `json:"health_score"`
+	CPUUsage      float64    `json:"cpu_usage"`
+	MemoryUsage   float64    `json:"memory_usage"`
+	DiskUsage     float64    `json:"disk_usage"`
+	LastHeartbeat CustomTime `json:"last_heartbeat"`
+}
+
+// AlertEntry represents an alert in the report
+type AlertEntry struct {
+	ID          uint       `json:"id"`
+	ServerUUID  string     `json:"server_uuid,omitempty"`
+	Hostname    string     `json:"hostname,omitempty"`
+	Type        string     `json:"type"`
+	Severity    string     `json:"severity"`
+	Message     string     `json:"message"`
+	Status      string     `json:"status"`
+	TriggeredAt CustomTime `json:"triggered_at"`
+	ResolvedAt  *CustomTime `json:"resolved_at,omitempty"`
+}
+
+// AlertHistoryResponse represents a quick alert history report
+type AlertHistoryResponse struct {
+	GeneratedAt CustomTime             `json:"generated_at"`
+	Summary     AlertHistoryStats      `json:"summary"`
+	ByType      map[string]int         `json:"by_type"`
+	BySeverity  map[string]int         `json:"by_severity"`
+	ByServer    []ServerAlertSummary   `json:"by_server,omitempty"`
+	AlertList   []AlertEntry           `json:"alert_list"`
+}
+
+// AlertHistoryStats contains alert history statistics
+type AlertHistoryStats struct {
+	TotalAlerts    int     `json:"total_alerts"`
+	ActiveAlerts   int     `json:"active_alerts"`
+	ResolvedAlerts int     `json:"resolved_alerts"`
+	CriticalCount  int     `json:"critical_count"`
+	WarningCount   int     `json:"warning_count"`
+	InfoCount      int     `json:"info_count"`
+	MTTR           float64 `json:"mttr_hours,omitempty"` // Mean Time To Resolution in hours
+}
+
+// ServerAlertSummary represents alert summary per server
+type ServerAlertSummary struct {
+	ServerUUID   string `json:"server_uuid"`
+	Hostname     string `json:"hostname"`
+	TotalAlerts  int    `json:"total_alerts"`
+	ActiveAlerts int    `json:"active_alerts"`
+}
+
+// ServerInventoryResponse represents a quick server inventory report
+type ServerInventoryResponse struct {
+	GeneratedAt CustomTime             `json:"generated_at"`
+	Summary     ServerInventoryStats   `json:"summary"`
+	ByOS        map[string]int         `json:"by_os"`
+	ByStatus    map[string]int         `json:"by_status"`
+	ByLocation  map[string]int         `json:"by_location,omitempty"`
+	ServerList  []ServerInventoryEntry `json:"server_list"`
+}
+
+// ServerInventoryStats contains server inventory statistics
+type ServerInventoryStats struct {
+	TotalServers   int `json:"total_servers"`
+	OnlineServers  int `json:"online_servers"`
+	OfflineServers int `json:"offline_servers"`
+}
+
+// ServerInventoryEntry represents a server in the inventory
+type ServerInventoryEntry struct {
+	ServerUUID    string     `json:"server_uuid"`
+	Hostname      string     `json:"hostname"`
+	Status        string     `json:"status"`
+	OS            string     `json:"os"`
+	OSVersion     string     `json:"os_version,omitempty"`
+	Architecture  string     `json:"architecture,omitempty"`
+	IPAddress     string     `json:"ip_address,omitempty"`
+	LastHeartbeat CustomTime `json:"last_heartbeat"`
+	AgentVersion  string     `json:"agent_version,omitempty"`
+	CreatedAt     CustomTime `json:"created_at"`
+}
+
+// UptimeReportResponse represents a quick uptime report
+type UptimeReportResponse struct {
+	GeneratedAt CustomTime            `json:"generated_at"`
+	Summary     UptimeStats           `json:"summary"`
+	ByServer    []ServerUptimeEntry   `json:"by_server"`
+	Outages     []OutageEntry         `json:"outages,omitempty"`
+}
+
+// UptimeStats contains overall uptime statistics
+type UptimeStats struct {
+	TotalServers    int     `json:"total_servers"`
+	AverageUptime   float64 `json:"average_uptime_percent"`
+	TotalOutages    int     `json:"total_outages"`
+	TotalDowntime   float64 `json:"total_downtime_hours"`
+}
+
+// ServerUptimeEntry represents uptime data for a server
+type ServerUptimeEntry struct {
+	ServerUUID      string  `json:"server_uuid"`
+	Hostname        string  `json:"hostname"`
+	UptimePercent   float64 `json:"uptime_percent"`
+	OutageCount     int     `json:"outage_count"`
+	TotalDowntime   float64 `json:"total_downtime_hours"`
+	LongestOutage   float64 `json:"longest_outage_hours,omitempty"`
+}
+
+// OutageEntry represents an outage event
+type OutageEntry struct {
+	ServerUUID    string      `json:"server_uuid"`
+	Hostname      string      `json:"hostname"`
+	StartTime     CustomTime  `json:"start_time"`
+	EndTime       *CustomTime `json:"end_time,omitempty"`
+	DurationHours float64     `json:"duration_hours"`
+	Reason        string      `json:"reason,omitempty"`
+}
+
 // ServerGroup represents a logical group of servers
 type ServerGroup struct {
 	ID             uint                   `json:"id"`
