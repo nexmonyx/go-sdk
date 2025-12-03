@@ -3484,11 +3484,48 @@ type ReportTemplate struct {
 	Type             string                 `json:"type"` // "health", "alert", "inventory", "uptime", "custom"
 	IsSystem         bool                   `json:"is_system"`
 	Sections         []TemplateSection      `json:"sections,omitempty"`
+	Parameters       []TemplateParameter    `json:"parameters,omitempty"`
 	DefaultParams    map[string]interface{} `json:"default_params,omitempty"`
 	OutputFormats    []string               `json:"output_formats,omitempty"`
+	ClonedFromID     *uint64                `json:"cloned_from_id,omitempty"`
+	ClonedFrom       *ReportTemplate        `json:"cloned_from,omitempty"`
 	CreatedByID      *uint                  `json:"created_by_id,omitempty"`
+	CreatedBy        *User                  `json:"created_by,omitempty"`
 	CreatedAt        CustomTime             `json:"created_at"`
 	UpdatedAt        CustomTime             `json:"updated_at"`
+}
+
+// TemplateParameter represents a configurable parameter for a report template
+type TemplateParameter struct {
+	ID           string                       `json:"id"`
+	Name         string                       `json:"name"`
+	Description  string                       `json:"description,omitempty"`
+	Type         string                       `json:"type"` // "daterange", "select", "text", "number", "checkbox", "multiselect"
+	Required     bool                         `json:"required"`
+	DefaultValue interface{}                  `json:"default_value,omitempty"`
+	Validation   *TemplateParameterValidation `json:"validation,omitempty"`
+	Options      []TemplateParameterOption    `json:"options,omitempty"`
+	Order        int                          `json:"order"`
+}
+
+// TemplateParameterValidation defines validation rules for a template parameter
+type TemplateParameterValidation struct {
+	MinValue  *float64 `json:"min_value,omitempty"`
+	MaxValue  *float64 `json:"max_value,omitempty"`
+	MinLength *int     `json:"min_length,omitempty"`
+	MaxLength *int     `json:"max_length,omitempty"`
+	Pattern   string   `json:"pattern,omitempty"`
+	MinDate   string   `json:"min_date,omitempty"`
+	MaxDate   string   `json:"max_date,omitempty"`
+	MaxRange  string   `json:"max_range,omitempty"`
+}
+
+// TemplateParameterOption represents an option for select/multiselect parameters
+type TemplateParameterOption struct {
+	Value       string `json:"value"`
+	Label       string `json:"label"`
+	Description string `json:"description,omitempty"`
+	Default     bool   `json:"default,omitempty"`
 }
 
 // TemplateSection represents a section within a report template
@@ -3510,6 +3547,7 @@ type CreateTemplateRequest struct {
 	Description   string                 `json:"description,omitempty"`
 	Type          string                 `json:"type"` // "health", "alert", "inventory", "uptime", "custom"
 	Sections      []TemplateSection      `json:"sections,omitempty"`
+	Parameters    []TemplateParameter    `json:"parameters,omitempty"`
 	DefaultParams map[string]interface{} `json:"default_params,omitempty"`
 	OutputFormats []string               `json:"output_formats,omitempty"`
 }
@@ -3519,8 +3557,19 @@ type UpdateTemplateRequest struct {
 	Name          *string                 `json:"name,omitempty"`
 	Description   *string                 `json:"description,omitempty"`
 	Sections      []TemplateSection       `json:"sections,omitempty"`
+	Parameters    []TemplateParameter     `json:"parameters,omitempty"`
 	DefaultParams map[string]interface{}  `json:"default_params,omitempty"`
 	OutputFormats []string                `json:"output_formats,omitempty"`
+}
+
+// CloneTemplateRequest represents a request to clone a template
+type CloneTemplateRequest struct {
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description,omitempty"`
+	Sections      []TemplateSection      `json:"sections,omitempty"`
+	Parameters    []TemplateParameter    `json:"parameters,omitempty"`
+	DefaultParams map[string]interface{} `json:"default_params,omitempty"`
+	OutputFormats []string               `json:"output_formats,omitempty"`
 }
 
 // TemplatePreviewRequest represents a request to preview a template

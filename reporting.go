@@ -468,6 +468,33 @@ func (s *ReportingService) PreviewTemplate(ctx context.Context, templateID uint,
 	return resp.Data, nil
 }
 
+// CloneTemplate clones an existing template with optional customizations
+// Authentication: JWT Token required
+// Endpoint: POST /v1/reports/templates/{id}/clone
+// Parameters:
+//   - templateID: Source template ID to clone
+//   - clone: CloneTemplateRequest with new name and optional customizations
+// Returns: Newly created ReportTemplate object
+func (s *ReportingService) CloneTemplate(ctx context.Context, templateID uint, clone *CloneTemplateRequest) (*ReportTemplate, error) {
+	var resp struct {
+		Data    *ReportTemplate `json:"data"`
+		Status  string          `json:"status"`
+		Message string          `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/reports/templates/%d/clone", templateID),
+		Body:   clone,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
 // ============================================================================
 // Quick Reports
 // ============================================================================
