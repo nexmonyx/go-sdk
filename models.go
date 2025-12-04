@@ -4143,6 +4143,375 @@ type ChannelTestRequest struct {
 	TestMessage string `json:"test_message,omitempty"`
 }
 
+// NotificationChannelTestResult represents the result of testing a notification channel
+// This extends the base ChannelTestResult with timing information for notifications
+type NotificationChannelTestResult struct {
+	Success      bool       `json:"success"`
+	Message      string     `json:"message,omitempty"`
+	ResponseTime int64      `json:"response_time_ms,omitempty"`
+	TestedAt     CustomTime `json:"tested_at"`
+}
+
+// ============================================================================
+// Notification Preferences Models
+// ============================================================================
+
+// NotificationPreferences represents notification preferences for an organization or user
+type NotificationPreferences struct {
+	ID             uint                           `json:"id"`
+	OrganizationID uint                           `json:"organization_id"`
+	UserID         *uint                          `json:"user_id,omitempty"`
+	Channels       []NotificationChannelPrefs     `json:"channels,omitempty"`
+	QuietHours     *QuietHoursConfig              `json:"quiet_hours,omitempty"`
+	Digest         *DigestConfig                  `json:"digest,omitempty"`
+	AlertFilters   []AlertFilterConfig            `json:"alert_filters,omitempty"`
+	CreatedAt      CustomTime                     `json:"created_at"`
+	UpdatedAt      CustomTime                     `json:"updated_at"`
+}
+
+// NotificationChannelPrefs represents preferences for a specific notification channel
+type NotificationChannelPrefs struct {
+	Channel  string   `json:"channel"`
+	Enabled  bool     `json:"enabled"`
+	Priority []string `json:"priority,omitempty"`
+	Types    []string `json:"types,omitempty"`
+}
+
+// QuietHoursConfig represents quiet hours configuration
+type QuietHoursConfig struct {
+	Enabled   bool   `json:"enabled"`
+	StartTime string `json:"start_time,omitempty"` // HH:MM format
+	EndTime   string `json:"end_time,omitempty"`   // HH:MM format
+	Timezone  string `json:"timezone,omitempty"`
+	Days      []int  `json:"days,omitempty"` // 0-6 (Sunday-Saturday)
+}
+
+// DigestConfig represents digest notification configuration
+type DigestConfig struct {
+	Enabled   bool   `json:"enabled"`
+	Frequency string `json:"frequency,omitempty"` // hourly, daily, weekly
+	Time      string `json:"time,omitempty"`      // HH:MM format
+	Timezone  string `json:"timezone,omitempty"`
+}
+
+// AlertFilterConfig represents an alert filter configuration
+type AlertFilterConfig struct {
+	Name          string   `json:"name"`
+	Enabled       bool     `json:"enabled"`
+	Severities    []string `json:"severities,omitempty"`
+	Types         []string `json:"types,omitempty"`
+	ServerFilters []string `json:"server_filters,omitempty"`
+	TagFilters    []string `json:"tag_filters,omitempty"`
+	Action        string   `json:"action,omitempty"` // notify, suppress, digest
+}
+
+// UpdatePreferencesRequest represents a request to update notification preferences
+type UpdatePreferencesRequest struct {
+	Channels     []NotificationChannelPrefs `json:"channels,omitempty"`
+	QuietHours   *QuietHoursConfig          `json:"quiet_hours,omitempty"`
+	Digest       *DigestConfig              `json:"digest,omitempty"`
+	AlertFilters []AlertFilterConfig        `json:"alert_filters,omitempty"`
+}
+
+// ============================================================================
+// Notification Rate Limit Models
+// ============================================================================
+
+// NotificationRateLimit represents rate limit configuration for notifications
+type NotificationRateLimit struct {
+	ID             uint                  `json:"id"`
+	OrganizationID uint                  `json:"organization_id"`
+	GlobalLimit    *RateLimitConfig      `json:"global_limit,omitempty"`
+	ChannelLimits  []ChannelRateLimitConfig `json:"channel_limits,omitempty"`
+	SeverityLimits []SeverityRateLimitConfig `json:"severity_limits,omitempty"`
+	CreatedAt      CustomTime            `json:"created_at"`
+	UpdatedAt      CustomTime            `json:"updated_at"`
+}
+
+// RateLimitConfig represents rate limit configuration
+type RateLimitConfig struct {
+	MaxPerHour   int `json:"max_per_hour"`
+	MaxPerDay    int `json:"max_per_day"`
+	BurstLimit   int `json:"burst_limit,omitempty"`
+}
+
+// ChannelRateLimitConfig represents rate limit for a specific channel
+type ChannelRateLimitConfig struct {
+	Channel    string `json:"channel"`
+	MaxPerHour int    `json:"max_per_hour"`
+	MaxPerDay  int    `json:"max_per_day"`
+}
+
+// SeverityRateLimitConfig represents rate limit for a specific severity
+type SeverityRateLimitConfig struct {
+	Severity   string `json:"severity"`
+	MaxPerHour int    `json:"max_per_hour"`
+	MaxPerDay  int    `json:"max_per_day"`
+}
+
+// RateLimitStatus represents current rate limit usage status
+type RateLimitStatus struct {
+	Global   *RateLimitUsage   `json:"global,omitempty"`
+	Channels []ChannelRateLimitUsage `json:"channels,omitempty"`
+}
+
+// RateLimitUsage represents current usage against rate limits
+type RateLimitUsage struct {
+	HourlyUsed     int        `json:"hourly_used"`
+	HourlyLimit    int        `json:"hourly_limit"`
+	DailyUsed      int        `json:"daily_used"`
+	DailyLimit     int        `json:"daily_limit"`
+	HourlyResetAt  CustomTime `json:"hourly_reset_at"`
+	DailyResetAt   CustomTime `json:"daily_reset_at"`
+}
+
+// ChannelRateLimitUsage represents rate limit usage for a specific channel
+type ChannelRateLimitUsage struct {
+	Channel string `json:"channel"`
+	RateLimitUsage
+}
+
+// UpdateRateLimitsRequest represents a request to update rate limits
+type UpdateRateLimitsRequest struct {
+	GlobalLimit    *RateLimitConfig          `json:"global_limit,omitempty"`
+	ChannelLimits  []ChannelRateLimitConfig  `json:"channel_limits,omitempty"`
+	SeverityLimits []SeverityRateLimitConfig `json:"severity_limits,omitempty"`
+}
+
+// ============================================================================
+// Notification History Models
+// ============================================================================
+
+// NotificationHistory represents a notification history entry
+type NotificationHistory struct {
+	ID                uint                   `json:"id"`
+	OrganizationID    uint                   `json:"organization_id"`
+	UserID            *uint                  `json:"user_id,omitempty"`
+	NotificationType  string                 `json:"notification_type"`
+	Channel           string                 `json:"channel"`
+	Severity          string                 `json:"severity"`
+	Subject           string                 `json:"subject"`
+	Content           string                 `json:"content,omitempty"`
+	ContentType       string                 `json:"content_type"`
+	Status            string                 `json:"status"`
+	DeliveryStatus    string                 `json:"delivery_status"`
+	SentAt            *CustomTime            `json:"sent_at,omitempty"`
+	DeliveredAt       *CustomTime            `json:"delivered_at,omitempty"`
+	FailedAt          *CustomTime            `json:"failed_at,omitempty"`
+	RetryCount        int                    `json:"retry_count"`
+	MaxRetries        int                    `json:"max_retries"`
+	NextRetryAt       *CustomTime            `json:"next_retry_at,omitempty"`
+	ErrorMessage      string                 `json:"error_message,omitempty"`
+	ExternalMessageID string                 `json:"external_message_id,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	AlertID           *uint                  `json:"alert_id,omitempty"`
+	ProbeID           *uint                  `json:"probe_id,omitempty"`
+	ServerID          *uint                  `json:"server_id,omitempty"`
+	CreatedAt         CustomTime             `json:"created_at"`
+	UpdatedAt         CustomTime             `json:"updated_at"`
+}
+
+// ListHistoryOptions represents options for listing notification history
+type ListHistoryOptions struct {
+	ListOptions
+	Channel          string `json:"channel,omitempty"`
+	Status           string `json:"status,omitempty"`
+	NotificationType string `json:"notification_type,omitempty"`
+	Severity         string `json:"severity,omitempty"`
+	StartDate        string `json:"start_date,omitempty"`
+	EndDate          string `json:"end_date,omitempty"`
+}
+
+// NotificationHistoryStats represents statistics for notification history
+type NotificationHistoryStats struct {
+	TotalSent       int64                  `json:"total_sent"`
+	TotalDelivered  int64                  `json:"total_delivered"`
+	TotalFailed     int64                  `json:"total_failed"`
+	TotalPending    int64                  `json:"total_pending"`
+	ByChannel       map[string]int64       `json:"by_channel,omitempty"`
+	BySeverity      map[string]int64       `json:"by_severity,omitempty"`
+	ByType          map[string]int64       `json:"by_type,omitempty"`
+	ByStatus        map[string]int64       `json:"by_status,omitempty"`
+	DeliveryRate    float64                `json:"delivery_rate"`
+	AverageDeliveryTime float64            `json:"average_delivery_time_seconds,omitempty"`
+	Period          StatsTimePeriod        `json:"period"`
+}
+
+// StatsTimePeriod represents the time period for statistics
+type StatsTimePeriod struct {
+	Start CustomTime `json:"start"`
+	End   CustomTime `json:"end"`
+}
+
+// ExportHistoryOptions represents options for exporting notification history
+type ExportHistoryOptions struct {
+	Format    string `json:"format,omitempty"` // csv, json
+	StartDate string `json:"start_date,omitempty"`
+	EndDate   string `json:"end_date,omitempty"`
+	Channel   string `json:"channel,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+
+// ============================================================================
+// Notification Digest Models
+// ============================================================================
+
+// DigestEntry represents a pending digest entry
+type DigestEntry struct {
+	ID                uint                   `json:"id"`
+	OrganizationID    uint                   `json:"organization_id"`
+	UserID            *uint                  `json:"user_id,omitempty"`
+	NotificationType  string                 `json:"notification_type"`
+	Channel           string                 `json:"channel"`
+	Severity          string                 `json:"severity"`
+	Subject           string                 `json:"subject"`
+	Content           string                 `json:"content"`
+	ContentType       string                 `json:"content_type"`
+	DigestKey         string                 `json:"digest_key"`
+	DigestFrequency   string                 `json:"digest_frequency"`
+	ScheduledDigestAt CustomTime             `json:"scheduled_digest_at"`
+	ExpiresAt         *CustomTime            `json:"expires_at,omitempty"`
+	Status            string                 `json:"status"`
+	ProcessedAt       *CustomTime            `json:"processed_at,omitempty"`
+	DigestBatchID     string                 `json:"digest_batch_id,omitempty"`
+	AlertID           *uint                  `json:"alert_id,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt         CustomTime             `json:"created_at"`
+	UpdatedAt         CustomTime             `json:"updated_at"`
+}
+
+// DigestStatus represents the current digest queue status
+type DigestStatus struct {
+	Running             bool                   `json:"running"`
+	ProcessInterval     string                 `json:"process_interval"`
+	CleanupInterval     string                 `json:"cleanup_interval"`
+	PendingEntries      int64                  `json:"pending_entries"`
+	PendingDigestGroups int64                  `json:"pending_digest_groups"`
+	NextScheduledAt     *CustomTime            `json:"next_scheduled_at,omitempty"`
+	NextDigestKey       string                 `json:"next_digest_key,omitempty"`
+	Last24Hours         DigestBatchStats       `json:"last_24h"`
+}
+
+// DigestBatchStats represents digest batch statistics
+type DigestBatchStats struct {
+	TotalBatches  int64 `json:"total_batches"`
+	SentBatches   int64 `json:"sent_batches"`
+	FailedBatches int64 `json:"failed_batches"`
+}
+
+// AddToDigestRequest represents a request to add a notification to the digest queue
+type AddToDigestRequest struct {
+	UserID           *uint                  `json:"user_id,omitempty"`
+	NotificationType string                 `json:"notification_type"`
+	Channel          string                 `json:"channel"`
+	Severity         string                 `json:"severity,omitempty"`
+	Subject          string                 `json:"subject"`
+	Content          string                 `json:"content"`
+	ContentType      string                 `json:"content_type,omitempty"`
+	Frequency        string                 `json:"frequency,omitempty"` // hourly, daily, weekly
+	AlertID          *uint                  `json:"alert_id,omitempty"`
+	ProbeID          *uint                  `json:"probe_id,omitempty"`
+	ServerID         *uint                  `json:"server_id,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// AddToDigestResponse represents the response to adding a notification to digest
+type AddToDigestResponse struct {
+	Entry *DigestEntry `json:"entry"`
+}
+
+// ProcessDigestResponse represents the response to processing digests
+type ProcessDigestResponse struct {
+	BatchesProcessed int `json:"batches_processed"`
+}
+
+// CancelDigestRequest represents a request to cancel digest entries
+type CancelDigestRequest struct {
+	AlertID *uint `json:"alert_id,omitempty"`
+}
+
+// CancelDigestResponse represents the response to cancelling digest entries
+type CancelDigestResponse struct {
+	CancelledCount int `json:"cancelled_count"`
+}
+
+// ============================================================================
+// Notification Template Models
+// ============================================================================
+
+// NotificationTemplate represents an email/notification template
+type NotificationTemplate struct {
+	ID             uint                   `json:"id"`
+	OrganizationID uint                   `json:"organization_id"`
+	Name           string                 `json:"name"`
+	Description    string                 `json:"description,omitempty"`
+	Type           string                 `json:"type"` // email, slack, sms, webhook
+	Subject        string                 `json:"subject,omitempty"`
+	Body           string                 `json:"body"`
+	Format         string                 `json:"format,omitempty"` // text, html, markdown
+	Variables      []TemplateVariable     `json:"variables,omitempty"`
+	IsDefault      bool                   `json:"is_default"`
+	IsActive       bool                   `json:"is_active"`
+	CreatedAt      CustomTime             `json:"created_at"`
+	UpdatedAt      CustomTime             `json:"updated_at"`
+}
+
+// TemplateVariable represents a variable that can be used in a template
+type TemplateVariable struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Required    bool   `json:"required"`
+	Default     string `json:"default,omitempty"`
+}
+
+// CreateNotificationTemplateRequest represents a request to create a notification template
+type CreateNotificationTemplateRequest struct {
+	Name        string             `json:"name"`
+	Description string             `json:"description,omitempty"`
+	Type        string             `json:"type"`
+	Subject     string             `json:"subject,omitempty"`
+	Body        string             `json:"body"`
+	Format      string             `json:"format,omitempty"`
+	Variables   []TemplateVariable `json:"variables,omitempty"`
+	IsDefault   bool               `json:"is_default,omitempty"`
+	IsActive    bool               `json:"is_active,omitempty"`
+}
+
+// UpdateNotificationTemplateRequest represents a request to update a notification template
+type UpdateNotificationTemplateRequest struct {
+	Name        *string             `json:"name,omitempty"`
+	Description *string             `json:"description,omitempty"`
+	Subject     *string             `json:"subject,omitempty"`
+	Body        *string             `json:"body,omitempty"`
+	Format      *string             `json:"format,omitempty"`
+	Variables   []TemplateVariable  `json:"variables,omitempty"`
+	IsDefault   *bool               `json:"is_default,omitempty"`
+	IsActive    *bool               `json:"is_active,omitempty"`
+}
+
+// PreviewNotificationTemplateRequest represents a request to preview a template
+type PreviewNotificationTemplateRequest struct {
+	Variables map[string]interface{} `json:"variables"`
+}
+
+// PreviewNotificationTemplateResponse represents the response to template preview
+type PreviewNotificationTemplateResponse struct {
+	Subject     string `json:"subject,omitempty"`
+	Body        string `json:"body"`
+	ContentType string `json:"content_type"`
+}
+
+// AvailableTemplateVariables represents available template variables
+type AvailableTemplateVariables struct {
+	Categories []TemplateVariableCategory `json:"categories"`
+}
+
+// TemplateVariableCategory represents a category of template variables
+type TemplateVariableCategory struct {
+	Name      string             `json:"name"`
+	Variables []TemplateVariable `json:"variables"`
+}
+
 // ============================================================================
 // Cluster Models
 // ============================================================================
