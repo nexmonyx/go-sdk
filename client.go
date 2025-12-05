@@ -73,6 +73,7 @@ type Client struct {
 	ML                    *MLService
 	VMs                   *VMsService
 	Reporting             *ReportingService
+	Regions               *RegionsService
 	ServerGroups          *ServerGroupsService
 	Search                *SearchService
 	Audit                 *AuditService
@@ -278,6 +279,7 @@ func NewClient(config *Config) (*Client, error) {
 	client.ML = &MLService{client: client}
 	client.VMs = &VMsService{client: client}
 	client.Reporting = &ReportingService{client: client}
+	client.Regions = &RegionsService{client: client}
 	client.ServerGroups = &ServerGroupsService{client: client}
 	client.Search = &SearchService{client: client}
 	client.Audit = &AuditService{client: client}
