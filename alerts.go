@@ -412,6 +412,23 @@ func (s *AlertsService) ResolveInstance(ctx context.Context, id string) error {
 	return err
 }
 
+// AcknowledgeInstance acknowledges an alert instance (Task 183)
+func (s *AlertsService) AcknowledgeInstance(ctx context.Context, id string, message string) error {
+	var resp StandardResponse
+
+	body := map[string]interface{}{
+		"message": message,
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   fmt.Sprintf("/v1/alerts/instances/%s/acknowledge", id),
+		Body:   body,
+		Result: &resp,
+	})
+	return err
+}
+
 // CreateInstance creates a new alert instance
 func (s *AlertsService) CreateInstance(ctx context.Context, req *CreateAlertInstanceRequest) (*AlertInstance, error) {
 	var resp StandardResponse
