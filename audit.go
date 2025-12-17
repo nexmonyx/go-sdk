@@ -2,8 +2,14 @@ package nexmonyx
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // AuditService handles audit log operations and compliance tracking
@@ -468,4 +474,336 @@ func (s *AuditService) ExportCommandAudit(ctx context.Context, filters *CommandE
 	}
 
 	return resp.Body, nil
+}
+
+// === Real-Time Audit Monitoring (WebSocket) ===
+
+// AuditMonitorConnection represents a WebSocket connection for real-time audit monitoring
+type AuditMonitorConnection struct {
+	conn         *websocket.Conn
+	client       *Client
+	mu           sync.RWMutex
+	connected    bool
+	subscriberID string
+	filters      *AuditMonitoringFilters
+
+	// Channels for events and errors
+	Events chan *AuditMonitoringEvent
+	Stats  chan *AuditMonitoringStats
+	Errors chan error
+
+	// Control channels
+	done     chan struct{}
+	stopOnce sync.Once
+}
+
+// ConnectAuditMonitor establishes a WebSocket connection for real-time audit event monitoring
+// Authentication: JWT Token required
+// Endpoint: GET /v1/audit/commands/monitor/ws (WebSocket upgrade)
+// Parameters:
+//   - ctx: Context for connection lifecycle
+//   - filters: Optional initial filters for events
+//
+// Returns: AuditMonitorConnection for receiving events, or error if connection fails
+//
+// Usage:
+//
+//	conn, err := client.Audit.ConnectAuditMonitor(ctx, &nexmonyx.AuditMonitoringFilters{
+//	    EventTypes: []string{"command_failed", "security_alert"},
+//	})
+//	if err != nil { return err }
+//	defer conn.Close()
+//
+//	for event := range conn.Events {
+//	    fmt.Printf("Event: %s - %s\n", event.Type, event.CommandName)
+//	}
+func (s *AuditService) ConnectAuditMonitor(ctx context.Context, filters *AuditMonitoringFilters) (*AuditMonitorConnection, error) {
+	// Build WebSocket URL from client base URL
+	baseURL := s.client.config.BaseURL
+	wsURL := strings.Replace(baseURL, "https://", "wss://", 1)
+	wsURL = strings.Replace(wsURL, "http://", "ws://", 1)
+	wsURL = strings.TrimSuffix(wsURL, "/") + "/v1/audit/commands/monitor/ws"
+
+	// Set up headers with authentication
+	headers := http.Header{}
+	if s.client.config.Auth.Token != "" {
+		headers.Set("Authorization", "Bearer "+s.client.config.Auth.Token)
+	} else if s.client.config.Auth.UnifiedAPIKey != "" {
+		headers.Set("Authorization", "Bearer "+s.client.config.Auth.UnifiedAPIKey)
+	} else if s.client.config.Auth.APIKey != "" {
+		// Use X-API-Key header for API key authentication
+		headers.Set("X-API-Key", s.client.config.Auth.APIKey)
+		if s.client.config.Auth.APISecret != "" {
+			headers.Set("X-API-Secret", s.client.config.Auth.APISecret)
+		}
+	}
+
+	// Dial WebSocket connection
+	dialer := websocket.Dialer{
+		HandshakeTimeout: 10 * time.Second,
+	}
+
+	conn, resp, err := dialer.DialContext(ctx, wsURL, headers)
+	if err != nil {
+		if resp != nil {
+			return nil, fmt.Errorf("websocket dial failed with status %d: %w", resp.StatusCode, err)
+		}
+		return nil, fmt.Errorf("websocket dial failed: %w", err)
+	}
+
+	// Create connection wrapper
+	amc := &AuditMonitorConnection{
+		conn:    conn,
+		client:  s.client,
+		filters: filters,
+		Events:  make(chan *AuditMonitoringEvent, 100),
+		Stats:   make(chan *AuditMonitoringStats, 10),
+		Errors:  make(chan error, 10),
+		done:    make(chan struct{}),
+	}
+
+	// Start message reader goroutine
+	go amc.readLoop()
+
+	// Wait for welcome message with timeout
+	welcomeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	select {
+	case <-welcomeCtx.Done():
+		amc.Close()
+		return nil, fmt.Errorf("timeout waiting for welcome message")
+	case err := <-amc.Errors:
+		amc.Close()
+		return nil, fmt.Errorf("error during connection setup: %w", err)
+	case <-time.After(100 * time.Millisecond):
+		// Brief delay to allow welcome message processing
+	}
+
+	// Apply initial filters if provided
+	if filters != nil {
+		if err := amc.SetFilters(filters); err != nil {
+			amc.Close()
+			return nil, fmt.Errorf("failed to set initial filters: %w", err)
+		}
+	}
+
+	amc.mu.Lock()
+	amc.connected = true
+	amc.mu.Unlock()
+
+	return amc, nil
+}
+
+// readLoop continuously reads messages from the WebSocket connection
+func (amc *AuditMonitorConnection) readLoop() {
+	defer func() {
+		amc.mu.Lock()
+		amc.connected = false
+		amc.mu.Unlock()
+		close(amc.Events)
+		close(amc.Stats)
+	}()
+
+	for {
+		select {
+		case <-amc.done:
+			return
+		default:
+		}
+
+		_, data, err := amc.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				return
+			}
+			select {
+			case amc.Errors <- err:
+			default:
+			}
+			return
+		}
+
+		var msg AuditMonitorMessage
+		if err := json.Unmarshal(data, &msg); err != nil {
+			select {
+			case amc.Errors <- fmt.Errorf("failed to parse message: %w", err):
+			default:
+			}
+			continue
+		}
+
+		amc.handleMessage(&msg)
+	}
+}
+
+// handleMessage processes incoming WebSocket messages
+func (amc *AuditMonitorConnection) handleMessage(msg *AuditMonitorMessage) {
+	switch msg.Type {
+	case "welcome":
+		amc.mu.Lock()
+		amc.subscriberID = msg.SubscriberID
+		amc.mu.Unlock()
+
+	case "stats":
+		if msg.Data != nil {
+			select {
+			case amc.Stats <- msg.Data:
+			default:
+				// Stats channel full, drop oldest
+			}
+		}
+
+	case "event":
+		if msg.Event != nil {
+			select {
+			case amc.Events <- msg.Event:
+			default:
+				// Events channel full, drop oldest
+			}
+		}
+
+	case "filters_updated":
+		if msg.Filters != nil {
+			amc.mu.Lock()
+			amc.filters = msg.Filters
+			amc.mu.Unlock()
+		}
+
+	case "pong":
+		// Pong received, connection is alive
+
+	case "error":
+		select {
+		case amc.Errors <- fmt.Errorf("server error: %s", msg.Error):
+		default:
+		}
+	}
+}
+
+// SetFilters updates the event filters for the connection
+func (amc *AuditMonitorConnection) SetFilters(filters *AuditMonitoringFilters) error {
+	amc.mu.RLock()
+	if !amc.connected && amc.conn == nil {
+		amc.mu.RUnlock()
+		return fmt.Errorf("connection not established")
+	}
+	amc.mu.RUnlock()
+
+	msg := map[string]interface{}{
+		"type":    "set_filters",
+		"filters": filters,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal filters: %w", err)
+	}
+
+	amc.mu.Lock()
+	defer amc.mu.Unlock()
+
+	if err := amc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		return fmt.Errorf("failed to send filters: %w", err)
+	}
+
+	return nil
+}
+
+// GetStats requests current monitoring statistics from the server
+func (amc *AuditMonitorConnection) GetStats() error {
+	amc.mu.RLock()
+	if !amc.connected {
+		amc.mu.RUnlock()
+		return fmt.Errorf("connection not established")
+	}
+	amc.mu.RUnlock()
+
+	msg := map[string]interface{}{
+		"type": "get_stats",
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	amc.mu.Lock()
+	defer amc.mu.Unlock()
+
+	if err := amc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+
+	return nil
+}
+
+// Ping sends a ping message to keep the connection alive
+func (amc *AuditMonitorConnection) Ping() error {
+	amc.mu.RLock()
+	if !amc.connected {
+		amc.mu.RUnlock()
+		return fmt.Errorf("connection not established")
+	}
+	amc.mu.RUnlock()
+
+	msg := map[string]interface{}{
+		"type": "ping",
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ping: %w", err)
+	}
+
+	amc.mu.Lock()
+	defer amc.mu.Unlock()
+
+	if err := amc.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		return fmt.Errorf("failed to send ping: %w", err)
+	}
+
+	return nil
+}
+
+// IsConnected returns whether the connection is currently active
+func (amc *AuditMonitorConnection) IsConnected() bool {
+	amc.mu.RLock()
+	defer amc.mu.RUnlock()
+	return amc.connected
+}
+
+// SubscriberID returns the unique subscriber ID assigned by the server
+func (amc *AuditMonitorConnection) SubscriberID() string {
+	amc.mu.RLock()
+	defer amc.mu.RUnlock()
+	return amc.subscriberID
+}
+
+// CurrentFilters returns the currently active filters
+func (amc *AuditMonitorConnection) CurrentFilters() *AuditMonitoringFilters {
+	amc.mu.RLock()
+	defer amc.mu.RUnlock()
+	return amc.filters
+}
+
+// Close gracefully closes the WebSocket connection
+func (amc *AuditMonitorConnection) Close() error {
+	var closeErr error
+	amc.stopOnce.Do(func() {
+		close(amc.done)
+
+		amc.mu.Lock()
+		amc.connected = false
+		if amc.conn != nil {
+			// Send close message
+			closeErr = amc.conn.WriteMessage(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+			)
+			amc.conn.Close()
+		}
+		amc.mu.Unlock()
+	})
+	return closeErr
 }

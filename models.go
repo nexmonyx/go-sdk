@@ -5116,3 +5116,85 @@ type CommandExportFilter struct {
 	IncludeResponse  bool
 	TimeZone         string
 }
+
+// === Audit Monitoring WebSocket Models ===
+
+// AuditMonitoringFilters defines what events a subscriber wants to receive
+type AuditMonitoringFilters struct {
+	ServerUUIDs      []string `json:"server_uuids,omitempty"`
+	CommandNames     []string `json:"command_names,omitempty"`
+	UserIDs          []uint   `json:"user_ids,omitempty"`
+	EventTypes       []string `json:"event_types,omitempty"` // command_started, command_completed, command_failed, command_timeout, security_alert
+	MinExecutionTime int64    `json:"min_execution_time_ms,omitempty"`
+	MaxExecutionTime int64    `json:"max_execution_time_ms,omitempty"`
+	OnlyFailures     bool     `json:"only_failures,omitempty"`
+	OnlySlowCommands bool     `json:"only_slow_commands,omitempty"`
+}
+
+// AuditMonitoringEvent represents a real-time event for command execution
+type AuditMonitoringEvent struct {
+	ID            string                 `json:"id"`
+	Type          string                 `json:"type"` // command_started, command_completed, command_failed, command_timeout, security_alert
+	Timestamp     CustomTime             `json:"timestamp"`
+	ServerUUID    string                 `json:"server_uuid"`
+	CommandName   string                 `json:"command_name"`
+	ExecutionID   uint64                 `json:"execution_id,omitempty"`
+	UserID        *uint                  `json:"user_id,omitempty"`
+	UserEmail     string                 `json:"user_email,omitempty"`
+	Success       *bool                  `json:"success,omitempty"`
+	ExecutionTime *int64                 `json:"execution_time_ms,omitempty"`
+	ErrorMessage  string                 `json:"error_message,omitempty"`
+	Severity      string                 `json:"severity"`
+	Details       map[string]interface{} `json:"details,omitempty"`
+
+	// Server context
+	ServerName        string `json:"server_name,omitempty"`
+	ServerEnvironment string `json:"server_environment,omitempty"`
+
+	// Performance alerts
+	IsSlowExecution   bool `json:"is_slow_execution,omitempty"`
+	IsHighMemoryUsage bool `json:"is_high_memory_usage,omitempty"`
+	IsSecurityAlert   bool `json:"is_security_alert,omitempty"`
+}
+
+// AuditMonitoringStats provides real-time statistics
+type AuditMonitoringStats struct {
+	ActiveConnections  int                    `json:"active_connections"`
+	CommandsInProgress int                    `json:"commands_in_progress"`
+	RecentCommands     []RecentCommandSummary `json:"recent_commands"`
+	ErrorRate          float64                `json:"error_rate_last_hour"`
+	AvgExecutionTime   float64                `json:"avg_execution_time_ms"`
+	AnomalyAlerts      []AnomalyAlert         `json:"anomaly_alerts"`
+}
+
+// RecentCommandSummary provides summary of recent command activity
+type RecentCommandSummary struct {
+	CommandName   string     `json:"command_name"`
+	Count         int        `json:"count"`
+	SuccessRate   float64    `json:"success_rate"`
+	AvgDuration   float64    `json:"avg_duration_ms"`
+	LastExecution CustomTime `json:"last_execution"`
+}
+
+// AnomalyAlert represents detected anomalies in command execution
+type AnomalyAlert struct {
+	Type        string                 `json:"type"` // high_error_rate, slow_execution, security_concern, unusual_pattern
+	Severity    string                 `json:"severity"`
+	Description string                 `json:"description"`
+	ServerUUID  string                 `json:"server_uuid,omitempty"`
+	CommandName string                 `json:"command_name,omitempty"`
+	Timestamp   CustomTime             `json:"timestamp"`
+	Details     map[string]interface{} `json:"details,omitempty"`
+}
+
+// AuditMonitorMessage represents a message from the audit monitoring WebSocket
+type AuditMonitorMessage struct {
+	Type         string                `json:"type"` // welcome, stats, event, filters_updated, pong, error
+	SubscriberID string                `json:"subscriber_id,omitempty"`
+	Timestamp    CustomTime            `json:"timestamp"`
+	Message      string                `json:"message,omitempty"`
+	Data         *AuditMonitoringStats `json:"data,omitempty"`
+	Event        *AuditMonitoringEvent `json:"event,omitempty"`
+	Filters      *AuditMonitoringFilters `json:"filters,omitempty"`
+	Error        string                `json:"error,omitempty"`
+}
