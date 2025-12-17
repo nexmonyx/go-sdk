@@ -4929,3 +4929,190 @@ type ServiceHealthScore struct {
 	Timestamp      string            `json:"timestamp"`
 	Interpretation map[string]string `json:"score_interpretation"`
 }
+
+// === Command Audit Security Event Models ===
+
+// SecurityEventRequest represents a request to log a security event
+type SecurityEventRequest struct {
+	ServerUUID  string                 `json:"server_uuid"`
+	CommandName string                 `json:"command_name"`
+	EventType   string                 `json:"event_type"`
+	Description string                 `json:"description"`
+	Severity    string                 `json:"severity,omitempty"`
+	Details     map[string]interface{} `json:"details,omitempty"`
+	IPAddress   string                 `json:"ip_address,omitempty"`
+	UserAgent   string                 `json:"user_agent,omitempty"`
+	RequestID   string                 `json:"request_id,omitempty"`
+	ThreatLevel string                 `json:"threat_level,omitempty"`
+	ActionTaken string                 `json:"action_taken,omitempty"`
+	Remediation string                 `json:"remediation,omitempty"`
+}
+
+// SecurityEventResponse represents the response after logging a security event
+type SecurityEventResponse struct {
+	EventID   string     `json:"event_id"`
+	Timestamp CustomTime `json:"timestamp"`
+	Severity  string     `json:"severity"`
+	Logged    bool       `json:"logged"`
+	AlertSent bool       `json:"alert_sent"`
+	Message   string     `json:"message"`
+}
+
+// === Command Analytics Models ===
+
+// CommandAnalyticsFilter represents filtering options for command analytics
+type CommandAnalyticsFilter struct {
+	ServerUUIDs  []string
+	CommandNames []string
+	UserIDs      []uint
+	StartTime    string // RFC3339 format
+	EndTime      string // RFC3339 format
+	TimeRange    string // 1h, 24h, 7d, 30d, 90d
+	Success      *bool
+	MinDuration  int64
+	MaxDuration  int64
+}
+
+// CommandAnalytics contains comprehensive analytics data
+type CommandAnalytics struct {
+	ExecutionStats     *ExecutionStatistics       `json:"execution_stats"`
+	PerformanceMetrics *CommandPerformanceMetrics `json:"performance_metrics"`
+	ErrorAnalysis      *ErrorAnalysis             `json:"error_analysis"`
+	Trends             *TrendData                 `json:"trends"`
+	Period             *AnalyticsPeriod           `json:"period,omitempty"`
+}
+
+// AnalyticsPeriod represents the time period for analytics
+type AnalyticsPeriod struct {
+	StartTime CustomTime `json:"start_time"`
+	EndTime   CustomTime `json:"end_time"`
+}
+
+// ExecutionStatistics contains execution count and success rate data
+type ExecutionStatistics struct {
+	TotalExecutions  int64          `json:"total_executions"`
+	SuccessfulCount  int64          `json:"successful_count"`
+	FailedCount      int64          `json:"failed_count"`
+	TimeoutCount     int64          `json:"timeout_count"`
+	SuccessRate      float64        `json:"success_rate"`
+	AveragePerDay    float64        `json:"average_per_day"`
+	CommandBreakdown []CommandStats `json:"command_breakdown"`
+}
+
+// CommandStats contains statistics for a specific command
+type CommandStats struct {
+	CommandName   string  `json:"command_name"`
+	Count         int64   `json:"count"`
+	SuccessCount  int64   `json:"success_count"`
+	FailureCount  int64   `json:"failure_count"`
+	SuccessRate   float64 `json:"success_rate"`
+	AvgDurationMs float64 `json:"avg_duration_ms"`
+}
+
+// CommandPerformanceMetrics contains performance analysis data
+type CommandPerformanceMetrics struct {
+	AverageExecutionTime int64         `json:"average_execution_time_ms"`
+	MedianExecutionTime  int64         `json:"median_execution_time_ms"`
+	P95ExecutionTime     int64         `json:"p95_execution_time_ms"`
+	P99ExecutionTime     int64         `json:"p99_execution_time_ms"`
+	SlowestCommands      []SlowCommand `json:"slowest_commands"`
+	FastestCommands      []FastCommand `json:"fastest_commands"`
+}
+
+// SlowCommand represents a slow command execution
+type SlowCommand struct {
+	ExecutionID uint64     `json:"execution_id"`
+	CommandName string     `json:"command_name"`
+	ServerUUID  string     `json:"server_uuid"`
+	DurationMs  int64      `json:"duration_ms"`
+	ExecutedAt  CustomTime `json:"executed_at"`
+}
+
+// FastCommand represents a fast command execution
+type FastCommand struct {
+	CommandName   string  `json:"command_name"`
+	AvgDurationMs float64 `json:"avg_duration_ms"`
+}
+
+// ErrorAnalysis contains error rate and breakdown data
+type ErrorAnalysis struct {
+	FailureRate      float64                  `json:"failure_rate"`
+	ErrorCounts      map[string]int64         `json:"error_counts"`
+	MostCommonErrors []string                 `json:"most_common_errors"`
+	ErrorTrend       []map[string]interface{} `json:"error_trend"`
+}
+
+// TrendData contains trend information
+type TrendData struct {
+	ExecutionTrend   []map[string]interface{} `json:"execution_trend"`
+	SuccessRateTrend []map[string]interface{} `json:"success_rate_trend"`
+}
+
+// === Command History Models ===
+
+// CommandHistoryFilter represents filtering for command history
+type CommandHistoryFilter struct {
+	ServerUUIDs      []string
+	CommandNames     []string
+	UserIDs          []uint
+	Success          *bool
+	StartTime        string
+	EndTime          string
+	MinExecutionTime int64
+	MaxExecutionTime int64
+	CorrelationID    string
+	IncludePayload   bool
+	IncludeResponse  bool
+	SearchText       string
+	OrderBy          string
+	OrderDirection   string
+}
+
+// CommandAuditEntry represents a detailed command audit record
+type CommandAuditEntry struct {
+	ID                 uint64                 `json:"id"`
+	ServerUUID         string                 `json:"server_uuid"`
+	CommandName        string                 `json:"command_name"`
+	Success            bool                   `json:"success"`
+	StartedAt          CustomTime             `json:"started_at"`
+	CompletedAt        *CustomTime            `json:"completed_at,omitempty"`
+	ExecutionTimeMs    *int64                 `json:"execution_time_ms,omitempty"`
+	ErrorMessage       *string                `json:"error_message,omitempty"`
+	UserID             *uint                  `json:"user_id,omitempty"`
+	UserEmail          *string                `json:"user_email,omitempty"`
+	CorrelationID      *string                `json:"correlation_id,omitempty"`
+	Status             string                 `json:"status"`
+	Payload            *string                `json:"payload,omitempty"`
+	Response           *string                `json:"response,omitempty"`
+	ServerName         *string                `json:"server_name,omitempty"`
+	ServerLocation     *string                `json:"server_location,omitempty"`
+	ServerEnvironment  *string                `json:"server_environment,omitempty"`
+	PerformanceMetrics map[string]interface{} `json:"performance_metrics,omitempty"`
+	AuditDetails       map[string]interface{} `json:"audit_details,omitempty"`
+}
+
+// CommandAuditHistorySummary contains summary statistics
+type CommandAuditHistorySummary struct {
+	TotalCommands      int     `json:"total_commands"`
+	SuccessfulCount    int     `json:"successful_count"`
+	FailedCount        int     `json:"failed_count"`
+	SuccessRate        float64 `json:"success_rate"`
+	AvgExecutionTimeMs float64 `json:"avg_execution_time_ms"`
+}
+
+// === Command Export Models ===
+
+// CommandExportFilter represents filtering for command export
+type CommandExportFilter struct {
+	ServerUUIDs      []string
+	CommandNames     []string
+	UserIDs          []uint
+	Success          *bool
+	StartTime        string
+	EndTime          string
+	MinExecutionTime int64
+	MaxExecutionTime int64
+	IncludePayload   bool
+	IncludeResponse  bool
+	TimeZone         string
+}

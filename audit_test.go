@@ -457,6 +457,464 @@ func TestAuditService_GetUserAuditHistory(t *testing.T) {
 	assert.Equal(t, 2, meta.TotalItems)
 }
 
+// === Command Audit Tests ===
+
+func TestAuditService_RecordSecurityEvent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/v1/audit/commands/security-event", r.URL.Path)
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
+
+		var reqBody SecurityEventRequest
+		json.NewDecoder(r.Body).Decode(&reqBody)
+		assert.Equal(t, "server-uuid-123", reqBody.ServerUUID)
+		assert.Equal(t, "system_update", reqBody.CommandName)
+		assert.Equal(t, "security_alert", reqBody.EventType)
+		assert.Equal(t, "high", reqBody.Severity)
+
+		response := struct {
+			Data    *SecurityEventResponse `json:"data"`
+			Status  string                 `json:"status"`
+			Message string                 `json:"message"`
+		}{
+			Data: &SecurityEventResponse{
+				EventID:   "evt-12345",
+				Timestamp: CustomTime{Time: time.Now()},
+				Severity:  "high",
+				Logged:    true,
+				AlertSent: true,
+				Message:   "Security event recorded successfully",
+			},
+			Status:  "success",
+			Message: "Security event recorded",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	resp, err := client.Audit.RecordSecurityEvent(context.Background(), &SecurityEventRequest{
+		ServerUUID:  "server-uuid-123",
+		CommandName: "system_update",
+		EventType:   "security_alert",
+		Description: "Potential security threat detected",
+		Severity:    "high",
+		Details: map[string]interface{}{
+			"threat_type": "unauthorized_access",
+		},
+		IPAddress:   "192.168.1.100",
+		ThreatLevel: "critical",
+		ActionTaken: "blocked",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "evt-12345", resp.EventID)
+	assert.Equal(t, "high", resp.Severity)
+	assert.True(t, resp.Logged)
+	assert.True(t, resp.AlertSent)
+}
+
+func TestAuditService_RecordSecurityEvent_Error(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(StandardResponse{
+			Status:  "error",
+			Message: "Invalid security event request",
+		})
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	_, err = client.Audit.RecordSecurityEvent(context.Background(), &SecurityEventRequest{
+		ServerUUID: "", // Missing required field
+	})
+	assert.Error(t, err)
+}
+
+func TestAuditService_GetCommandAnalytics(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/analytics", r.URL.Path)
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
+
+		response := struct {
+			Data    *CommandAnalytics `json:"data"`
+			Status  string            `json:"status"`
+			Message string            `json:"message"`
+		}{
+			Data: &CommandAnalytics{
+				ExecutionStats: &ExecutionStatistics{
+					TotalExecutions: 5000,
+					SuccessfulCount: 4800,
+					FailedCount:     200,
+					TimeoutCount:    50,
+					SuccessRate:     96.0,
+					AveragePerDay:   166.67,
+					CommandBreakdown: []CommandStats{
+						{
+							CommandName:   "system_update",
+							Count:         1500,
+							SuccessCount:  1450,
+							FailureCount:  50,
+							SuccessRate:   96.67,
+							AvgDurationMs: 250.5,
+						},
+						{
+							CommandName:   "health_check",
+							Count:         3500,
+							SuccessCount:  3350,
+							FailureCount:  150,
+							SuccessRate:   95.71,
+							AvgDurationMs: 120.3,
+						},
+					},
+				},
+				PerformanceMetrics: &CommandPerformanceMetrics{
+					AverageExecutionTime: 185,
+					MedianExecutionTime:  150,
+					P95ExecutionTime:     500,
+					P99ExecutionTime:     1200,
+					SlowestCommands: []SlowCommand{
+						{
+							ExecutionID: 12345,
+							CommandName: "backup",
+							ServerUUID:  "server-123",
+							DurationMs:  5000,
+							ExecutedAt:  CustomTime{Time: time.Now()},
+						},
+					},
+					FastestCommands: []FastCommand{
+						{
+							CommandName:   "ping",
+							AvgDurationMs: 15.5,
+						},
+					},
+				},
+				ErrorAnalysis: &ErrorAnalysis{
+					FailureRate: 4.0,
+					ErrorCounts: map[string]int64{
+						"timeout":     50,
+						"auth_failed": 75,
+						"not_found":   75,
+					},
+					MostCommonErrors: []string{"auth_failed", "not_found", "timeout"},
+				},
+			},
+			Status:  "success",
+			Message: "Command analytics retrieved successfully",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	analytics, err := client.Audit.GetCommandAnalytics(context.Background(), nil)
+	require.NoError(t, err)
+	assert.NotNil(t, analytics.ExecutionStats)
+	assert.Equal(t, int64(5000), analytics.ExecutionStats.TotalExecutions)
+	assert.Equal(t, int64(4800), analytics.ExecutionStats.SuccessfulCount)
+	assert.Equal(t, float64(96.0), analytics.ExecutionStats.SuccessRate)
+	assert.Len(t, analytics.ExecutionStats.CommandBreakdown, 2)
+	assert.NotNil(t, analytics.PerformanceMetrics)
+	assert.Equal(t, int64(185), analytics.PerformanceMetrics.AverageExecutionTime)
+	assert.Equal(t, int64(500), analytics.PerformanceMetrics.P95ExecutionTime)
+	assert.NotNil(t, analytics.ErrorAnalysis)
+	assert.Equal(t, float64(4.0), analytics.ErrorAnalysis.FailureRate)
+}
+
+func TestAuditService_GetCommandAnalytics_WithFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/analytics", r.URL.Path)
+		assert.Equal(t, "server-1,server-2", r.URL.Query().Get("server_uuids"))
+		assert.Equal(t, "system_update,health_check", r.URL.Query().Get("command_names"))
+		assert.Equal(t, "24h", r.URL.Query().Get("time_range"))
+		assert.Equal(t, "true", r.URL.Query().Get("success"))
+
+		response := struct {
+			Analytics *CommandAnalytics `json:"analytics"`
+			Status    string            `json:"status"`
+		}{
+			Analytics: &CommandAnalytics{
+				ExecutionStats: &ExecutionStatistics{
+					TotalExecutions: 500,
+					SuccessfulCount: 500,
+					FailedCount:     0,
+					SuccessRate:     100.0,
+				},
+			},
+			Status: "success",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	success := true
+	analytics, err := client.Audit.GetCommandAnalytics(context.Background(), &CommandAnalyticsFilter{
+		ServerUUIDs:  []string{"server-1", "server-2"},
+		CommandNames: []string{"system_update", "health_check"},
+		TimeRange:    "24h",
+		Success:      &success,
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, analytics.ExecutionStats)
+	assert.Equal(t, int64(500), analytics.ExecutionStats.TotalExecutions)
+	assert.Equal(t, float64(100.0), analytics.ExecutionStats.SuccessRate)
+}
+
+func TestAuditService_GetCommandHistory(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/history", r.URL.Path)
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
+
+		execTime := int64(250)
+		errorMsg := "Connection timed out"
+		correlationID := "corr-123"
+		userID := uint(10)
+		userEmail := "admin@example.com"
+		serverName := "web-server-01"
+		response := struct {
+			Data    []CommandAuditEntry         `json:"data"`
+			Summary *CommandAuditHistorySummary `json:"summary"`
+			Meta    *PaginationMeta             `json:"meta"`
+		}{
+			Data: []CommandAuditEntry{
+				{
+					ID:              1,
+					ServerUUID:      "server-uuid-123",
+					CommandName:     "system_update",
+					Success:         true,
+					StartedAt:       CustomTime{Time: time.Now().Add(-1 * time.Hour)},
+					CompletedAt:     &CustomTime{Time: time.Now().Add(-55 * time.Minute)},
+					ExecutionTimeMs: &execTime,
+					UserID:          &userID,
+					UserEmail:       &userEmail,
+					CorrelationID:   &correlationID,
+					Status:          "completed",
+					ServerName:      &serverName,
+				},
+				{
+					ID:              2,
+					ServerUUID:      "server-uuid-456",
+					CommandName:     "health_check",
+					Success:         false,
+					StartedAt:       CustomTime{Time: time.Now().Add(-30 * time.Minute)},
+					CompletedAt:     &CustomTime{Time: time.Now().Add(-29 * time.Minute)},
+					ExecutionTimeMs: &execTime,
+					ErrorMessage:    &errorMsg,
+					UserID:          &userID,
+					Status:          "failed",
+				},
+			},
+			Summary: &CommandAuditHistorySummary{
+				TotalCommands:      100,
+				SuccessfulCount:    95,
+				FailedCount:        5,
+				SuccessRate:        95.0,
+				AvgExecutionTimeMs: 200.5,
+			},
+			Meta: &PaginationMeta{
+				Page:       1,
+				PerPage:    20,
+				TotalItems: 100,
+				TotalPages: 5,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	history, summary, meta, err := client.Audit.GetCommandHistory(context.Background(), nil, nil)
+	require.NoError(t, err)
+	assert.Len(t, history, 2)
+	assert.Equal(t, "system_update", history[0].CommandName)
+	assert.True(t, history[0].Success)
+	assert.Equal(t, "server-uuid-123", history[0].ServerUUID)
+	assert.Equal(t, "completed", history[0].Status)
+	assert.False(t, history[1].Success)
+	assert.Equal(t, "failed", history[1].Status)
+	assert.NotNil(t, history[1].ErrorMessage)
+	assert.NotNil(t, summary)
+	assert.Equal(t, 100, summary.TotalCommands)
+	assert.Equal(t, 95.0, summary.SuccessRate)
+	assert.NotNil(t, meta)
+	assert.Equal(t, 100, meta.TotalItems)
+}
+
+func TestAuditService_GetCommandHistory_WithPagination(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/history", r.URL.Path)
+		assert.Equal(t, "2", r.URL.Query().Get("page"))
+		assert.Equal(t, "50", r.URL.Query().Get("limit"))
+		assert.Equal(t, "server-123", r.URL.Query().Get("server_uuids"))
+		assert.Equal(t, "true", r.URL.Query().Get("include_payload"))
+		assert.Equal(t, "started_at", r.URL.Query().Get("order_by"))
+		assert.Equal(t, "desc", r.URL.Query().Get("order_direction"))
+
+		response := struct {
+			Commands   []CommandAuditEntry `json:"commands"`
+			Pagination *PaginationMeta     `json:"pagination"`
+		}{
+			Commands: []CommandAuditEntry{
+				{
+					ID:          51,
+					ServerUUID:  "server-123",
+					CommandName: "backup",
+					Success:     true,
+					StartedAt:   CustomTime{Time: time.Now()},
+					Status:      "completed",
+				},
+			},
+			Pagination: &PaginationMeta{
+				Page:       2,
+				PerPage:    50,
+				TotalItems: 75,
+				TotalPages: 2,
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	history, _, meta, err := client.Audit.GetCommandHistory(context.Background(),
+		&CommandHistoryFilter{
+			ServerUUIDs:    []string{"server-123"},
+			IncludePayload: true,
+			OrderBy:        "started_at",
+			OrderDirection: "desc",
+		},
+		&PaginationOptions{Page: 2, Limit: 50})
+	require.NoError(t, err)
+	assert.Len(t, history, 1)
+	assert.Equal(t, uint64(51), history[0].ID)
+	assert.NotNil(t, meta)
+	assert.Equal(t, 2, meta.Page)
+	assert.Equal(t, 75, meta.TotalItems)
+}
+
+func TestAuditService_ExportCommandAudit_CSV(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/export", r.URL.Path)
+		assert.Equal(t, "csv", r.URL.Query().Get("format"))
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
+
+		// Return CSV data
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", "attachment; filename=command_audit.csv")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ID,ServerUUID,CommandName,Success,StartedAt,ExecutionTimeMs\n1,server-123,system_update,true,2024-01-15T10:00:00Z,250\n2,server-456,health_check,false,2024-01-15T10:05:00Z,150\n"))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	data, err := client.Audit.ExportCommandAudit(context.Background(), nil, "csv")
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+	assert.Contains(t, string(data), "ID,ServerUUID,CommandName")
+	assert.Contains(t, string(data), "system_update")
+	assert.Contains(t, string(data), "health_check")
+}
+
+func TestAuditService_ExportCommandAudit_JSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "/v1/audit/commands/export", r.URL.Path)
+		assert.Equal(t, "json", r.URL.Query().Get("format"))
+		assert.Equal(t, "server-123,server-456", r.URL.Query().Get("server_uuids"))
+		assert.Equal(t, "true", r.URL.Query().Get("include_response"))
+		assert.Equal(t, "America/New_York", r.URL.Query().Get("timezone"))
+
+		// Return JSON data
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", "attachment; filename=command_audit.json")
+		w.WriteHeader(http.StatusOK)
+		exportData := []map[string]interface{}{
+			{
+				"id":           1,
+				"server_uuid":  "server-123",
+				"command_name": "system_update",
+				"success":      true,
+			},
+			{
+				"id":           2,
+				"server_uuid":  "server-456",
+				"command_name": "health_check",
+				"success":      false,
+			},
+		}
+		json.NewEncoder(w).Encode(exportData)
+	}))
+	defer server.Close()
+
+	client, err := NewClient(&Config{
+		BaseURL: server.URL,
+		Auth:    AuthConfig{Token: "test-token"},
+	})
+	require.NoError(t, err)
+
+	data, err := client.Audit.ExportCommandAudit(context.Background(),
+		&CommandExportFilter{
+			ServerUUIDs:     []string{"server-123", "server-456"},
+			IncludeResponse: true,
+			TimeZone:        "America/New_York",
+		},
+		"json")
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+	assert.Contains(t, string(data), "system_update")
+	assert.Contains(t, string(data), "health_check")
+}
+
 func TestAuditService_ErrorHandling(t *testing.T) {
 	tests := []struct {
 		name          string

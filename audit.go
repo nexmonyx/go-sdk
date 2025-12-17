@@ -3,6 +3,7 @@ package nexmonyx
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // AuditService handles audit log operations and compliance tracking
@@ -234,4 +235,237 @@ func (s *AuditService) GetUserAuditHistory(ctx context.Context, userID uint, opt
 	}
 
 	return resp.Data, resp.Meta, nil
+}
+
+// === Command Audit Methods ===
+
+// RecordSecurityEvent logs a security event for command auditing
+// Authentication: JWT Token required
+// Endpoint: POST /v1/audit/commands/security-event
+// Parameters:
+//   - req: SecurityEventRequest with event details
+//
+// Returns: SecurityEventResponse with event ID and status
+func (s *AuditService) RecordSecurityEvent(ctx context.Context, req *SecurityEventRequest) (*SecurityEventResponse, error) {
+	var resp struct {
+		Data    *SecurityEventResponse `json:"data"`
+		Status  string                 `json:"status"`
+		Message string                 `json:"message"`
+	}
+
+	_, err := s.client.Do(ctx, &Request{
+		Method: "POST",
+		Path:   "/v1/audit/commands/security-event",
+		Body:   req,
+		Result: &resp,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Data, nil
+}
+
+// GetCommandAnalytics retrieves command execution analytics
+// Authentication: JWT Token required
+// Endpoint: GET /v1/audit/commands/analytics
+// Parameters:
+//   - filters: Optional CommandAnalyticsFilter for filtering results
+//
+// Returns: CommandAnalytics with execution stats, performance metrics, and trends
+func (s *AuditService) GetCommandAnalytics(ctx context.Context, filters *CommandAnalyticsFilter) (*CommandAnalytics, error) {
+	var resp struct {
+		Data      *CommandAnalytics `json:"data,omitempty"`
+		Analytics *CommandAnalytics `json:"analytics,omitempty"`
+		Status    string            `json:"status"`
+		Message   string            `json:"message"`
+	}
+
+	queryParams := make(map[string]string)
+	if filters != nil {
+		if len(filters.ServerUUIDs) > 0 {
+			queryParams["server_uuids"] = strings.Join(filters.ServerUUIDs, ",")
+		}
+		if len(filters.CommandNames) > 0 {
+			queryParams["command_names"] = strings.Join(filters.CommandNames, ",")
+		}
+		if filters.StartTime != "" {
+			queryParams["start_time"] = filters.StartTime
+		}
+		if filters.EndTime != "" {
+			queryParams["end_time"] = filters.EndTime
+		}
+		if filters.TimeRange != "" {
+			queryParams["time_range"] = filters.TimeRange
+		}
+		if filters.Success != nil {
+			queryParams["success"] = fmt.Sprintf("%t", *filters.Success)
+		}
+		if filters.MinDuration > 0 {
+			queryParams["min_duration_ms"] = fmt.Sprintf("%d", filters.MinDuration)
+		}
+		if filters.MaxDuration > 0 {
+			queryParams["max_duration_ms"] = fmt.Sprintf("%d", filters.MaxDuration)
+		}
+	}
+
+	analyticsReq := &Request{
+		Method: "GET",
+		Path:   "/v1/audit/commands/analytics",
+		Result: &resp,
+	}
+	if len(queryParams) > 0 {
+		analyticsReq.Query = queryParams
+	}
+
+	_, err := s.client.Do(ctx, analyticsReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// Handle different response structures
+	if resp.Analytics != nil {
+		return resp.Analytics, nil
+	}
+	return resp.Data, nil
+}
+
+// GetCommandHistory retrieves command execution history with filtering
+// Authentication: JWT Token required
+// Endpoint: GET /v1/audit/commands/history
+// Parameters:
+//   - filters: Optional CommandHistoryFilter for filtering results
+//   - opts: Optional pagination options
+//
+// Returns: Array of CommandAuditEntry, summary statistics, and pagination metadata
+func (s *AuditService) GetCommandHistory(ctx context.Context, filters *CommandHistoryFilter, opts *PaginationOptions) ([]CommandAuditEntry, *CommandAuditHistorySummary, *PaginationMeta, error) {
+	var resp struct {
+		Data       []CommandAuditEntry         `json:"data,omitempty"`
+		Commands   []CommandAuditEntry         `json:"commands,omitempty"`
+		Summary    *CommandAuditHistorySummary `json:"summary,omitempty"`
+		Pagination *PaginationMeta             `json:"pagination,omitempty"`
+		Meta       *PaginationMeta             `json:"meta,omitempty"`
+	}
+
+	queryParams := make(map[string]string)
+	if opts != nil {
+		if opts.Page > 0 {
+			queryParams["page"] = fmt.Sprintf("%d", opts.Page)
+		}
+		if opts.Limit > 0 {
+			queryParams["limit"] = fmt.Sprintf("%d", opts.Limit)
+		}
+	}
+	if filters != nil {
+		if len(filters.ServerUUIDs) > 0 {
+			queryParams["server_uuids"] = strings.Join(filters.ServerUUIDs, ",")
+		}
+		if len(filters.CommandNames) > 0 {
+			queryParams["command_names"] = strings.Join(filters.CommandNames, ",")
+		}
+		if filters.StartTime != "" {
+			queryParams["start_time"] = filters.StartTime
+		}
+		if filters.EndTime != "" {
+			queryParams["end_time"] = filters.EndTime
+		}
+		if filters.Success != nil {
+			queryParams["success"] = fmt.Sprintf("%t", *filters.Success)
+		}
+		if filters.CorrelationID != "" {
+			queryParams["correlation_id"] = filters.CorrelationID
+		}
+		if filters.IncludePayload {
+			queryParams["include_payload"] = "true"
+		}
+		if filters.IncludeResponse {
+			queryParams["include_response"] = "true"
+		}
+		if filters.SearchText != "" {
+			queryParams["search"] = filters.SearchText
+		}
+		if filters.OrderBy != "" {
+			queryParams["order_by"] = filters.OrderBy
+		}
+		if filters.OrderDirection != "" {
+			queryParams["order_direction"] = filters.OrderDirection
+		}
+	}
+
+	historyReq := &Request{
+		Method: "GET",
+		Path:   "/v1/audit/commands/history",
+		Result: &resp,
+	}
+	if len(queryParams) > 0 {
+		historyReq.Query = queryParams
+	}
+
+	_, err := s.client.Do(ctx, historyReq)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Handle different response structures
+	data := resp.Data
+	if len(resp.Commands) > 0 {
+		data = resp.Commands
+	}
+	meta := resp.Meta
+	if resp.Pagination != nil {
+		meta = resp.Pagination
+	}
+
+	return data, resp.Summary, meta, nil
+}
+
+// ExportCommandAudit exports command audit logs in the specified format
+// Authentication: JWT Token required
+// Endpoint: GET /v1/audit/commands/export
+// Parameters:
+//   - filters: Optional CommandExportFilter for filtering results
+//   - format: Export format (csv, json)
+//
+// Returns: Raw bytes of the exported file (CSV or JSON content)
+func (s *AuditService) ExportCommandAudit(ctx context.Context, filters *CommandExportFilter, format string) ([]byte, error) {
+	queryParams := make(map[string]string)
+	queryParams["format"] = format
+
+	if filters != nil {
+		if len(filters.ServerUUIDs) > 0 {
+			queryParams["server_uuids"] = strings.Join(filters.ServerUUIDs, ",")
+		}
+		if len(filters.CommandNames) > 0 {
+			queryParams["command_names"] = strings.Join(filters.CommandNames, ",")
+		}
+		if filters.StartTime != "" {
+			queryParams["start_time"] = filters.StartTime
+		}
+		if filters.EndTime != "" {
+			queryParams["end_time"] = filters.EndTime
+		}
+		if filters.Success != nil {
+			queryParams["success"] = fmt.Sprintf("%t", *filters.Success)
+		}
+		if filters.IncludePayload {
+			queryParams["include_payload"] = "true"
+		}
+		if filters.IncludeResponse {
+			queryParams["include_response"] = "true"
+		}
+		if filters.TimeZone != "" {
+			queryParams["timezone"] = filters.TimeZone
+		}
+	}
+
+	resp, err := s.client.Do(ctx, &Request{
+		Method: "GET",
+		Path:   "/v1/audit/commands/export",
+		Query:  queryParams,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Body, nil
 }
